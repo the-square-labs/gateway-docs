@@ -16,6 +16,7 @@ export default defineConfig({
 		}),
 		starlight({
 			title: 'Good Gateway',
+			disable404Route: true,
 			titleDelimiter: '·',
 			description: 'Operate Good Gateway with production-ready guides, runbooks, and reference documentation.',
 			favicon: '/favicon.png',

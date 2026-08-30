@@ -28,6 +28,22 @@ function frontmatter(source) {
 	return match?.[1] ?? '';
 }
 
+function contentTargetExists(absolute, locale, target) {
+	const clean = target.split('#', 1)[0].split('?', 1)[0];
+	if (!clean) return true;
+
+	let base;
+	if (clean.startsWith('/')) {
+		const prefix = `/${locale}/`;
+		if (!clean.startsWith(prefix)) return true;
+		base = join(contentRoot, locale, clean.slice(prefix.length));
+	} else {
+		base = resolve(dirname(absolute), clean);
+	}
+
+	return [base, `${base}.md`, `${base}.mdx`, join(base, 'index.md'), join(base, 'index.mdx')].some(existsSync);
+}
+
 const byLocale = Object.fromEntries(locales.map((locale) => [locale, contentFiles(locale)]));
 const expected = byLocale.en;
 
@@ -56,6 +72,14 @@ for (const locale of locales) {
 				? join(publicRoot, target.slice(1))
 				: resolve(dirname(absolute), target);
 			if (!existsSync(resolved)) errors.push(`${locale}/${file}: missing image ${target}`);
+		}
+
+		for (const match of source.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
+			const target = match[1];
+			if (/^(?:https?:|mailto:|tel:|#)/.test(target)) continue;
+			if (!contentTargetExists(absolute, locale, target)) {
+				errors.push(`${locale}/${file}: broken internal link ${target}`);
+			}
 		}
 
 		if (/\/(Users|home)\//.test(source)) errors.push(`${locale}/${file}: contains a local filesystem path`);

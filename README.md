@@ -34,3 +34,7 @@ This repository intentionally contains no GitHub Actions workflow.
 ## Content safety
 
 Never commit credentials, private addresses, customer topology, production identifiers, or screenshots containing secrets. Use synthetic names and redact operational data before adding screenshots.
+
+## License
+
+Portal code, configuration, and build scripts are licensed under the [MIT License](LICENSE-CODE). Documentation text and documentation images are licensed under [Creative Commons Attribution 4.0 International](LICENSE-DOCS.md). These licenses do not apply to the Good Gateway product source code, binaries, trademarks, or commercial license keys.

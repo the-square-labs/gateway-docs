@@ -2,6 +2,7 @@
   "name": "gateway-docs",
   "description": "Public documentation portal for Good Gateway",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
