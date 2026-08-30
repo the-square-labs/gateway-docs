@@ -8,25 +8,58 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-
 Gateway distinguishes a requested operation from its verified outcome.
+
+This distinction matters whenever work crosses the control plane, Relay, a managed daemon, and a host runtime. An API response can confirm that Gateway validated and recorded an instruction while the owning daemon is still applying it. Use the resource's durable state, Task, events, health, and logs to determine the actual outcome.
 
 ## Desired state and observed state
 
-The control plane stores desired configuration and operation state before dispatch. Daemons report observed runtime state. A successful API response may mean an operation was accepted; use Tasks, resource status, health, and events to confirm convergence.
+The control plane stores desired configuration and operation state before dispatch. Daemons report observed inventory, capabilities, health, and runtime state. Gateway compares those views and records the work required to converge them.
+
+Desired state survives an application restart, temporary Relay interruption, daemon reconnect, or host reboot. Observed state can become stale while the owner is unavailable. A sanitized last-known snapshot may remain visible for diagnosis, but it does not prove that the runtime still exists or that a mutation is safe.
+
+A completed outcome requires evidence from the owning component. For a workload, verify runtime state, health, logs, and its Route or private dependency. For an Ingress change, verify nginx accepted the configuration and test the external hostname. For a database binding, verify the daemon-owned listener, engine identity, and a real application query.
+
+## Operation lifecycle
+
+Long-running work is represented by a durable Task or operation. Typical stages include queued work, dispatch to an owner, host-local preparation, validation, apply or cutover, verification, and cleanup. The exact stages and cancellation behavior depend on the resource.
+
+Record the Task or operation ID before leaving a change. Reloading the page should reconnect to the same durable record. A browser timeout, lost response, or interrupted stream does not prove that the owner never received the command. Inspect both the Task and the current resource state before sending a duplicate create, recreate, migration, or delete.
+
+Progress is evidence reported by the owning worker or daemon, not a browser animation. A terminal success should correspond to the post-condition defined by the operation. A terminal failure should preserve enough phase, error, and request context to identify the unmet prerequisite without repeating the action blindly.
 
 ## Reconciliation
 
-Gateway retries safe idempotent work after transient disconnects and reconciles resources after application or daemon restart. It avoids inventing success from stale inventory. When ownership cannot be proven, mutations fail closed.
+Gateway retries safe idempotent work after transient disconnects and reconciles resources after application or daemon restart. Reconciliation uses the durable owner, desired state, current capability report, and observed runtime state. It avoids inventing success from stale inventory or adopting an unrelated same-name object.
+
+When ownership, capability, entitlement, or current state cannot be proven, mutations fail closed. Restore the missing prerequisite first: reconnect the Node, recover Relay, correct the registry or certificate, restore storage, or resolve the active operation. Then allow Gateway to refresh inventory and reconcile the original resource.
+
+Do not use direct host deletion as a generic reconciliation tool. Removing a Gateway-owned Container, network, listener, engine role, connector, or revision marker can destroy the evidence needed to complete or roll back the operation. Use supported retry, repair, cancellation, or cleanup-recovery actions when they are available.
 
 ## Destructive actions
 
-Deletion, credential rotation, migration cutover, archive import, database teardown, and certificate replacement have wider effects than ordinary edits. Read the confirmation text, check dependent resources, and verify the post-condition.
+Deletion, credential rotation, migration cutover, archive import, database teardown, and certificate replacement have wider effects than ordinary edits. Before starting, identify the owning resource, dependent Routes and bindings, persistent data, external clients, rollback candidate, and the expected cleanup.
+
+Read the confirmation text rather than assuming that related objects share one deletion policy. Deleting a Container removes its resource grants but does not automatically delete a separate volume. Deleting a Route retires its Route-owned Secure Link but does not delete reusable certificates or Access Lists. Removing a source connection stops future builds but does not automatically remove deployed artifacts. Database deletion requires bindings and backup retention to be handled first.
+
+After a destructive operation, verify the intended absence and the intended survivors. Check relationship cleanup, access revocation, storage retention, public reachability, audit attribution, and the terminal Task. If cleanup is interrupted, keep the durable record and recover through the recorded operation rather than manually erasing intermediate objects.
 
 ## Safe offline behavior
 
-When a node is offline, Gateway may display a sanitized last-known snapshot. It does not allow a mutation that would rely on unverified current state. Existing services on the node may continue running independently.
+When a Node is offline, Gateway may display a sanitized last-known snapshot. It does not allow a mutation that would rely on unverified current state. Existing nginx, Containers, managed databases, and other previously applied services may continue running independently.
+
+Start recovery with host power and network, system time, DNS, the daemon service, certificate identity, and outbound Relay reachability. Avoid deleting the Node record while the old daemon may reconnect: deletion creates a different durable identity and can prevent safe reconciliation.
+
+After reconnect, wait for a fresh capability and inventory report. Review failed or interrupted operations before retrying them, then verify every resource family owned by the Node. A green connection indicator alone does not prove that Routes, certificates, workloads, Compose Projects, database bindings, or monitoring have converged.
 
 ## Long-running operations
 
-Builds, migrations, deployments, certificate work, updates, and database provisioning are durable Tasks. Use operation history and logs rather than repeating an action because the page appears slow.
+Builds, migrations, Deployments, certificate work, updates, and database provisioning are durable Tasks. Use operation history and bounded logs rather than repeating an action because a page appears slow. Starting a second conflicting mutation may be rejected, deferred, or create a more difficult recovery path.
+
+Retry only when the operation contract marks the work retryable or the previous attempt is known to be terminal. Cancellation is cooperative when the owner supports it. Force Cancel can stop Gateway from waiting on an abandoned operation, but it does not prove that the underlying runtime action never occurred. Refresh owner state and resolve any interrupted-operation marker before the next mutation.
+
+## Verification and recovery discipline
+
+For every meaningful change, define the expected post-condition before execution. Verify from the real consumer path: external DNS/TLS/HTTP for public traffic, an application query for a database binding, a pulled immutable digest and health check for a release, or reconnect and current capabilities for a Node update.
+
+When a change fails, preserve the Task ID, request ID, phase, bounded logs, desired state, and current owner state. Correct the narrow prerequisite and resume through Gateway. Roll back through the higher-level owner when a known-good revision, Deployment slot, Tag, or source artifact exists. Do not claim recovery until Gateway state and externally observed behavior agree.

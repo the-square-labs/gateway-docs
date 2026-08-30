@@ -8,7 +8,6 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-
 Gateway uses explicit scopes. A scope has a capability base and may include a resource suffix.
 
 ```text
@@ -18,6 +17,10 @@ databases:view:<database-id>
 nodes:details:<node-id>
 ```
 
+The capability base describes the permitted action. A resource suffix narrows that action to a Node or resource identity. Gateway evaluates the authenticated identity, effective group and direct grants, resource ownership, current product state, and plan entitlement at the backend operation boundary. Navigation visibility and disabled controls help users understand access, but they are not authorization.
+
+Permissions answer two separate questions: which action is allowed, and which resource is in scope. A user may be able to view a Container without seeing sensitive host details, or manage one Route without managing every Route on its Ingress Node. Prefer the smallest grant that supports the real workflow rather than giving broad access to avoid a missing screen.
+
 ## Design rules
 
 1. Grant through groups for normal access; reserve direct user additions for exceptions.
@@ -25,6 +28,16 @@ nodes:details:<node-id>
 3. Separate viewing from mutation, secret reveal, export, mounts, and destructive actions.
 4. Treat API tokens and OAuth grants as delegated authority, not as alternate administrators.
 5. Test the resulting user journey, including navigation visibility and direct API denial.
+
+Start with the job the identity must perform. List the read actions needed to discover and verify the target, the mutation actions needed to change it, and any separately protected data or destructive action. Then limit each grant to the exact resource, Node, or folder where the work belongs. Group membership is normally easier to review and revoke than many direct user grants.
+
+Do not grant a global management scope merely because the workflow crosses several resource types. A publication workflow may need limited access to a Pages Project, Domain, certificate, Route, and Build Worker status while still not needing general Node administration or private-key export. Test the complete workflow with the intended non-admin identity before production use.
+
+## Scope levels and visibility
+
+Global scopes apply across the permitted product area. Node-scoped grants restrict operations to resources on a specific managed Node when the resource contract supports that scope. Resource-scoped grants identify one durable Gateway resource. Folders can group supported resources and participate in access design, but moving a resource into a folder does not change its runtime ownership or network path.
+
+Resource visibility and host visibility are intentionally distinct. A user can operate an assigned workload without learning unrelated host inventory. Search, navigation, REST, MCP discovery, realtime subscriptions, and direct resource requests must all apply the same effective access rules. A hidden navigation item is not proof of denial; verify a direct request as well.
 
 ## Important separations
 
@@ -34,8 +47,28 @@ nodes:details:<node-id>
 - Viewing a resource does not imply viewing its host node details.
 - Route editing does not imply certificate private-key export.
 
+Other sensitive operations follow the same principle. Console or file access is separate from ordinary workload viewing. Archive export is separate from viewing files or resource configuration. Secret mutation does not imply secret reveal, and write-only values are replaced rather than retrieved. OAuth consent and MCP tool discovery do not add scopes that the owning user does not have.
+
+AI Workspace and remote MCP remain within normal Gateway authorization. AI Workspace access and Gateway Inference use are separate capabilities. Remote MCP requires its own OAuth resource and `mcp:use`; browser sessions, ordinary `gw_` API tokens, logging tokens, inference tokens, or OAuth tokens issued for another resource are not interchangeable MCP credentials.
+
+## Programmatic identities
+
+Use separate credentials for interactive administration, CI, monitoring, and third-party tools. An API token acts with delegated authority from its Gateway user. An OAuth client adds an explicit redirect and consent lifecycle. Remote MCP uses OAuth and exposes only tools compatible with the current identity and product state. A dedicated `gwi_` token belongs to the Gateway Inference data plane and cannot be used as a normal Gateway API credential.
+
+Create automation credentials with an owner, purpose, expected rotation, and known dependent system. Store secrets once in a secret manager, never in repository URLs, command history, screenshots, or logs. Test one permitted action and one denied action. If a token is lost, create a replacement and revoke the old value; masked secrets cannot be recovered from the UI.
+
 ## Revocation
 
-Session and WebSocket operations revalidate access. Revoking a group, token, or resource grant must stop new privileged actions and terminate protected streams where required. Historical audit records remain attributable after a user is blocked or deleted.
+Session, API, MCP, and protected WebSocket operations revalidate access. Revoking a group, token, or resource grant must stop new privileged actions and terminate protected streams where required. A previously loaded page or discovered tool does not preserve authority after revocation.
+
+When a user's responsibilities change, review group membership, direct grants, active sessions, API tokens, OAuth grants, and automation dependencies together. Blocking a user stops new use without erasing attribution. Deleting a user preserves historical audit records, and restoring a deleted record does not silently reactivate it.
+
+For credential rotation, create the replacement, update the dependent system, verify successful use, then revoke the old credential. After suspected disclosure, revoke first when operationally safe, inspect audit activity and request IDs, invalidate related sessions separately, and rotate any downstream secret that may have been exposed.
+
+## Verification and failure diagnosis
+
+Test permissions from the identity that will use them, not from an administrator account. Confirm the expected navigation and search visibility, read the target resource, perform one allowed operation, and attempt one clearly out-of-scope operation. For automation, also test validation failure and asynchronous Task follow-up.
+
+Interpret common failures precisely: `401` indicates missing or invalid authentication; `403` usually means a missing scope or entitlement; `404` can reflect resource visibility as well as absence; `409` indicates a lifecycle, quota, or current-state conflict; and `422` indicates invalid input. Do not solve an entitlement or lifecycle conflict by widening permissions.
 
 See [Scopes, tokens, and OAuth](/en/identity/scopes-tokens-oauth/) for implementation workflows.

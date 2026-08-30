@@ -8,18 +8,41 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-
 Secure Links connect supported Gateway-managed resources without turning the destination into a general public endpoint.
+
+The term covers narrowly scoped private connectivity with durable Gateway ownership. It does not imply that every private path uses the same runtime component. Ingress upstream links and managed database bindings have different owners, credentials, lifecycle records, and diagnostic signals.
+
+## Prerequisites and trust boundary
+
+Both endpoints must be supported Gateway-managed resources with stable identities, and their owning Nodes must be online with compatible capabilities. Relay must be healthy and reachable from participating Nodes. The caller needs permission to read the target resource and mutate the resource that owns the relationship.
+
+Select the application service or port that the process actually listens on. A published host port is not required merely to create a private link, and opening one does not repair a failed private path. Gateway does not create host firewall rules or make arbitrary networks reachable.
 
 ## Database bindings
 
-A managed database binding connects one standalone container, Deployment, or Compose service to one managed database. Gateway creates a separate engine identity for the binding and delivers only binding-specific connection material. The database owner credential is not exposed to the workload.
+A managed database binding connects one eligible Container, Deployment, or Compose service to one managed database. Gateway creates a separate engine user or role for the binding and grants only the required database permissions. It delivers binding-specific connection material to the workload; the database owner credential is not exposed.
 
-Recreating the workload keeps the binding available because authorization follows the stable Gateway resource identity. Deleting the binding retires its engine identity through a reconciled lifecycle; Gateway must not leave orphan roles or users.
+The target Docker daemon owns a TCP listener on a dedicated private bridge network and reconciles that listener as part of the binding's desired state. There is no per-binding database connector Container to restart, inspect, or replace. The listener and engine identity are separate but coordinated records, so one workload's credential rotation, permission change, or deletion does not silently alter another binding.
+
+Recreating the workload keeps the binding available because authorization follows the stable Gateway resource identity rather than a transient Container ID. Gateway reconciles the listener and injects current connection settings again. Deleting the binding removes the listener relationship and retires its engine identity through one recorded lifecycle; the normal path must not leave orphan roles or users.
+
+For a failed database binding, check the managed database and Database Node, then the target Docker Node and workload, binding desired state, daemon-owned listener, engine identity and permissions, and finally application configuration. Do not delete the role, bridge network, or listener manually as a generic repair step. That can turn a recoverable mismatch into an orphaned identity or failed future reconciliation.
 
 ## Ingress upstream links
 
-Routes and Additional Routes can target supported Docker resources through a Route-owned Secure Link. Advanced configurations can use separately managed additional bindings. Route-owned bindings are visible for diagnosis but cannot be deleted independently from their owner.
+Routes and Additional Routes can target supported Docker resources through a Secure Link. Gateway validates the selected resource and application port, creates the relationship, and reconciles a Gateway-owned connector through Relay. The connector used for nginx-to-workload traffic is a real runtime component, but it remains outside ordinary user lifecycle APIs.
+
+A link created by a managed Route belongs to that Route. It is visible for diagnosis but cannot be deleted independently; disabling the Route preserves its configuration and relationship, while deleting the Route retires the owned binding after reconciliation. Workload restart or recreation keeps the link because the Route targets the stable Gateway resource. Deployment promotion and Compose revision changes resolve the active runtime behind the same higher-level identity.
+
+Advanced nginx configurations can use separately managed additional bindings with their own lifecycle. Do not confuse those with Route-owned bindings. Before deleting a user-managed binding, identify every configuration that references it.
+
+## Normal flow and verification
+
+For an Ingress upstream, choose the managed target in the Route or Additional Route editor, select the service or application port and protocol, save, and wait for both Secure Link reconciliation and nginx configuration validation. Then verify the target identity, connector state, Route health, and a real external request.
+
+For a managed database, create the binding from the eligible workload and database, choose least-privilege access, wait for the engine identity and daemon listener, apply the workload configuration when required, and execute a real application query. Confirm binding telemetry and both workload and database logs.
+
+Verification should prove the intended path rather than only the existence of a record. For Ingress, inspect Relay availability, both Node connections, setup latency, active streams, throughput, completion health, admission rejects, nginx logs, and application behavior. For database bindings, inspect database readiness, listener reconciliation, engine-principal state, application connectivity, and current workload configuration.
 
 ## What Secure Links do not do
 
@@ -28,6 +51,10 @@ Routes and Additional Routes can target supported Docker resources through a Rou
 - They do not open host firewalls automatically.
 - They do not remove the need for application-level authentication where the target protocol requires it.
 
-## Operational checks
+They also do not transfer ownership of the target resource, make unsupported workloads portable, or authorize a user who lacks access to either side. A Secure Link is not a reason to expose daemon control interfaces, database owner ports, or internal connector credentials.
 
-For ingress links, monitor Secure Link connector state together with Relay availability, setup latency, active streams, throughput, completion health, and admission rejects. For managed database bindings, monitor the daemon-owned listener and binding reconciliation state instead of looking for a connector container. On failure, diagnose identity and desired-state reconciliation before recreating resources manually.
+## Failure and safe recovery
+
+If an Ingress Route saves but traffic fails, check Route enabled and maintenance state, nginx revision, Relay, Ingress and Docker Node connectivity, target runtime and port, connector admission, then application logs and protocol behavior. Do not publish an internal workload port as an undocumented workaround.
+
+If a Node or Relay interruption occurs, restore connectivity and wait for fresh capability and desired-state reconciliation before replacing identities. Preserve operation history and request IDs. If deletion is interrupted, keep the durable owner or binding record so Gateway can complete cleanup. Manual deletion of Gateway-owned connectors, networks, listeners, or engine principals is an exceptional recovery action requiring a coordinated procedure, not a first response.

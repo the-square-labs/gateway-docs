@@ -8,12 +8,15 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-
 Gateway resources have stable identities that are distinct from mutable runtime names or container IDs.
 
 ## Stable identities
 
-Permissions, bindings, source settings, health configuration, and migration state attach to a Gateway resource identity. Recreating a managed workload preserves the intended identity; deleting it explicitly removes associated grants so a later same-name resource does not inherit access accidentally.
+Permissions, bindings, source settings, health configuration, operation history, and migration state attach to a Gateway resource identity. Runtime names, process IDs, container IDs, IP addresses, and placement can change without creating a new product resource. This distinction lets Gateway recreate or move eligible runtime objects while preserving the relationships that operators intentionally configured.
+
+Recreating a managed workload preserves its Gateway identity and therefore keeps eligible Route, binding, grant, and source relationships. Duplicating a workload creates a separate resource with separate access and lifecycle history. Explicit deletion removes grants owned by the deleted resource, so a later resource with the same display name does not inherit authority accidentally.
+
+Use stable resource and operation IDs when correlating API responses, Tasks, events, logs, and audit records. Names are for operators and may change or collide across Nodes or folders. A name match is not sufficient evidence that a newly observed runtime object is the resource Gateway previously managed.
 
 ## Ownership boundaries
 
@@ -24,12 +27,32 @@ Permissions, bindings, source settings, health configuration, and migration stat
 - A Route or Additional Route can own its Secure Link binding.
 - Gateway-owned internal containers are outside user lifecycle APIs.
 
-These boundaries prevent a lower-level API from bypassing the higher-level lifecycle that created the resource.
+These boundaries prevent a lower-level API from bypassing the higher-level lifecycle that created the resource. A child can be visible for diagnosis without becoming independently mutable. For example, Deployment slots are inspected through the Deployment, Compose services through the Compose Project, and a Route-owned Secure Link through the Route that created it.
+
+Ownership does not automatically spread to referenced dependencies. A Route that uses a reusable certificate or Access List does not own and delete those resources. A workload placed on a Node does not own the Node. A Pages Route points to a Tag without owning the immutable Deployment selected by that Tag. Before deletion or migration, inspect both owned children and referenced dependencies because their cleanup rules are different.
+
+Gateway also creates internal runtime objects used to implement product behavior. Their labels, runtime names, networks, volumes, credentials, connectors, and task records are implementation details unless a supported action explicitly exposes them. Direct deletion or renaming through host Docker tools can break reconciliation, routing, private connectivity, or rollback.
+
+## Desired, reported, and runtime state
+
+The product resource keeps durable desired state in Gateway. Its owning daemon reports inventory, capabilities, health, and operation results. The host runtime contains the actual process, configuration, storage, and network attachment. These views can temporarily disagree during an operation, restart, disconnection, or failure.
+
+A successful save means the desired state was accepted, not necessarily that the owner applied it. Follow the durable Task and wait for a fresh reported state. If a Node is offline, Gateway may show sanitized last-known data, but it blocks mutations that require current ownership or capability. Restore the owner and allow reconciliation before deciding that a missing runtime object should be recreated manually.
 
 ## Folders and navigation
 
-Folders organize resources and can participate in scoped access. They do not change runtime networking or ownership. Search and command-palette results should resolve to the canonical resource page rather than to implementation children.
+Folders organize supported resources and can participate in scoped access. They do not change runtime networking, placement, or lifecycle ownership. Moving or grouping a resource in navigation does not move its runtime or transfer its dependent resources.
+
+Search and command-palette results resolve to the canonical Gateway resource page rather than to implementation children. This keeps actions, audit history, related resources, and recovery controls anchored to the stable identity that owns the lifecycle.
 
 ## External resources
 
-Externally created Compose Projects can be discovered from canonical Docker labels. They remain read-only until adopted with complete YAML. External databases remain operator-managed; Gateway stores and tests their connection without claiming lifecycle ownership.
+Externally created Compose Projects can be discovered from canonical Docker labels. Gateway can show their services, state, health, logs, and inventory, but external projects remain read-only until an operator explicitly adopts them with complete YAML and the required permissions. Adoption transfers future management to Gateway only after validation and preparation of an immutable revision; Gateway does not trust a label-supplied host path as source configuration.
+
+External databases remain operator-managed. Gateway stores their connection settings encrypted, tests connectivity, and can expose permitted tools, but it does not own engine upgrades, storage, backups, availability, or deletion. Similarly, global Docker images and intentionally external or shared Compose resources remain outside project-owned child cleanup.
+
+## Safe change and deletion
+
+Before changing a resource, identify its owner, owned children, referenced dependencies, active operation, rollback candidate, and persistent data. Make one lifecycle change through the highest-level owner and verify the resulting health, relationships, and reported state. Do not mix direct host changes with an active Gateway operation.
+
+Deletion is not the reverse of creation. It may remove grants, engine identities, Route-owned links, revision history, or rollback slots while intentionally retaining reusable certificates, Access Lists, external resources, or persistent volumes. Read the confirmation, detach or migrate dependencies, preserve required data, and follow the deletion Task through cleanup. If cleanup is interrupted, retain the Gateway record and use its operation state for recovery instead of force-removing child objects.
