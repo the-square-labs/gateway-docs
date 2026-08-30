@@ -54,8 +54,13 @@ document.addEventListener('keydown', (event) => {
 	openImage(image);
 });
 
-for (const image of document.querySelectorAll(imageSelector)) {
-	image.tabIndex = 0;
-	image.setAttribute('role', 'button');
-	image.setAttribute('aria-label', image.alt ? `Expand image: ${image.alt}` : 'Expand image');
+function prepareImages() {
+	for (const image of document.querySelectorAll(imageSelector)) {
+		image.tabIndex = 0;
+		image.setAttribute('role', 'button');
+		image.setAttribute('aria-label', image.alt ? `Expand image: ${image.alt}` : 'Expand image');
+	}
 }
+
+prepareImages();
+document.addEventListener('astro:page-load', prepareImages);

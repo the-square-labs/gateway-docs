@@ -56,7 +56,7 @@ The public installation normally needs inbound HTTP/HTTPS for the user interface
 
 Outbound access depends on enabled features. Typical destinations include identity providers, ACME and DNS providers, source-control systems, container registries, release and license services, email/webhook endpoints, SIEM receivers, and configured AI providers. Build Workers may need a different and more restrictive egress policy than the control plane.
 
-Review [Ports and network](../reference/ports-and-network.mdx) before changing firewalls. Validate paths from the actual host and network namespace that will initiate the connection; a successful request from an administrator laptop is not evidence that Gateway or a node can reach the same endpoint.
+Review [Ports and network](/en/reference/ports-and-network/) before changing firewalls. Validate paths from the actual host and network namespace that will initiate the connection; a successful request from an administrator laptop is not evidence that Gateway or a node can reach the same endpoint.
 
 ## Node roles and trust boundaries
 
