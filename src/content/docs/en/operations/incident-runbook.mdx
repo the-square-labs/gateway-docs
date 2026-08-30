@@ -37,6 +37,8 @@ For Deployments, roll back to the previous healthy slot. For Pages, move the Tag
 
 Check Relay, both nodes, database health, binding desired state, the target daemon's listener status, and the engine principal. Retry reconciliation before manual identity changes; there is no per-binding database connector container to restart or replace.
 
+Use the layer-by-layer checks in [Application database bindings](/en/databases/bindings/) and preserve the failed Task before retrying.
+
 ## Closeout
 
 Confirm recovery from an external client, clear maintenance intentionally, document the root cause and detection gap, and create follow-up work for every temporary mitigation.
@@ -46,6 +48,8 @@ Confirm recovery from an external client, clear maintenance intentionally, docum
 Check the Gateway container/process, PostgreSQL, Redis, persistent volumes, disk pressure, migrations, and application logs. Preserve the existing encryption keys and database before attempting a replacement instance. If customer workloads continue, avoid broad host changes while restoring the control plane.
 
 After Gateway returns, verify sign-in, decryption, Relay health, background jobs, update discovery, notifications, and fresh node snapshots. Do not assume daemons reconciled merely because the Dashboard loads.
+
+Use [Updates and backups](/en/operations/updates-backups/) before restoring a replacement instance or changing persistent state.
 
 ## Ingress outage
 
@@ -57,11 +61,15 @@ Inspect the durable Task, owning Node connection, daemon operation history, runt
 
 If Force Cancel is available, understand whether it cancels only Gateway tracking or also dispatches cancellation to the owner. After cancellation, refresh runtime state and clear any interrupted-operation marker only through the supported reconciliation path.
 
+Use [Tasks, events, and audit](/en/reference/tasks-and-audit/) to distinguish accepted, running, cancelled, and completed work, then continue with the owning [Docker resource](/en/docker/overview/).
+
 ## Database unavailable
 
 Separate engine health, storage, direct publication, managed binding, and application-query failures. Verify the database Node, engine container, storage image/mount, monitoring snapshot, Relay path, target Docker Node, daemon-owned listener, binding identity, and application configuration.
 
 Do not delete the database or engine principal as a diagnostic step. Preserve storage and operation history, then retry the narrow failed reconciliation.
+
+Continue with [Database operations](/en/databases/operations/) for engine, storage, backup, and restore checks, or [Application database bindings](/en/databases/bindings/) when only the private application path is affected.
 
 ## Communication and evidence
 

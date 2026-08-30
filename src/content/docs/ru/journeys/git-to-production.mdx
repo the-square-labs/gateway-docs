@@ -1,5 +1,5 @@
 ---
-title: Из Git в production
+title: Из Git в рабочую среду
 description: Подключите репозиторий, соберите в изоляции, одобрите неизменяемый артефакт и безопасно разверните его.
 section: Сквозные сценарии
 order: 2
@@ -8,91 +8,97 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-Git-backed delivery связывает проверенную source revision с immutable artifact, а затем — с lifecycle владеющего resource Gateway. Source integration доказывает, что разрешено читать; Build Worker владеет isolated execution; registry хранит artifact; Container, Deployment, Compose Project или Pages Project решает, попадёт ли он к пользователям.
+Этот сценарий ведёт от проверенной ревизии Git к неизменяемому артефакту и затем к жизненному циклу владеющего ресурса Gateway. До начала назначьте владельца репозитория, Build Worker, целевой Node и правило отката. Если выполняете этот процесс впервые, сначала прочитайте [сборки из Git](/ru/docker/git-builds/) и [Deployments](/ru/docker/deployments/). Интеграция источника доказывает, что разрешено читать, Build Worker отвечает за изолированную сборку, реестр хранит артефакт, а Container, Deployment, Compose Project или Pages Project решает, попадёт ли он к пользователям.
 
-Это важно для release governance: право собирать repository не означает право менять production Route, а успешный build не равен успешному deployment.
+Это разделение важно для управления релизами: право собирать репозиторий не даёт права менять Route рабочей среды, а успешная сборка не означает успешное развёртывание.
 
-Git-source delivery доступна только при наличии нужного plan entitlement. До проектирования unattended delivery подтвердите, что target resource, integration type, automatic build и automatic deploy поддерживаются выбранным тарифным планом.
+Доставка из Git доступна только при соответствующем праве по тарифу. До проектирования полностью автоматического процесса подтвердите, что целевой ресурс, тип интеграции, автоматическая сборка и автоматическая публикация поддерживаются выбранным тарифом.
 
-## Определите ownership и release policy
+## Определите владение и политику релиза
 
-До подключения production source согласуйте:
+До подключения исходного кода рабочей среды согласуйте:
 
-- integration и repository identity, которые разрешено использовать Gateway;
-- allowlist repositories и branches;
-- владельцев source settings и Build Secrets;
-- запускают ли pushes builds автоматически;
-- может ли approved build deploy автоматически или требует promotion;
-- vulnerability policy, блокирующую artifact;
-- точные user-facing checks успешного deployment;
-- владельца rollback и cancellation in-progress operation.
+- интеграцию и идентичность репозитория, которые разрешено использовать Gateway;
+- разрешённые репозитории и ветки;
+- владельцев настроек источника и Build Secrets;
+- должны ли изменения автоматически запускать сборки;
+- может ли одобренная сборка развёртываться автоматически или требует продвижения;
+- политику уязвимостей, блокирующую артефакт;
+- точные проверки пользовательского пути, определяющие успешное развёртывание;
+- владельца отката и отмены выполняющейся операции.
 
-Разделяйте **automatic build** и **automatic deploy**. Automatic build создаёт candidate artifact. Automatic deploy изменяет running resource или Pages Tag и несёт другой риск.
+Разделяйте автоматическую сборку и автоматическую публикацию. Сборка создаёт версию-кандидат. Публикация изменяет работающий ресурс или Pages Tag и несёт другой риск.
 
-## Подготовьте execution boundary
+## Подготовьте границу выполнения
 
-Настройте поддерживаемую integration GitLab, GitHub, generic Git или External SSH в **Settings > Integrations**. Выдайте connector только доступ к repositories, нужным для discovery и clone. Не встраивайте credentials в repository URL.
+Настройте поддерживаемую интеграцию GitLab, GitHub, generic Git или External SSH в **Settings > Integrations**. Выдайте коннектору доступ только к репозиториям, необходимым для обнаружения и клонирования. Не встраивайте учётные данные в URL репозитория.
 
-Зарегистрируйте dedicated Build Worker и убедитесь, что он **Online** и сообщает execution, dedicated-runtime и resource-enforcement capabilities для build admission. Build Worker использует dedicated BuildKit/containerd services и не предоставляет builder profile обычный Docker Engine socket.
+Зарегистрируйте выделенный Build Worker, убедитесь, что он имеет состояние **Online** и сообщает возможности `execution`, `dedicated-runtime` и `resource-enforcement`, необходимые для допуска сборки. Build Worker использует выделенные службы BuildKit/containerd и не открывает профилю `builder` обычный сокет Docker Engine.
 
-Считайте внешний host Build Worker или unprivileged system container security boundary. Он обрабатывает repository-controlled input и не должен содержать unrelated workloads, cloud instance credentials, deployment keys или control-plane secrets. Egress profile должен соответствовать build: public dependency downloads могут требоваться, но metadata, private и control-plane ranges должны оставаться denied.
+Считайте внешний хост Build Worker или непривилегированный системный Container границей безопасности. Он обрабатывает данные под контролем репозитория и не должен содержать несвязанные рабочие нагрузки, учётные данные облачного экземпляра, ключи развёртывания или секреты контура управления. Профиль исходящего трафика должен соответствовать сборке: загрузка публичных зависимостей может быть нужна, но диапазоны служебных адресов метаданных, приватной сети и контура управления должны оставаться запрещёнными.
 
-## Подключите resource
+## Подключите ресурс
 
-1. Создайте или откройте target Container, Deployment, Compose Project или Pages Project.
-2. Выберите режим **Repository** и approved integration, repository и branch.
-3. Настройте build context и Dockerfile либо bounded Compose file и поддерживаемые `build` fields. Для Pages выберите package-manager discovery, build script, Node version и artifact directory.
-4. Добавьте source-scoped Build Secrets только если build действительно в них нуждается.
-5. Отдельно примите решения automatic build и automatic deploy.
-6. Сохраните source configuration и проверьте resolved repository path до запуска production candidate.
+1. Создайте или откройте целевой Container, Deployment, Compose Project или Pages Project.
+2. Выберите режим **Repository**, одобренную интеграцию, репозиторий и ветку.
+3. Настройте контекст сборки и Dockerfile либо ограниченный файл Compose и поддерживаемые поля `build`. Для Pages выберите обнаружение менеджера пакетов, скрипт сборки, версию Node и каталог артефакта.
+4. Добавьте Build Secrets с областью источника, только если сборка действительно в них нуждается.
+5. Отдельно примите решения об автоматической сборке и автоматической публикации.
+6. Сохраните конфигурацию источника и проверьте разрешённый путь репозитория до запуска кандидата рабочей среды.
 
-Build Secrets передаются через secret mechanism BuildKit и редактируются в поддерживаемых logs. Это не обычные build arguments: никогда не копируйте их в `ARG`, `ENV`, committed files, image labels, package-manager URLs или shell tracing. Malicious Dockerfile всё равно может раскрыть secret, поэтому repository review остаётся частью boundary.
+Build Secrets подключаются через механизм секретов BuildKit и маскируются в поддерживаемых журналах. Это не обычные аргументы сборки: не копируйте их в `ARG`, `ENV`, файлы репозитория, метки образа, URL менеджера пакетов или трассировку командной оболочки. Вредоносный Dockerfile всё равно способен раскрыть секрет, поэтому проверка репозитория остаётся частью границы безопасности.
 
-## Соберите и одобрите artifact
+## Соберите и одобрите артефакт
 
-Поставьте build в очередь и следите за durable job record. Проверьте:
+Поставьте сборку в очередь и следите за её долговременной записью. Проверьте:
 
-- resolved branch и exact commit;
-- assigned Build Worker и target platform;
-- build logs с ожидаемым secret redaction;
-- vulnerability и policy results;
-- produced immutable digest или Pages artifact;
-- cancellation, retry или superseded status;
-- owning resource, который использует artifact.
+- разрешённую ветку и точный коммит;
+- назначенный Build Worker и целевую платформу;
+- журналы сборки с ожидаемым маскированием секретов;
+- результаты проверки уязвимостей и политики;
+- созданный неизменяемый дайджест или артефакт Pages;
+- состояние отмены, повтора или замены другой сборкой;
+- владеющий ресурс, который будет использовать артефакт.
 
-![Завершённая Git-сборка с commit, платформой, Build Worker и выводом артефакта](/screenshots/product-tour/build-details.png)
+![Завершённая Git-сборка с коммитом, платформой, Build Worker и результатом](/screenshots/product-tour/build-details.png)
 
-Build можно выпускать только при approved policy decision и наличии artifact в настроенном registry или Pages deployment flow. Не подменяйте отсутствующий approved digest mutable image tag при outage worker или registry.
+Сборка готова к релизу только после одобрения политикой и появления артефакта в настроенном реестре или процессе Deployment Pages. Если сбой Build Worker или реестра не позволяет создать одобренный дайджест, не подменяйте его изменяемым tag образа.
 
-## Batch behavior Compose
+## Пакетное поведение Compose
 
-Repository Compose file может создать отдельный child build для каждого service с поддерживаемым `build` section. Каждый Build Worker выполняет один build одновременно, поэтому при ограниченной capacity project может обрабатываться последовательно.
+Файл Compose из репозитория может создавать отдельную дочернюю сборку для каждой службы с поддерживаемой секцией `build`. Каждый Build Worker выполняет одну сборку за раз, поэтому при ограниченной ёмкости проект может обрабатываться последовательно.
 
-Gateway ждёт approval всех ожидаемых child artifacts до создания digest-pinned immutable Compose revision. Failed, rejected, cancelled или superseded child блокирует весь rollout. Это намеренно: применение смеси старых и новых service images рассинхронизирует source revision и runtime revision.
+Gateway ждёт одобрения всех ожидаемых дочерних артефактов до создания неизменяемой ревизии Compose с закреплёнными дайджестами. Неуспешная, отклонённая, отменённая или заменённая дочерняя сборка блокирует весь выпуск. Это намеренно: смесь старых и новых образов служб привела бы к расхождению ревизии источника и среды выполнения.
 
-Runtime-only networks и managed database overlays могут добавляться в deployed revision без изменения authored Compose source. Проверяйте финальную revision, а не предполагайте, что source file описывает каждое Gateway-owned runtime attachment.
+Сети, используемые только в среде выполнения, и наложения управляемых баз данных могут добавляться в развёрнутую ревизию без изменения исходного файла Compose. Проверяйте итоговую ревизию и не считайте, что исходный файл описывает каждую привязку среды выполнения, принадлежащую Gateway.
 
-## Deploy и verification
+## Развёртывание и проверка
 
-Продвигайте approved artifact через lifecycle владельца:
+Продвигайте одобренный артефакт через жизненный цикл владельца:
 
-- Container использует controlled recreate;
-- Deployment — health-checked blue/green rollout;
-- Compose Project создаёт и применяет immutable revision;
-- Pages Project создаёт immutable Deployment и перемещает нужный Tag.
+- Container использует контролируемое **Recreate**;
+- Deployment — сине-зелёный выпуск с проверкой состояния;
+- Compose Project создаёт и применяет неизменяемую ревизию;
+- Pages Project создаёт неизменяемый Deployment и перемещает нужный Tag.
 
-Проверьте deployed digest или commit, runtime health, logs, public Route и database binding. Для Pages проверьте HTML, assets, client-visible runtime configuration и selected Tag. Для Docker workloads подтвердите, что target Node загрузил approved digest, а не похожий tag.
+Проверьте развёрнутый дайджест или коммит, состояние среды выполнения, журналы, публичный Route и каждую привязку базы данных. Для Pages проверьте HTML, статические ресурсы, видимую клиенту конфигурацию среды выполнения и выбранный Tag. Для рабочих нагрузок Docker убедитесь, что целевой Node загрузил одобренный дайджест, а не похожий tag.
 
-До promotion запишите last known-good artifact. Source rollback должен быть явным: redeploy предыдущий approved digest или верните Pages Tag. Повторный rebuild той же branch может создать другой candidate из-за изменившихся dependencies и не эквивалентен known-good artifact.
+До продвижения запишите последний заведомо исправный артефакт. Откат источника должен быть явным: снова разверните предыдущий одобренный дайджест или верните Pages Tag. Повторная сборка той же ветки позднее может создать другой кандидат из-за изменившихся зависимостей и не равна использованию заведомо исправного артефакта.
 
-## Сбой и recovery
+## Сбой и восстановление
 
-**Source discovery не работает:** проверьте connector authorization, repository allowlist, branch и application root. Не расширяйте integration на всю organization без review.
+**Источник не обнаруживается:** проверьте авторизацию коннектора, список разрешённых репозиториев, существование ветки и корень приложения. Не расширяйте интеграцию на всю организацию без проверки.
 
-**Worker не принимает job:** проверьте worker status и capabilities, registry writability, plan entitlement и egress policy. Existing deployments остаются valid; дождитесь безопасной build capacity вместо обхода immutable artifact path.
+**Ни один Build Worker не принимает задание:** проверьте его состояние и необходимые возможности, возможность записи в реестр, право по тарифу и политику исходящего трафика. Существующие развёртывания остаются действительными; дождитесь безопасной ёмкости сборки вместо обхода пути неизменяемого артефакта.
 
-**Policy отклоняет artifact:** изучите findings и threshold. Исправьте проблему или измените policy через утверждённый security process; не помечайте тот же digest как trusted вручную.
+**Политика отклоняет артефакт:** откройте найденные проблемы и порог политики. Исправьте их или явно измените политику через утверждённый процесс безопасности; не помечайте тот же дайджест доверенным вручную.
 
-**Deployment падает после успешного build:** сохраните build record. Диагностируйте owning resource, health check, Node capacity, secrets и external dependencies. Build success доказывает создание artifact, но не runtime correctness.
+**Deployment завершается ошибкой после успешной сборки:** сохраните запись сборки. На странице владеющего ресурса проверьте Task, проверку состояния, ёмкость Node, секреты и внешние зависимости. Успешная сборка доказывает создание артефакта, но не его корректную работу.
 
-**Automatic delivery создаёт риск:** сначала отключите automatic deploy, оставив automatic builds при необходимости. Так candidate generation сохраняется без изменения production на каждое source event.
+**Автоматическая доставка создаёт риск:** сначала отключите автоматическую публикацию, при необходимости оставив автоматическую сборку. Так новые версии продолжат создаваться, но каждое изменение источника не будет сразу менять рабочую среду.
+
+| Симптом | Сначала проверьте | Подробная страница |
+| --- | --- | --- |
+| Сборка не начинается | Доступ к Git, Task и Build Worker | [Сборки из Git](/ru/docker/git-builds/) |
+| Новый Deployment не готов | Проверку состояния, журналы и предыдущую версию | [Deployments](/ru/docker/deployments/) |
+| Публикация не отвечает | Route и ответ приложения после отката | [Публикация приложения](/ru/journeys/publish-application/) |

@@ -3,6 +3,9 @@ dist/
 # generated types
 .astro/
 
+# local workflow state
+.workflow/
+
 # dependencies
 node_modules/
 

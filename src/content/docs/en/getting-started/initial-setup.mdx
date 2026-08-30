@@ -48,7 +48,7 @@ Successful completion consumes the bootstrap path. The setup code is not an ongo
 
 **Passkeys** are enrolled after the primary account exists and can act as a strong MFA-capable factor. Register more than one suitable authenticator when policy permits and document account recovery if a device is lost.
 
-Gateway does not implement SCIM. Authentication through OIDC does not automatically mean that users or groups are provisioned and deprovisioned through SCIM. Plan user lifecycle around the supported Gateway administration and identity contracts.
+Gateway does not support SCIM yet. SCIM provisioning is planned, but no release date is guaranteed. Until it is available, manage users and groups in Gateway or automate the supported administration flow through the REST API with a scoped OAuth client if your identity system can call external APIs. OIDC sign-in proves identity; it does not provision or remove Gateway access by itself.
 
 ## Establish the administrative baseline
 

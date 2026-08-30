@@ -10,6 +10,8 @@ lastReviewed: 2026-08-30
 
 This journey gives an application private database access without publishing the database port and without sharing the database owner credential. Gateway creates a durable **binding**—the managed relationship between one workload and one database—and provisions a dedicated engine identity for that relationship.
 
+If this is your first database workflow, read [Databases overview](/en/databases/overview/), prepare a [managed database](/en/databases/managed-databases/), and review how [application bindings](/en/databases/bindings/) behave before creating production data.
+
 The platform owner controls connectivity, the database owner controls data lifecycle and backup, and the application owner receives only the connection material needed by that workload. Deleting application access and deleting the database are intentionally different operations.
 
 ## Decide whether a managed database is appropriate
@@ -85,3 +87,13 @@ If the binding is unhealthy, first identify which layer is unavailable: applicat
 Prefer reconciliation or a targeted retry after correcting the root cause. Do not delete Gateway-owned networks, listeners, or engine users manually; that can turn a recoverable runtime outage into an ownership mismatch or orphaned cleanup problem. Do not publish the database port merely to bypass a private-link incident.
 
 If application access must be removed, delete the binding and verify that its engine principal is revoked. If the database itself must be deleted, confirm backup/retention requirements and use the managed database deletion flow, understanding that its managed storage is removed. Keep those two decisions separate in change approval.
+
+### Diagnostic map
+
+| Symptom | Check first | Detailed guide |
+| --- | --- | --- |
+| Database never reaches **Ready** | Database Node, storage preflight, engine version, provisioning Task | [Managed databases](/en/databases/managed-databases/) |
+| Binding is unhealthy | Database, both Nodes, Relay, listener, and engine identity | [Application database bindings](/en/databases/bindings/) |
+| Application is denied | Connection values, TLS mode, and the binding-specific principal | [Database operations](/en/databases/operations/) |
+| Binding fails after a Node restart | Node freshness and reconciliation history | [Node updates and offline behavior](/en/nodes/updates-and-offline-behavior/) |
+| Direct access is required | Published TLS port and network restrictions | [Ports and network paths](/en/reference/ports-and-network/) |

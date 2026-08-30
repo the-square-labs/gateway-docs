@@ -17,7 +17,7 @@ Use groups as the normal permission boundary. Keep a small, auditable administra
 
 Impersonation is an administrative support flow and must remain distinguishable in session purpose and audit records. Stop impersonation to restore the original administrator session; do not issue normal API tokens from an impersonated session.
 
-Gateway does not provide SCIM. Document the organization's manual or external provisioning process accordingly.
+Gateway does not provide SCIM yet. SCIM support is planned; until it arrives, use the supported administration API with scoped OAuth automation when your identity system can call external APIs, or maintain a documented manual process.
 
 ![Group editor with inherited permissions and individually selected scopes](/screenshots/product-tour/group-scopes.png)
 
@@ -49,9 +49,9 @@ Keep the administrator group small and maintain a documented break-glass path. T
 
 Use impersonation only for a bounded support investigation. The session must remain visibly marked and auditable. Do not change credentials, create durable administrator tokens, or perform unrelated work while impersonating another user. Stop impersonation before returning to normal administration.
 
-## Provisioning limitation
+## Provisioning before SCIM
 
-Gateway does not currently provide SCIM provisioning. Maintain an external joiner/mover/leaver checklist and reconcile users and groups manually or through supported API/OAuth automation until SCIM is released.
+SCIM provisioning is not available yet and no release date is guaranteed. Until it is released, keep a joiner/mover/leaver checklist and reconcile users and groups manually or through supported REST API and OAuth automation. Give the automation client only the user and group scopes it needs, make requests idempotent, and verify one expected grant and one expected denial after every access change.
 
 ## Recovery and lockout prevention
 

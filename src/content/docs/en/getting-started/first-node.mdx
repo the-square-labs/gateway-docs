@@ -81,3 +81,7 @@ If enrollment does not complete, keep the pending Node while diagnosing. Check t
 Do not remove certificate pinning to make the connection succeed. That converts a configuration problem into an identity risk. Correct **Settings > Gateway > General** and generate a fresh command if the public or local gRPC target is wrong.
 
 A pending Node can be deleted and recreated when you deliberately want a new enrollment identity. Never reuse an old one-time token. After enrollment, deletion has role-specific consequences: a Relay with active assignments must be drained, and a Node that owns workloads or data should be decommissioned through the relevant workload or database runbook rather than simply removed from inventory.
+
+## Next step
+
+With an Ingress or Docker Node online, continue with [Publish your first Route](/en/getting-started/first-route/). For role-specific production checks, use [Node roles and installation](/en/nodes/roles-and-installation/) and [Node updates and offline behavior](/en/nodes/updates-and-offline-behavior/).

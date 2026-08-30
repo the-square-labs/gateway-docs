@@ -6,6 +6,66 @@ const contentRoot = join(root, 'src', 'content', 'docs');
 const publicRoot = join(root, 'public');
 const locales = ['en', 'ru'];
 const errors = [];
+const untranslatedRussianProseTerms = [
+	'acceptance',
+	'access',
+	'application',
+	'artifact',
+	'backup',
+	'binding',
+	'build',
+	'capability',
+	'capabilities',
+	'cleanup',
+	'control',
+	'credentials',
+	'daemon',
+	'data',
+	'deployment',
+	'endpoint',
+	'environment',
+	'evaluator',
+	'evidence',
+	'external',
+	'health',
+	'healthy',
+	'host',
+	'hostname',
+	'identity',
+	'image',
+	'inventory',
+	'lifecycle',
+	'listener',
+	'logs',
+	'managed',
+	'network',
+	'owner',
+	'ownership',
+	'path',
+	'policy',
+	'private',
+	'production',
+	'provider',
+	'public',
+	'recovery',
+	'registry',
+	'release',
+	'resource',
+	'resources',
+	'retry',
+	'rollback',
+	'runtime',
+	'service',
+	'source',
+	'state',
+	'status',
+	'storage',
+	'upstream',
+	'volume',
+	'workload',
+	'workloads',
+	'workflow',
+];
 
 function filesUnder(directory) {
 	if (!existsSync(directory)) return [];
@@ -26,6 +86,15 @@ function contentFiles(locale) {
 function frontmatter(source) {
 	const match = source.match(/^---\n([\s\S]*?)\n---/);
 	return match?.[1] ?? '';
+}
+
+function proseOnly(source) {
+	return source
+		.replace(/^---\n[\s\S]*?\n---/, '')
+		.replace(/```[\s\S]*?```/g, '')
+		.replace(/`[^`]*`/g, '')
+		.replace(/\]\([^)]+\)/g, ']')
+		.replace(/<[^>]+>/g, '');
 }
 
 function contentTargetExists(absolute, locale, target) {
@@ -90,6 +159,16 @@ for (const locale of locales) {
 		if (/\/(Users|home)\//.test(source)) errors.push(`${locale}/${file}: contains a local filesystem path`);
 		if (/\b(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)\d{1,3}\.\d{1,3}\b/.test(source)) {
 			errors.push(`${locale}/${file}: contains a private-network address`);
+		}
+
+		if (locale === 'ru') {
+			const prose = proseOnly(source);
+			for (const term of untranslatedRussianProseTerms) {
+				const matches = prose.match(new RegExp(`\\b${term}\\b`, 'g'));
+				if (matches) {
+					errors.push(`${locale}/${file}: contains untranslated prose term "${term}" (${matches.length})`);
+				}
+			}
 		}
 	}
 }

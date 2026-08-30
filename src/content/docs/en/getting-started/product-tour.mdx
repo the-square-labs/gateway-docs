@@ -8,9 +8,9 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-Gateway is an infrastructure control plane: it gives teams one governed place to publish services, operate distributed Nodes, manage application runtimes and databases, and keep the resulting actions visible and attributable. The interface is organized around operational outcomes rather than a raw list of servers.
+Good Gateway brings the work around an application into one understandable flow: build it from source, run it on the right server, connect private data, publish a secure domain, and give each teammate only the access they need. Instead of making users assemble these steps from unrelated server tools, Gateway keeps the resources, operations, and results connected.
 
-For an evaluator, the most important distinction is ownership. Gateway coordinates resources that it manages, but the underlying hosts, networks, source repositories, DNS zones, backup destinations, and external providers remain owned by your organization. A healthy product evaluation should show both: convenient central control and explicit boundaries where a human or external system is still responsible.
+You can begin in the web interface without learning every internal component. As your needs grow, the same resources remain available through the Operations Console, REST API, OAuth, MCP, and AI Workspace. The sections below show what each area helps you achieve and where to look when the result is not what you expected.
 
 ![Gateway Dashboard and primary product navigation](/screenshots/product-tour/dashboard-overview.png)
 
@@ -20,7 +20,7 @@ The Dashboard summarizes resource counts, health, recent activity, pinned resour
 
 It is not a universal observability screen. Detailed metrics and logs live on the relevant Node, Route, workload, database, Pages Project, or logging environment. A yellow navigation indicator can represent a warning outside the small healthy subset visible on the Dashboard, so open the linked detail rather than assuming the summary is contradictory.
 
-**Evaluation goal:** verify that a user can move from a high-level warning to the resource, operation, or log that explains it, without receiving unrelated administrative access.
+**Try it:** open one warning or recent operation and follow it to the affected resource, its latest Task, and the log or metric that explains the current state.
 
 ## Ingress: publish and protect traffic
 
@@ -93,11 +93,11 @@ Gateway Inference is a separate data plane with dedicated `gwi_` tokens, provide
 ## A useful evaluation sequence
 
 1. Review the Dashboard and open a real resource warning or recent operation.
-2. Enroll a disposable Node and verify restart recovery.
-3. Deploy a test application and inspect logs and metrics.
-4. Publish it through a Domain, certificate, and Route.
-5. Create a least-privilege group for an operator and confirm the boundary.
+2. [Enroll a disposable Node](/en/getting-started/first-node/) and verify restart recovery.
+3. [Deploy a test application](/en/journeys/publish-application/) and inspect logs and metrics.
+4. [Publish it through a Domain, certificate, and Route](/en/getting-started/first-route/).
+5. [Create a least-privilege group](/en/identity/auth-users-groups/) for an operator and confirm the boundary.
 6. Exercise rollback or maintenance without deleting the resource.
-7. Review the resulting Tasks and audit history.
+7. [Review the resulting Tasks and audit history](/en/reference/tasks-and-audit/).
 
 This sequence demonstrates the core value of Gateway: one governed workflow across infrastructure domains, while keeping the underlying ownership and recovery responsibilities explicit.

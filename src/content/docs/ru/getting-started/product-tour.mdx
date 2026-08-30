@@ -1,6 +1,6 @@
 ---
 title: Обзор продукта
-description: Познакомьтесь с основными рабочими областями Gateway и их взаимосвязями.
+description: Узнайте, как Good Gateway объединяет публикацию приложений, доступ, Docker и данные в понятный рабочий процесс.
 section: Начало работы
 order: 2
 audience: [operator, evaluator]
@@ -8,96 +8,52 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-Gateway — это infrastructure control plane: единая управляемая точка для публикации сервисов, эксплуатации распределённых Nodes, управления application runtimes и databases и сохранения видимой, атрибутируемой истории действий. Интерфейс организован вокруг эксплуатационных результатов, а не сырого списка серверов.
-
-Для evaluator особенно важен ownership. Gateway координирует ресурсы, которыми управляет, но базовые hosts, networks, source repositories, DNS zones, backup destinations и external providers остаются ответственностью вашей организации. Здоровая оценка продукта должна показать обе стороны: удобное централизованное управление и явные границы, где решение всё ещё принадлежит человеку или внешней системе.
+Good Gateway собирает ежедневные инфраструктурные задачи в одном месте: вы публикуете приложение, подключаете его к приватной базе данных, проверяете состояние и управляете доступом без ручной сборки разрозненных сценариев на серверах. Начните с нужного результата, а детали каждой операции Gateway сохранит в ресурсах, Tasks и журнале аудита.
 
 ![Панель Gateway и основная навигация по продукту](/screenshots/product-tour/dashboard-overview.png)
 
-## Начните с Dashboard
+## Пройдите путь приложения
 
-Dashboard обобщает resource counts, health, recent activity, pinned resources и системные предупреждения, например недоступный Relay или проблему лицензии. Он отвечает на вопрос «требует ли что-то внимания?» и даёт путь к affected resource.
+1. Подготовьте Gateway и [добавьте первый Node](/ru/getting-started/first-node/).
+2. Запустите приложение в Docker или соберите его из Git.
+3. Создайте Domain, TLS-сертификат и Route, чтобы открыть приложение пользователям.
+4. При необходимости создайте управляемую базу данных и приватную привязку.
+5. Выдайте команде права через группы и настройте уведомления.
 
-Это не универсальный observability screen. Подробные metrics и logs находятся на соответствующих Node, Route, workload, database, Pages Project или logging environment. Жёлтый indicator в navigation может означать предупреждение вне небольшого healthy subset, показанного на Dashboard, поэтому открывайте связанную деталь, а не считайте summary противоречивым.
+Для полного первого запуска используйте [сценарий публикации приложения](/ru/journeys/publish-application/). Если у приложения уже есть база данных, продолжите со [сценария приватной базы](/ru/journeys/private-database/).
 
-**Цель оценки:** пользователь должен перейти от high-level warning к resource, operation или log с объяснением, не получая лишних административных прав.
+## С чего начинается работа
 
-## Ingress: публикация и защита traffic
+На Главной панели видно, требует ли инфраструктура внимания: здесь собраны предупреждения, последние операции и закреплённые ресурсы. Откройте предупреждение, чтобы перейти к конкретному Node, Route, рабочей нагрузке, базе данных или Task. Подробные метрики и журналы остаются рядом с тем ресурсом, к которому относятся.
 
-Область Ingress разделяет три ответственности:
+Успешная операция — это не только сообщение в интерфейсе. Для публикации проверьте реальный ответ по доменному имени; для Docker — состояние рабочей нагрузки и её журналы; для базы данных — подключение приложения; для долгой операции — итог Task и фактическое состояние ресурса.
 
-- **Domains** хранят hostnames и выбирают eligible Ingress Node.
-- **SSL Certificates** централизуют lifecycle сертификатов и deployment status.
-- **Routes** соединяют domains с upstream applications и применяют forwarding, TLS, maintenance, access и health policy.
+## Основные области Gateway
 
-Разделение делает изменения безопаснее. Application можно откатить без изменения DNS, а обновлённый сертификат — распространить без rebuild workload. Managed Docker upstreams могут использовать Secure Link, чтобы не публиковать обычный host port только ради ingress.
+### Ingress: открывайте приложения безопасно
 
-**Ownership:** network и DNS owners утверждают reachability; security owners — TLS и access rules; application owners — ожидаемый upstream и health response.
+Domains, TLS-сертификаты и Routes разделены намеренно. Вы можете обновить сертификат без пересборки приложения или откатить приложение, не меняя DNS. Route связывает домен с приложением и задаёт правила доступа, обслуживания и проверки состояния. Начните с [публикации через Domain, Route и TLS](/ru/ingress/domains-routes-tls/).
 
-## Docker: эксплуатация application runtimes
+### Docker: запускайте и обновляйте приложения
 
-Docker охватывает standalone Containers, blue/green Deployments, Compose Projects, images, volumes, networks, registries, Git builds и durable Tasks. Выбирайте resource model по ownership:
+Docker поддерживает отдельные Containers, Deployments с проверкой состояния, Compose Projects, образы, тома, сети, реестры и сборки из Git. Выберите Container для простой одиночной службы, Deployment для контролируемого переключения версий, Compose Project для приложения из нескольких служб. Операции фиксируются как Tasks: при потере страницы сначала откройте существующую Task, а не запускайте дубликат.
 
-- **Container** — непосредственно управляемая одиночная workload;
-- **Deployment** добавляет health-checked rollout и rollback;
-- **Compose Project** владеет multi-service application, immutable revisions и дочерними services.
+### Databases: давайте приложению ровно нужный доступ
 
-Gateway защищает эти границы. Compose-owned child containers не показываются как обычные standalone lifecycle targets, потому что их stop или recreate вне project создаст drift и ложное состояние. Долгие операции представлены как Tasks, чтобы cancellation, progress, failure и audit history сохранялись после reload страницы.
+Gateway подключает PostgreSQL, Redis и ClickHouse и создаёт управляемые базы на Nodes с нужной ролью. По умолчанию управляемая база остаётся приватной. Приложение получает отдельную идентичность через привязку, а не учётные данные владельца базы. Удаление привязки отзовёт доступ приложения; удаление самой базы данных удалит данные, поэтому сначала определите резервное копирование и восстановление.
 
-**Цель оценки:** развернуть безопасную тестовую workload, изучить logs и metrics, выполнить controlled update и убедиться, что UI показывает фактический runtime state, а не только запрошенную операцию.
+### Pages: публикуйте статические сайты с простым откатом
 
-## Databases: state без выдачи owner credentials
+Pages хранит неизменяемые Deployments статического сайта. Tag указывает, какой Deployment видят пользователи, поэтому откат — это возврат Tag на ранее проверенную версию, а не изменение файлов на сервере. [Сценарий Pages](/ru/journeys/static-site/) проведёт от артефакта до публичного домена.
 
-Раздел Databases хранит external connections PostgreSQL, Redis или ClickHouse и создаёт managed instances на database Nodes. Managed databases по умолчанию private. Application получает binding-specific identity вместо database owner credential, что ограничивает blast radius компрометации workload и позволяет независимо отозвать binding.
+### Nodes и наблюдаемость: доверяйте подтверждённому состоянию
 
-Database ownership отличается от application ownership. Удаление binding убирает доступ приложения; удаление managed database — destructive data operation, которая также удаляет managed storage. Backup, retention, capacity и recovery следует определить до создания production data.
+Nodes — это зарегистрированные Linux-хосты с ролями Ingress, Docker, Databases, Build Worker, Monitoring или Relay. Они сами устанавливают защищённое соединение с Gateway и сообщают фактическую версию, возможности и состояние. Метрики и журналы помогают понять проблему, уведомления привлекают нужную команду, а история аудита отвечает на вопрос, кто изменил конфигурацию.
 
-**Цель оценки:** создать disposable database, привязать тестовую workload, проверить query, пересоздать workload и подтвердить сохранение binding без раскрытия owner credentials.
+### Доступ и автоматизация
 
-## Pages: публикация immutable static artifacts
+Группы и области доступа позволяют дать пользователю доступ к одному Route, Node, рабочей нагрузке или базе, не открывая весь Gateway. REST API, OAuth и MCP используют те же права и журнал аудита, что и интерфейс. AI Workspace необязателен: он помогает составлять планы и выполнять разрешённые действия, но не обходит авторизацию. Gateway Inference — отдельная служба с собственными `gwi_` токенами и правилами доступа к моделям.
 
-Pages размещает static sites как immutable Deployments на Ingress Nodes. **Tag** — перемещаемый release pointer, а каждый Deployment остаётся неизменным. Route отправляет public domain на выбранный Tag. Это даёт простой rollback: вернуть Tag на known-good Deployment, а не изменять files на месте.
+## Границы ответственности и следующий шаг
 
-Projects принимают загруженные artifacts. Если тарифный план разрешает Git-source delivery, Gateway может собрать подключённый repository через isolated Build Worker и опубликовать approved artifact. Runtime configuration по дизайну public и никогда не должна содержать secrets.
-
-Landing Good Gateway и этот documentation portal — примеры сайтов, которые можно обслуживать через Gateway Pages; продукт использует тот же delivery path, который документирует.
-
-## Nodes: capabilities без смешивания trust domains
-
-Nodes — зарегистрированные Linux-хосты с явными ролями Ingress, Docker, Databases, Build Worker, Monitoring или Relay. Они инициируют authenticated connections к Gateway и сообщают реальные version, capabilities и health. Enrollment использует one-time token и certificate pinning; долговременная связь — mutual TLS.
-
-Поэтому Nodes list — не просто inventory. Он показывает, где находится capability и может ли Gateway сейчас на неё полагаться. Role selection должна следовать ownership и isolation host, а не удобству.
-
-**Цель оценки:** зарегистрировать disposable Node, перезапустить daemon, подтвердить reconnection и проверить, что пользователь с resource-scoped access не может управлять посторонними Nodes.
-
-## Logging, monitoring и operations
-
-Gateway не предоставляет отдельное универсальное приложение «Observability». Monitoring и logs показываются в контексте Nodes, workloads, Routes, databases и Compose Projects. Structured Logging предоставляет environments, schemas, tokens, retention и optional SIEM delivery. Notifications, status pages, Tasks, recent activity и audit history рассчитаны на разные аудитории и не взаимозаменяемы.
-
-Используйте metrics для понимания текущего поведения, logs для диагностики событий, Tasks для отслеживания операций, notifications для вызова responders, а audit records — для ответа на вопрос, кто и что изменил. Production alerting должен фокусироваться на customer impact и устойчивых state transitions, а не каждом внутреннем retry.
-
-## Доступ и администрирование
-
-Settings, users, groups, scopes, authentication methods, API tokens, OAuth clients, integrations, licensing, updates и housekeeping администрируются централизованно. Gateway поддерживает resource-scoped permissions: пользователь может получить доступ к одному Route, Node, workload или database, а не ко всей области продукта.
-
-Profile показывает personal preferences, active authorizations и — в включённых средах — Inference usage. До приглашения большой команды создайте groups вокруг должностных обязанностей и сохраните отдельно контролируемый recovery path для system administration.
-
-![Редактор группы с наследуемыми правами и индивидуально выбранными областями ресурсов](/screenshots/product-tour/group-scopes.png)
-
-## AI и программное управление
-
-AI Workspace предоставляет intent-driven interface для чтения документации, планирования и выполнения операций в пределах permissions и approval mode текущего пользователя. Он не создаёт отдельный authorization bypass. Operations Console, REST API, OAuth clients и MCP открывают те же product resources для deterministic или automated workflows.
-
-Gateway Inference — отдельная data plane с выделенными `gwi_` tokens, providers, accounting и model access rules. Включение AI Workspace не выдаёт автоматически каждому пользователю доступ ко всем models или infrastructure actions.
-
-## Практичная последовательность оценки
-
-1. Изучите Dashboard и откройте реальное предупреждение resource или recent operation.
-2. Зарегистрируйте disposable Node и проверьте recovery после restart.
-3. Разверните тестовое приложение и изучите logs и metrics.
-4. Опубликуйте его через Domain, certificate и Route.
-5. Создайте least-privilege group для operator и подтвердите boundary.
-6. Выполните rollback или maintenance без удаления resource.
-7. Просмотрите созданные Tasks и audit history.
-
-Эта последовательность демонстрирует основную ценность Gateway: единый governed workflow между инфраструктурными domains с сохранением явной ответственности за базовые системы и recovery.
+Gateway управляет ресурсами, которые ему назначены, и делает изменения наблюдаемыми. Сеть, DNS-зоны, репозитории исходного кода, внешние поставщики и хранилища резервных копий остаются в зоне ответственности вашей организации. Перед рабочим запуском пройдите [чек-лист готовности](/ru/operations/production-checklist/) и сохраните ссылку на [руководство по инцидентам](/ru/operations/incident-runbook/).

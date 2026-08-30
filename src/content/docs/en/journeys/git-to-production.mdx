@@ -14,6 +14,8 @@ This distinction matters to release governance: permission to build a repository
 
 Git-source delivery is available only where the current plan entitlement permits it. Before designing unattended delivery, confirm that the target resource, integration type, automatic build, and automatic deploy behavior are all covered by the intended plan.
 
+Before starting, prepare the [source-control integration](/en/integrations/source-control/) and [Build Worker](/en/docker/git-builds/). For a static site, also review [Pages Git deployments](/en/pages/git-deployments/).
+
 ## Define ownership and release policy
 
 Agree on these decisions before connecting production source:
@@ -96,3 +98,15 @@ Record the last known-good artifact before promotion. A source rollback should b
 **Deployment fails after a successful build:** keep the build record. Diagnose the owning resource, health check, Node capacity, secrets, and external dependencies. A build success proves artifact creation, not runtime correctness.
 
 **Automatic delivery creates risk:** disable automatic deploy first while keeping automatic builds if useful. This preserves candidate generation without changing production on every source event.
+
+### Diagnostic map
+
+| Symptom | Check first | Detailed guide |
+| --- | --- | --- |
+| Repository is not discovered | Connector authorization, repository allowlist, branch, application root | [Source-control integrations](/en/integrations/source-control/) |
+| Build Worker does not accept the job | Node status, capabilities, plan, registry write access | [Git sources and Build Workers](/en/docker/git-builds/) |
+| Build is rejected | Policy findings and blocking threshold in the build record | [Git sources and Build Workers](/en/docker/git-builds/) |
+| Artifact exists but deployment fails | Deployment Task, target Node, logs, health check | [Tasks, events, and audit](/en/reference/tasks-and-audit/) |
+| Image cannot be pulled | Registry reachability, digest, and stored credentials | [Registries and image trust](/en/docker/registries/) |
+
+Preserve the build ID, Task ID, exact commit, and error before retrying. A new build can hide whether the earlier candidate completed, failed, or is still running.

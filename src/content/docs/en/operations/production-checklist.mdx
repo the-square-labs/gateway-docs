@@ -78,6 +78,14 @@ After enabling business traffic, watch Route health, TLS, Relay pressure, node f
 
 Hold the review against a named release and installation. For each area, record **pass**, **accepted exception**, or **no-go**, plus an evidence link and owner. Do not carry evidence forward from an older release when the relevant lifecycle, daemon, Relay, database, or ingress component changed.
 
+Use one row for every acceptance check so a less experienced reviewer can see what was tested and a power user can reproduce it:
+
+| Area | Owner | Check performed | Result | Evidence | Exception or follow-up |
+| --- | --- | --- | --- | --- | --- |
+| Example: public application | Application team | External DNS, TLS, and primary user path | Pass | Task, request, or report link | None |
+
+Do not write only “works” or “checked.” The evidence should identify the exact resource, version, test location, time, and expected result.
+
 Start with the three journeys that would create immediate business impact: administrator recovery, public customer traffic, and application access to persistent data. Then review supporting capabilities such as builds, Pages, notifications, AI, and optional integrations according to what the installation will actually use. Untested unused features do not block launch; enabled critical features do.
 
 ### Minimum acceptance scenarios

@@ -14,6 +14,8 @@ Pages is for static output—HTML, JavaScript, CSS, images, fonts, and other fil
 
 The Good Gateway landing site and the Good Gateway documentation portal are examples of sites that can run on Gateway Pages. Using the platform for its own public properties is useful operational proof, but those projects should still follow the same access, review, and rollback controls as customer sites.
 
+Start with [Pages overview](/en/pages/overview/). For Git delivery, prepare [Pages Git deployments](/en/pages/git-deployments/) and a [source-control integration](/en/integrations/source-control/). A custom domain also requires the [Domain, Route, and TLS path](/en/ingress/domains-routes-tls/).
+
 ## Define the release contract
 
 Before creating the project, decide:
@@ -86,3 +88,14 @@ Verify DNS, TLS, the returned entry document, nested assets, client-side navigat
 To roll back, move the public Tag to the previous verified Deployment. Then retest the Route, assets, runtime configuration, and browser behavior. Do not edit or replace the failed Deployment in place; its immutable record is useful for diagnosis and proves what was actually released.
 
 Deleting a Deployment can remove a rollback target. Review Tag references and retention requirements first. Deleting a Tag or Route changes reachability but does not alter the immutable artifact. Disable Pages globally only with an explicit product decision; disabling navigation is not a substitute for decommissioning public Routes and retaining required evidence.
+
+### Diagnostic map
+
+| Symptom | Check first | Detailed guide |
+| --- | --- | --- |
+| Upload was interrupted | Upload status and Task; do not copy partial files manually | [Tasks, events, and audit](/en/reference/tasks-and-audit/) |
+| Git build failed | Source settings, Build Worker, logs, and policy decision | [Pages Git deployments](/en/pages/git-deployments/) |
+| Preview works but public Route fails | Tag, Domain, DNS, TLS, and Ingress placement | [Ingress troubleshooting](/en/ingress/troubleshooting/) |
+| Direct URL returns 404 | Entry document, base path, and client-side routing | [Pages Git deployments](/en/pages/git-deployments/) |
+| Runtime configuration is wrong | `Default`, whole-object Tag override, and version compatibility | [Pages overview](/en/pages/overview/) |
+| No rollback target remains | Tag references and Deployment retention | [Pages overview](/en/pages/overview/) |

@@ -12,6 +12,8 @@ This journey takes an approved application artifact to a public HTTPS endpoint. 
 
 The target outcome is a service that is healthy from the user's perspective, reachable through the intended domain, observable in Gateway, protected by the expected access policy, and reversible without rebuilding the control plane.
 
+If this is your first deployment, prepare a [Docker Node](/en/getting-started/first-node/), review the [Docker resource models](/en/docker/overview/), and keep [Publish your first Route](/en/getting-started/first-route/) open for the ingress step.
+
 ## Decide the workload model
 
 Choose the resource that matches lifecycle ownership:
@@ -96,3 +98,13 @@ Record the last known-good target before promotion. For a Deployment, verify the
 If the release fails but ingress is healthy, roll back the workload rather than deleting the Domain, certificate, or Route. Use Route maintenance when traffic must be stopped while preserving the resource and its configuration. If a migration has already changed data, application rollback alone may be unsafe; follow the data recovery plan.
 
 After rollback, repeat user-facing tests and inspect logs for requests that may have reached the failed revision. Keep the failed artifact and operation evidence until the incident review is complete.
+
+### Diagnostic map
+
+| Symptom | Check first | Detailed guide |
+| --- | --- | --- |
+| Workload never becomes ready | Owning Task, application logs, port, and health check | [Docker overview](/en/docker/overview/) |
+| Route does not publish | DNS, TLS, nginx apply, Route health, and upstream | [Ingress troubleshooting](/en/ingress/troubleshooting/) |
+| Secure Link is unavailable | Both Nodes, Relay, target workload, and connector operation | [Secure upstreams](/en/ingress/secure-upstreams/) |
+| New release is unhealthy | Roll back the owning workload; keep the Route intact | [Blue-green Deployments](/en/docker/deployments/) |
+| Migration changed data | Stop writes and follow the separate data-recovery plan | [Updates and backups](/en/operations/updates-backups/) |
