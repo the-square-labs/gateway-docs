@@ -11,11 +11,22 @@ lastReviewed: 2026-08-30
 
 Gateway brings two different database models into one operational surface: saved external connections and managed database instances. The difference is ownership. An external connection records access to a service operated elsewhere; a managed instance has a Gateway-controlled lifecycle on a database-profile node.
 
+Choose the model before onboarding an application. Use an external connection when another platform or database team already owns availability, backups, upgrades, and network policy. Use a managed instance when Gateway should provision the engine, enforce a bounded local disk, expose health and lifecycle operations, and create private application bindings. Converting one model into the other is a migration project, not a metadata toggle.
+
+| Question | External connection | Managed instance |
+| --- | --- | --- |
+| Who runs and upgrades the engine? | External database owner | Gateway through a Databases Node |
+| Who owns data backup and restore? | External database owner | Your operator team, using engine-appropriate tooling |
+| How do Gateway workloads connect? | The saved external connection path you configure | Private application bindings by default |
+| Can Gateway pause, resize, or delete the engine? | No | Yes, within the managed lifecycle |
+
 ## Resource model
 
 Managed PostgreSQL, Redis, and ClickHouse instances are private by default. Gateway coordinates engine configuration, storage, credentials, health, logs, operations, and application bindings. The selected database node runs the engine, while Gateway retains the desired resource state and its relationships to workloads.
 
 An external connection does not transfer database ownership to Gateway. Gateway stores its connection configuration and credentials encrypted at rest, subject to explicit permission, but the external database's availability, backup, access policy, and engine lifecycle remain the responsibility of its operator.
+
+Treat saved credentials as privileged infrastructure secrets. Grant view, edit, reveal, and query permissions separately where the role model allows it, and avoid sharing an owner or superuser account when a narrower service account is available. Deleting an external connection removes Gateway's saved relationship; it does not delete the remote database, its storage, or its users.
 
 ## Private-by-default access
 
@@ -30,6 +41,25 @@ Direct TCP publication is an explicit opt-in for external clients. It does not o
 The database detail view brings together health, metrics, engine settings, credentials, certificates, resizing, pause/unpause, restart, logs, and eligible Explorer or Console access. Available actions depend on engine, node connectivity, instance health, and your granted permissions.
 
 Pause preserves data while intentionally disabling engine compute. A paused instance does not provide normal health, metrics, Explorer, or Console behavior until it is unpaused. Restart is useful for a controlled operational action; it is not a repair for unresolved storage, authentication, or node failures.
+
+## Readiness baseline
+
+Before handing a database to an application team, verify the complete ownership boundary:
+
+1. The selected Database Node is online and reports supported storage capabilities.
+2. The managed instance is **Ready**, or the external endpoint is reachable with the intended TLS policy.
+3. Backup ownership, retention, and restore evidence are documented outside the instance itself.
+4. The application uses a binding-specific identity or another least-privilege account rather than an owner credential.
+5. Monitoring is collecting without requiring an operator to keep the detail page open.
+6. A controlled restart or reconnect proves that the client recovers as expected.
+
+A green engine badge alone is not end-to-end proof. Confirm at least one real application query, the expected permission boundary, and the absence of credentials in source control, logs, task output, and public runtime configuration.
+
+## Availability and limitations
+
+Managed instances are single-node resources. Gateway preserves desired state and coordinates recovery, but it does not turn a single database process into a multi-node high-availability cluster. Plan host redundancy, data replication, off-node backups, and recovery time according to the database's business criticality.
+
+Gateway configuration backups do not contain a usable substitute for database data backups. Likewise, deleting a managed database is expected to remove its managed storage; use a verified backup or migration target before approving deletion.
 
 ## Next steps
 

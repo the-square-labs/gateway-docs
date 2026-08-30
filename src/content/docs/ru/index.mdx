@@ -27,12 +27,12 @@ Good Gateway — это плоскость управления инфрастр
 
 ## Начните с готового сценария
 
-- **Оцениваете продукт:** начните с [Обзора продукта](getting-started/product-tour.mdx), [Архитектуры](concepts/architecture.mdx) и [Возможностей](reference/capabilities.mdx).
-- **Устанавливаете новый экземпляр:** следуйте [Требованиям](getting-started/requirements.mdx), [Установке Gateway](getting-started/install.mdx) и [Первоначальной настройке](getting-started/initial-setup.mdx).
-- **Публикуете приложение:** пройдите полный сценарий [Публикации приложения](journeys/publish-application.mdx).
-- **Подключаете приложение к приватной базе данных:** используйте сценарий [Приватная база данных приложения](journeys/private-database.mdx).
-- **Эксплуатируете production:** прочитайте [чек-лист готовности production](operations/production-checklist.mdx), [Обновления и резервное копирование](operations/updates-backups.mdx) и [Операционный runbook по инцидентам](operations/incident-runbook.mdx).
-- **Интегрируете инструменты:** используйте [Области, токены и OAuth](identity/scopes-tokens-oauth.mdx) и справочник программного доступа в руководстве по операциям репозитория.
+- **Оцениваете продукт:** начните с [Обзора продукта](/ru/getting-started/product-tour/), [Архитектуры](/ru/concepts/architecture/) и [Возможностей](/ru/reference/capabilities/).
+- **Устанавливаете новый экземпляр:** следуйте [Требованиям](/ru/getting-started/requirements/), [Установке Gateway](/ru/getting-started/install/) и [Первоначальной настройке](/ru/getting-started/initial-setup/).
+- **Публикуете приложение:** пройдите полный сценарий [Публикации приложения](/ru/journeys/publish-application/).
+- **Подключаете приложение к приватной базе данных:** используйте сценарий [Приватная база данных приложения](/ru/journeys/private-database/).
+- **Эксплуатируете production:** прочитайте [чек-лист готовности production](/ru/operations/production-checklist/), [Обновления и резервное копирование](/ru/operations/updates-backups/) и [Операционный runbook по инцидентам](/ru/operations/incident-runbook/).
+- **Интегрируете инструменты:** используйте [Области, токены и OAuth](/ru/identity/scopes-tokens-oauth/) и справочник программного доступа в руководстве по операциям репозитория.
 
 ## Модель продукта за минуту
 
@@ -57,3 +57,7 @@ Health and runtime events -> notifications -> status pages / SIEM
 - **Справочник:** стабильная терминология, порты, статус функций, планы и границы безопасности.
 
 Возможности, доступные только по дорожной карте, явно помечаются и не должны восприниматься как доступные функции runtime.
+
+---
+
+Этот портал документации и продуктовый сайт Good Gateway собираются из Git и публикуются как неизменяемые Deployments через [Good Gateway Pages](/ru/journeys/static-site/). Таким образом production-сайты используют тот же путь сборки, release Tag, preview и rollback, который описан в этой документации.

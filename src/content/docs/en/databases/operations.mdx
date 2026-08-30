@@ -23,6 +23,10 @@ Use logs to classify startup, storage, authentication, permission, and recovery 
 
 Gateway configuration backups do not replace database data backups. Use an engine-appropriate backup method, retain recovery evidence, and test restores against a separate target. Plan a backup before destructive lifecycle work, substantial resize, or a migration that involves persistent data.
 
+The interactive Console is intentionally bounded by an execution budget shared across statements. It is an operator tool, not a batch migration runner. Prefer versioned migration tooling for schema changes and long-running maintenance, and use a read-only or narrowly privileged identity whenever possible. A browser disconnect must not be treated as proof that a query was cancelled; check the resulting engine state before retrying.
+
+Monitoring collection is background-owned. Gateway starts collection after bootstrap and when a managed database becomes ready; opening the database detail page is not the trigger. On a first visit, a chart may wait for the first real sample or historical query, but the UI must distinguish absent data from a healthy sample.
+
 ## Recover a failed workload binding
 
 Check a failed binding in this order:
@@ -41,3 +45,24 @@ Prefer reconciliation or a targeted retry after correcting the root cause. Do no
 Pause/unpause, restart, resize, credential rotation, certificate rotation, direct publication, binding deletion, and database deletion should each be followed by the relevant verification: engine health, client connection, route or listener state, logs, metrics, and recorded Task result. Direct publication is opt-in; monitor it as an external-client path separately from private bindings.
 
 When deleting a database, remove or migrate bindings first and wait for their listener and identity cleanup. A failed delete should remain in Gateway's operation history for recovery. Do not force-remove storage or users at the daemon or engine layer unless an explicit recovery procedure calls for it.
+
+## Backup and restore runbook
+
+Define an engine-specific recovery point objective and recovery time objective before production use. Keep backups off the Database Node, encrypt them, record the engine version and restore command, and test them on an isolated target. A successful backup command without a successful restore test is not recovery evidence.
+
+For a restore exercise:
+
+1. Create a separate target with compatible engine and storage capacity.
+2. Restore the backup without overwriting the active instance.
+3. Run integrity checks and representative application queries.
+4. Recreate access with new bindings or narrowly scoped client identities.
+5. Compare row/key/table counts and application-level invariants.
+6. Record duration, manual steps, and any version constraint discovered.
+
+Gateway does not provide point-in-time recovery merely because it manages the container lifecycle. WAL, Redis persistence, ClickHouse backup strategy, replication, and off-site retention remain database-operations responsibilities.
+
+## Incident classification
+
+Classify before changing state: **control-plane** failures affect Tasks or reconciliation; **node** failures affect daemon freshness and local runtime; **engine** failures appear in database logs and health; **storage** failures affect mount or capacity; **binding** failures affect listener or principal state; **application** failures appear after connectivity succeeds. This ordering prevents a healthy engine from being restarted to solve an application permission error.
+
+After recovery, verify the original customer path, not only the administrative screen. Confirm a real query, expected permissions, stable health collection, and that no temporary direct publication, elevated role, debug token, or manual network change remains.

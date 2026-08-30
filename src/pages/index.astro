@@ -10,6 +10,11 @@ const destination = '/en/';
 		<meta http-equiv="refresh" content={`0;url=${destination}`} />
 		<link rel="canonical" href={`https://docs.goodgateway.dev${destination}`} />
 		<title>Good Gateway Documentation</title>
+		<style is:inline>
+			:root { color-scheme: dark; background: #0b0b0d; }
+			html, body { min-height: 100%; margin: 0; background: #0b0b0d; }
+			body { visibility: hidden; }
+		</style>
 	</head>
 	<body>
 		<p><a href={destination}>Open Good Gateway documentation</a></p>

@@ -31,6 +31,23 @@ Before creating a binding, confirm that the managed database is **Ready**, the t
 
 Use private bindings for workload access even when direct TCP publication is enabled for an external client. Publication is opt-in and does not replace binding isolation.
 
+Bindings can target an eligible standalone Container, Deployment, or Compose service. Gateway delivers a connection URI and, where configured, individual host, port, database, user, and password values to the selected workload environment. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
+
+One database can serve multiple workloads through separate bindings. That is preferable to reusing one shared account: each binding can be audited, rotated, permissioned, and retired independently. Gateway rejects conflicting environment-variable assignments rather than silently replacing an existing application value.
+
+## Verify isolation
+
+After creation or workload recreation, verify all of the following:
+
+- the binding reports **Ready** and its target workload is running;
+- the workload received the expected variable names without exposing their values;
+- a permitted query succeeds and a deliberately ungranted operation fails;
+- binding runtime telemetry shows the expected stream and no sustained admission rejects;
+- recreating the workload preserves the same binding relationship and does not create an additional engine role;
+- an unrelated workload cannot reach the private listener or reuse the binding identity.
+
+Credential reveal is an exceptional diagnostic action. It requires explicit access and should be followed by normal secret-handling controls; avoid revealing credentials merely to prove that a binding works when an application query and telemetry provide safer evidence.
+
 ## Reconciliation and failure handling
 
 Desired binding state remains durable through workload recreation, Docker daemon restart, node reconnection, and Relay restart. Reconciliation restores the daemon-owned listener and confirms the engine identity without creating a new identity for every transient runtime. This is how Gateway avoids orphan roles after normal restart and recreation paths.
@@ -42,3 +59,9 @@ For a failed binding, diagnose in this order: managed database readiness; target
 Delete the binding through Gateway when the workload no longer needs access. Gateway removes the listener relationship and retires the binding's engine identity as part of one recorded lifecycle, preventing the normal deletion path from leaving unused identities behind. Delete the binding before deleting the database or the workload whenever possible, then verify that the listener, telemetry, and engine principal cleanup have completed.
 
 If a deletion is interrupted, leave the durable binding record in place and use its operation state for recovery. Manual role deletion is an exceptional recovery procedure because it can make a future reconciliation fail; use it only with an explicit, coordinated recovery plan.
+
+## Upgrade and compatibility notes
+
+Current bindings use daemon-owned listeners and do not require a per-binding database connector image. During an upgrade from an older release, successful reconciliation can retire legacy connector containers after the new daemon and binding identity are ready. Do not delete legacy artifacts early: allow the recorded migration to prove the replacement path first.
+
+An application-only Gateway restart should not terminate established binding traffic when the Relay and target daemons remain healthy. A Relay update is a data-plane maintenance event and can interrupt streams; clients should use bounded reconnect and retry behavior. A target Docker daemon or Node restart requires listener reconciliation, so verify both the binding state and a real query after reconnect.

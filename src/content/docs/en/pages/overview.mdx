@@ -11,11 +11,29 @@ lastReviewed: 2026-08-30
 
 Pages publishes static sites as Projects with immutable Deployments and mutable Tags. A Deployment is a fixed artifact produced by a manual upload or a Git build. A Tag is a movable named pointer to one Deployment. Routes target Tags, never raw Deployments, which makes promotion and rollback deliberate operational actions instead of changes to an already published artifact.
 
+For a product or engineering lead, the outcome is a controlled release path for documentation, landing pages, dashboards, and other static frontends without adding an application server. The project owner decides what is built, a release owner decides which immutable artifact a Tag selects, and the Ingress owner controls the Domain and TLS Route. Success means a release can be previewed, promoted, verified, and rolled back without rebuilding or editing the previous artifact.
+
+Pages is appropriate for browser-delivered static output. It is not a general server runtime: API processes, background workers, stateful sessions, and server-side application code belong on workloads behind Gateway Routes.
+
+This documentation portal and the Good Gateway product landing are themselves published through Gateway Pages. They use the same immutable Deployment, Tag, Route, TLS, and rollback model described here.
+
 ## Resource model and ownership
 
 A Pages Project owns its deployment history, Tags, Routes, runtime configuration, access relationships, and retention behavior. Gateway stores each published artifact centrally and materializes it on the assigned nginx nodes. Nginx serves the applied Pages configuration, while Gateway remains the source of truth for which Tag a Route should use.
 
 Deployments are immutable: changing site files, build output, or source input creates a new Deployment. Tags are mutable: moving a Tag changes which already-created Deployment it selects. The system-managed `latest` Tag tracks the appropriate current deployment; use custom Tags for named environments, release channels, or an explicit promotion gate.
+
+## Decisions before the first release
+
+Agree on five points before connecting a public Domain:
+
+1. **Ownership:** who may create Deployments, move production Tags, edit runtime configuration, and delete rollback candidates.
+2. **Release source:** manual artifact upload or an approved Git integration and Build Worker.
+3. **Promotion policy:** automatic deployment for low-risk sites or an explicit review before the production Tag moves.
+4. **Retention:** how many known-good Deployments must remain available and for how long.
+5. **Runtime contract:** which public values may change independently of the artifact and which changes require a new build.
+
+Use separate Tags when environments need independent promotion. Do not use Tag names as access control: permissions and Routes remain the security boundary.
 
 ## Publish from Git or manually
 
@@ -29,6 +47,8 @@ Custom Routes target Tags only. Verify the Domain, TLS certificate, nginx placem
 
 Runtime configuration is public client-side data and is separate from the immutable artifact identity. It is exposed to the site as `window.runtime.config`, with a `Default` object and whole-object Tag overrides. Immutable previews use `Default`; a Tag Route uses its override when present or falls back to `Default`. Do not place secrets, credentials, or private topology in runtime configuration.
 
+Runtime configuration is useful for public API origins, feature presentation, analytics identifiers, or environment labels that legitimately belong in the browser. A Tag override replaces the whole object rather than merging individual keys, so review every required field when creating an override. Keep the contract backward-compatible with every Deployment that the Tag may select during rollback.
+
 ## Promote, roll back, and verify
 
 1. Create a new immutable Deployment through Git or manual publishing.
@@ -39,9 +59,17 @@ Runtime configuration is public client-side data and is separate from the immuta
 
 To roll back, move the Route's Tag to a previous known-good Deployment. The older artifact remains unchanged, and the rollback is recorded as a Tag publication change. Keep runtime configuration backward-compatible while a Tag can move between releases; changing runtime configuration does not create a new Deployment.
 
+The release is successful only when the custom Domain returns the intended document, referenced assets load without errors, TLS is valid, client-side navigation works after a direct refresh, and the browser receives the intended runtime configuration. An immutable preview proves the artifact; it does not prove the production Domain, certificate, Tag, or environment-specific runtime values.
+
 ## Lifecycle consequences
 
 Deleting a Deployment removes that immutable release from future selection and can eliminate a rollback target. Remove it only after retention requirements and Tag references have been reviewed. Deleting a Tag or Route changes reachability, not the contents of the selected Deployment. Disabling Pages removes the feature from normal navigation while preserving project data.
+
+## Operator details: placement and recovery
+
+Gateway stores the Pages artifact centrally and materializes replicas on assigned nginx Nodes. If a Route fails while the Deployment remains ready, inspect the Domain placement, Ingress Node, certificate relationship, Tag target, and Pages operation before rebuilding. Rebuilding the same source is not a substitute for restoring the serving path.
+
+If promotion causes an incident, first move the production Tag to the previous verified Deployment. Change runtime configuration only when it is part of the failure and remains compatible with the rollback target. Preserve the failed Deployment, build record, and logs until the incident is understood; immutability makes them useful evidence.
 
 ## Next step
 

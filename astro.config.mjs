@@ -32,9 +32,6 @@ export default defineConfig({
 			lastUpdated: true,
 			pagefind: true,
 			customCss: ['./src/styles/custom.css'],
-			editLink: {
-				baseUrl: 'https://github.com/the-square-labs/gateway-docs/edit/main/src/content/docs/',
-			},
 			social: [
 				{
 					icon: 'github',

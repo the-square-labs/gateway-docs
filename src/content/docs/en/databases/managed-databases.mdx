@@ -19,6 +19,10 @@ You need permission to create the database and use the selected database node. C
 
 Keep direct publication disabled unless an external client has a documented need. Private application connectivity should use bindings. Enabling direct publication is an intentional change to the instance's exposure and does not open a host firewall automatically.
 
+The Databases Node must pass the storage preflight used by the runtime: Gateway-managed databases use fixed-size preallocated ext4 images rather than an unbounded Docker volume. On VM or bare-metal hosts the required loop and mount capabilities are normally available. Containerized hosts require explicit loop-device and mount support; an unsupported host is rejected instead of silently falling back to weaker storage isolation.
+
+Read the curated version catalog in the UI before provisioning. Supported versions are an operational contract: do not pin an arbitrary upstream patch version or keep an obsolete engine only because its container can still start. For production data, document the upgrade path and restore compatibility before selecting a version.
+
 ## Provision and verify
 
 1. Choose the engine, supported version, database node, storage size, and memory profile.
@@ -26,6 +30,8 @@ Keep direct publication disabled unless an external client has a documented need
 3. Create the instance and follow the provisioning operation to completion.
 4. Wait for the instance to show **Ready** before creating an application binding or relying on Explorer, Console, or metrics.
 5. Verify engine health, recent logs, storage reporting, and a permitted connection path.
+
+The first verification should include a write appropriate to the engine and a read-back through the same identity the real client will use. For PostgreSQL, verify the intended database and schema; for Redis, verify the expected key access and persistence policy; for ClickHouse, verify the target database/table path and both query and storage behavior. Remove synthetic data after the test.
 
 Provisioning failures commonly result from unavailable nodes, capacity limits, storage preparation, unsupported engine settings, or engine startup. Read the operation result before retrying. Repeated restarts or recreation attempts can obscure the original failure and are not a replacement for correcting storage or configuration prerequisites.
 
@@ -35,8 +41,21 @@ Pause and unpause control compute while retaining the database data. Expect norm
 
 Resize only within the engine and storage constraints. Back up before a substantial capacity change, follow the resize operation, then verify storage reporting and application behavior. Credential rotation affects direct clients that use those credentials; application bindings retain their own engine identities. Certificate rotation can briefly recreate the database service, so clients must continue trusting the Gateway Database CA.
 
+For a planned change, record a before-state: engine version, storage usage, connection count, current bindings, publication state, latest successful backup, and the operation owner. After the change, compare the same signals and run a real client query. If the operation fails, preserve its Task and engine logs before retrying; repeated blind retries can replace useful evidence with secondary failures.
+
+Direct publication uses native TLS. Gateway issues the server certificate from its separate Database CA and keeps the private key in daemon-owned storage outside the database image. PostgreSQL and Redis expose one TLS endpoint; ClickHouse exposes HTTPS and its native TLS endpoint. Clients must trust the displayed Database CA and should pin the documented hostname or certificate fingerprint policy rather than disabling verification.
+
 ## Publication and retirement
 
 Direct TCP publication is opt-in and should be treated as a separate external-client contract. Verify the intended client, certificate trust, credentials, and network path after enabling it. Disabling publication removes that direct path but does not delete the instance or private workload bindings.
 
 Deletion is destructive. First remove or migrate dependent bindings, decide how long backups must be retained, and confirm that no external clients still require direct publication. Gateway then removes the managed instance and its related identity and storage state through its lifecycle. Do not manually remove engine users, internal network objects, or storage in an attempt to accelerate deletion; let the recorded operation finish so cleanup remains consistent.
+
+## Recovery decisions
+
+- If the Node is offline, restore the Node and daemon connection before changing the database definition.
+- If provisioning failed before the engine became ready, correct the reported storage, capacity, or version problem and use the targeted retry action.
+- If the engine is ready but clients fail, separate direct-publication TLS, binding state, credentials, and application configuration before restarting anything.
+- If storage is damaged or data is inconsistent, stop lifecycle experimentation and restore to a separate verified target from an engine-level backup.
+
+Pause is not a backup and restart is not rollback. Gateway can reconcile infrastructure state, but it cannot reverse an application schema migration or reconstruct data that was never backed up.

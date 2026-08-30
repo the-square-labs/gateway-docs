@@ -29,7 +29,8 @@ function frontmatter(source) {
 }
 
 function contentTargetExists(absolute, locale, target) {
-	const clean = target.split('#', 1)[0].split('?', 1)[0];
+	const raw = target.split('#', 1)[0].split('?', 1)[0];
+	const clean = raw.length > 1 && raw.endsWith('/') ? raw.slice(0, -1) : raw;
 	if (!clean) return true;
 
 	let base;
@@ -77,6 +78,10 @@ for (const locale of locales) {
 		for (const match of source.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
 			const target = match[1];
 			if (/^(?:https?:|mailto:|tel:|#)/.test(target)) continue;
+			if (/\.mdx?(?:[?#]|$)/.test(target)) {
+				errors.push(`${locale}/${file}: source-file extension is not a public documentation URL ${target}`);
+				continue;
+			}
 			if (!contentTargetExists(absolute, locale, target)) {
 				errors.push(`${locale}/${file}: broken internal link ${target}`);
 			}
