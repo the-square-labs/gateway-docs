@@ -44,7 +44,7 @@ export default defineConfig({
 				{
 					icon: 'github',
 					label: 'GitHub',
-					href: 'https://github.com/the-square-labs/gateway-docs',
+					href: 'https://github.com/the-square-labs/gateway',
 				},
 			],
 			head: [
