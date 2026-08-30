@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Tasks, events, and audit answer different management questions. A **Task** tells the operator whether long-running work completed. An **event** helps the interface and automation react to a state change. An **audit record** tells a security reviewer who or what attempted a consequential action. None of them alone proves the customer outcome.
+
+The resource owner decides whether to retry or roll back, the operator reconciles Task state with the owning runtime, and the security owner defines audit retention and export. Keep these records connected with stable resource, request, Task, and operation IDs.
+
 **Tasks** represent durable long-running work such as builds, deployments, migrations, imports, provisioning, and updates. Follow status, progress, logs, error code, and retry/cancel availability. Do not start duplicates merely because a browser disconnected.
 
 **Events** update live UI state and trigger supported operational workflows. Consumers must revalidate authorization and tolerate reconnect or replay boundaries.
@@ -49,3 +53,17 @@ Audit is not a debug log. Use operational logs and Tasks for implementation deta
 4. Compare desired state with current owner state.
 5. Review bounded operational logs.
 6. Record retry, cancellation, rollback, and final verification.
+
+## Success and failure interpretation
+
+A succeeded Task means the owning workflow reached its documented terminal state. It does not necessarily prove DNS propagation, external client access, application-level correctness, delivered email, processed webhook data, or restored business data. Add an independent verification appropriate to the resource.
+
+A failed or interrupted Task does not prove that no side effect occurred. The owner may have created a container, written a file, changed a provider, or completed a runtime action before acknowledgement was lost. Read current owner state and operation history before cleanup or retry.
+
+Waiting states should identify the dependency or required input. If a Task remains waiting without a clear owner, preserve its IDs and escalate rather than using Force Cancel as routine cleanup.
+
+## Retention and external evidence
+
+Keep audit records according to security and compliance policy, and export to independently controlled SIEM storage when the evidence must survive a Gateway outage or administrator compromise. Operational Task logs may have different retention and sensitivity. Do not expand audit payloads with secrets or raw request bodies merely to make debugging easier.
+
+When supplying evidence to support or another team, include timestamps, stable IDs, terminal state, sanitized error details, and the independent verification result. Remove credentials, internal topology, customer data, prompts, model output, and unrestricted logs.

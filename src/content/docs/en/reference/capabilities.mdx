@@ -18,7 +18,7 @@ lastReviewed: 2026-08-30
 | Managed and external databases | [Databases overview](/en/databases/overview/) |
 | Private database bindings | [Application database bindings](/en/databases/bindings/) |
 | Pages | [Pages overview](/en/pages/overview/) |
-| Monitoring, notifications, status | [Observability overview](/en/observability/overview/) |
+| Monitoring, logs, notifications, and status | [Monitoring and operations signals](/en/observability/overview/) |
 | Identity and permissions | [Authentication, users, and groups](/en/identity/auth-users-groups/) |
 | AI Workspace | [AI Workspace](/en/ai/workspace/) |
 | Gateway Inference | [Gateway Inference](/en/ai/inference/) |
@@ -35,6 +35,8 @@ lastReviewed: 2026-08-30
 
 Plan inclusion and runtime readiness are separate. A checkmark for an **In development** capability means the plan is intended to include it after release, not that the current Gateway instance can use it.
 
+Use this index to answer three evaluation questions: whether Gateway owns the workflow, which infrastructure prerequisite provides it, and which plan admits it. A feature can be documented and licensed but unavailable on a particular installation because the required Node role, connector, provider, or runtime capability is not healthy.
+
 ## Current product families
 
 - **Ingress:** Domains, Routes, TLS, access lists, maintenance, health checks, managed upstreams, and nginx placement.
@@ -43,7 +45,7 @@ Plan inclusion and runtime readiness are separate. A checkmark for an **In devel
 - **Pages:** immutable static deployments, Tags, Routes, previews, and optional Git builds.
 - **Nodes and Relay:** role-based enrollment, capability reporting, signed updates, monitoring, and multi-member Relay operation.
 - **Identity:** users, groups, MFA, OIDC, tokens, OAuth, resource scopes, and impersonation.
-- **Observability:** health, metrics, logs, tasks, alerts, notifications, status pages, structured logging, audit, and SIEM.
+- **Operations visibility:** health, metrics, logs, Tasks, alerts, notifications, status pages, structured logging, audit, and SIEM. These are connected product surfaces, not one universal observability dashboard.
 - **Automation and AI:** REST, OAuth, MCP, AI Workspace, scenarios, Plan Mode, and Gateway Inference.
 - **Security:** system PKI, user-facing Internal PKI, encrypted secrets, audit, admission boundaries, and fail-closed lifecycle checks.
 
@@ -52,3 +54,21 @@ Plan inclusion and runtime readiness are separate. A checkmark for an **In devel
 A plan entitlement does not replace host capability. Secure Runtime needs a healthy gVisor capability, Git builds need a dedicated Build Worker, managed databases need a prepared Database Node, public ingress needs a reachable Ingress node, and private links need a healthy Relay path.
 
 Use the feature-specific page to verify prerequisites, lifecycle consequences, and recovery behavior before enabling a capability in production. See [Plans and entitlements](/en/reference/plans-and-entitlements/) for plan behavior.
+
+## Evaluation path
+
+For a product evaluation, begin with the business journey rather than the longest feature list. Choose one representative public application, one private data dependency, one managed Node role, and one operator identity. Prove deployment, access control, customer traffic, monitoring, failure recovery, and audit for that journey. Then add higher-level capabilities such as Git builds, Pages, managed databases, AI, or SIEM only when they match the intended operating model.
+
+Record each result as:
+
+- **supported and verified** on the tested installation;
+- **supported with an unmet prerequisite**;
+- **plan-restricted**;
+- **in development**; or
+- **outside Gateway's product boundary**.
+
+This avoids treating roadmap positioning, a disabled UI control, and a failed runtime capability as the same thing.
+
+## Product boundary
+
+Gateway coordinates infrastructure resources and their supported lifecycle. It does not replace Kubernetes, infrastructure-as-code, professional monitoring/SIEM, host security, network firewalls, engine-native database tooling, or disaster-recovery systems. Use those systems alongside Gateway where the organization needs their depth. The relevant Gateway value is a consistent ownership, authorization, workflow, and audit layer across the supported resources—not a claim to absorb every infrastructure discipline.

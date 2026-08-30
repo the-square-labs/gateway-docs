@@ -9,6 +9,12 @@ lastReviewed: 2026-08-30
 ---
 
 
+Эта страница превращает connectivity Gateway в решение о владении до того, как оно станет firewall-инцидентом. Владелец платформы определяет placement и service addresses, владелец сети согласует paths, а владельцы сервисов решают, какие public endpoints нужны приложениям. Gateway не открывает host firewalls и не выполняет NAT traversal.
+
+Цель default-схемы проста: пользователи достигают Gateway и public Ingress по HTTPS; managed Nodes инициируют аутентифицированные исходящие соединения с Relay; внутренние базы данных и control interfaces остаются private. Добавляйте exposure только для документированного product path.
+
+## Краткая схема связности
+
 | Путь | Назначение |
 | --- | --- |
 | Client -> Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, inference proxy |
@@ -52,3 +58,21 @@ Gateway записывает сообщённые локальные/публи�
 ## Проверка
 
 Проверяйте из реальной исходной сети, а не только с целевого хоста. Подтвердите DNS, доступность TCP, идентичность TLS, поведение протокола HTTP или gRPC и состояние, сообщаемое Gateway. Одно успешное TCP-соединение не доказывает аутентификацию или готовность приложения.
+
+## Изменение и rollback
+
+До изменения public address, Relay endpoint, firewall rule, DNS record или certificate identity перечислите все peers этого path и задайте период совместной работы старого и нового пути. Снижайте DNS TTL только когда изменение затрагивает DNS, и заранее. Сохраняйте старый route, пока внешняя проверка и reconnect managed Nodes не подтвердят новый path.
+
+Для rollback восстановите прежний address, DNS value, certificate или assignment как одно согласованное изменение. Не переключайтесь между конфигурациями, пока caches и long-lived connections остаются активными. После rollback проверьте Relay sessions, свежесть Nodes, Routes, Pages, database bindings, webhooks и provider/source egress установки.
+
+### Диагностика оператора
+
+Проверяйте слоями из фактического источника:
+
+1. DNS возвращает ожидаемый address.
+2. Network path и firewall разрешают документированный destination port.
+3. TLS показывает ожидаемую identity и trusted chain.
+4. Application protocol завершает authentication или health check.
+5. Gateway получает свежий owner-reported state.
+
+Зафиксируйте слой сбоя. Открытие дополнительных ports не исправляет certificate, authorization, policy или application readiness.

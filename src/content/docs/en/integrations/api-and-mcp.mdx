@@ -9,6 +9,8 @@ lastReviewed: 2026-08-30
 ---
 
 
+Use REST and MCP when a Gateway workflow must be repeatable, attributable, and independent of one operator's browser. The automation owner maintains the client, resource owners approve its boundaries, and platform operators own runtime recovery. Success is a reconciled product outcome with durable evidence—not merely an accepted HTTP request or completed tool call.
+
 The REST API exposes documented resource operations with session, API-token, or OAuth authentication as appropriate. Remote MCP provides task-oriented tools over the same scopes, validation, entitlements, and audit trail.
 
 Automation should:
@@ -58,3 +60,17 @@ Use MCP for goal-oriented operations where the tool schema adds safety and resou
 ## Verification
 
 For every automation path, test one allowed action, one denied action, one validation failure, one asynchronous success, and one interrupted operation. Confirm audit attribution and make sure logs redact credentials and sensitive request fields.
+
+## Designing reliable clients
+
+Model automation as reconciliation rather than a sequence of blind button presses. Read the current resource, compare it with the desired state, submit the smallest required mutation, and verify the resulting owner-reported state. Use stable IDs in stored state and human-readable names only for display. When an API exposes an operation or Task ID, persist it alongside the automation run so an operator can correlate a timeout with Gateway history.
+
+Set bounded connection, request, and overall operation deadlines separately. A short HTTP deadline can coexist with a long-running durable Task. Retry reads and explicitly idempotent updates with capped exponential backoff and jitter. Do not automatically retry creates, deletes, migrations, restores, or credential rotation after an ambiguous timeout unless the API contract provides an idempotency key or the existing operation has been reconciled.
+
+Version the client against the OpenAPI document and the Gateway releases it has actually tested. Reject unknown destructive fields and states rather than silently ignoring them. If a release changes a lifecycle contract, update the client and its acceptance tests before rolling it across all installations.
+
+## Safe rollout and rollback
+
+Run new automation against a disposable Folder or resource set with production-like scopes. Capture the intended request, resulting Task, audit record, and independent state verification. Roll out to one installation or failure domain first, then observe errors and reconciliation lag before expanding.
+
+Rollback normally means disabling the caller, stopping new submissions, and applying a supported product rollback to already changed resources. It does not mean deleting Tasks or editing desired state in PostgreSQL. Preserve request IDs and failed payload metadata with secrets removed so the product owner can distinguish a client defect from a Gateway or daemon failure.

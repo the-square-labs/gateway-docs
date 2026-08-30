@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Tasks, events и audit отвечают на разные управленческие вопросы. **Task** показывает оператору, завершилась ли долгая работа. **Event** помогает UI и automation реагировать на изменение состояния. **Audit record** сообщает security reviewer, кто или что попыталось выполнить значимое действие. Ни один источник сам по себе не доказывает клиентский результат.
+
+Владелец ресурса решает, нужен ли retry или rollback, оператор сверяет Task с фактическим runtime owner, а владелец безопасности определяет retention и export аудита. Связывайте записи через стабильные resource, request, Task и operation IDs.
+
 **Tasks** представляют долговечную работу: сборки, Deployments, миграции, imports, provisioning и обновления. Следите за status, progress, logs, error code и доступностью retry/cancel. Не запускайте дубликаты только из-за отключения браузера.
 
 **Events** обновляют состояние live UI и запускают поддерживаемые операционные процессы. Потребители должны повторно проверять авторизацию и учитывать границы reconnect или replay.
@@ -49,3 +53,17 @@ Events, запускающие автоматизацию, должны повт
 4. Сравните желаемое состояние с текущим состоянием владельца.
 5. Просмотрите ограниченные операционные логи.
 6. Зафиксируйте retry, cancellation, rollback и финальную проверку.
+
+## Интерпретация success и failure
+
+Succeeded Task означает, что workflow владельца достиг документированного terminal state. Это не обязательно доказывает DNS propagation, доступ внешнего клиента, application correctness, доставленное email, обработку webhook или восстановление business data. Добавьте независимую проверку, соответствующую ресурсу.
+
+Failed или interrupted Task не доказывает отсутствие side effects. Владелец мог создать Container, записать файл, изменить provider или завершить runtime action до потери acknowledgement. До cleanup или retry прочитайте текущее owner state и operation history.
+
+Waiting state должен указывать dependency или необходимый input. Если Task остается waiting без понятного владельца, сохраните IDs и эскалируйте, а не используйте Force Cancel как обычную очистку.
+
+## Retention и внешние свидетельства
+
+Храните audit records согласно security и compliance policy и экспортируйте в независимо контролируемый SIEM, если evidence должно пережить Gateway outage или компрометацию администратора. У operational Task logs могут быть другие retention и sensitivity. Не добавляйте secrets или raw request bodies в audit ради удобства debugging.
+
+При передаче evidence в support или другую команду включайте timestamps, stable IDs, terminal state, очищенные error details и результат независимой проверки. Удаляйте credentials, internal topology, customer data, prompts, model output и неограниченные logs.

@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Hardening is the process of reducing avoidable privilege and making recovery predictable before an incident. The security owner approves exceptions, the platform owner implements host and network controls, and service owners prove that tighter controls do not break required workflows. Prioritize controls by customer impact and credential reach rather than by checklist count.
+
+Start with the boundaries that can compromise the entire installation: Gateway host access, administrator identities, encryption and PKI keys, PostgreSQL, Redis, Relay identity, and backup storage. Then harden managed-node roles, workloads, providers, and automation.
+
 - Keep Gateway and daemon hosts patched and dedicated to their roles where practical.
 - Restrict PostgreSQL and Redis to the private application network.
 - Expose only HTTPS and Relay ports required by the deployment.
@@ -62,3 +66,15 @@ Do not publish screenshots, support bundles, or logs until secrets, internal add
 Review administrator membership, group scopes, tokens, OAuth clients, source integrations, DNS connectors, SMTP credentials, SIEM destinations, and active sessions on a fixed schedule. Test denial paths with non-admin identities.
 
 Run incident, restore, update, Relay failover, node restart, workload recreation, and database binding recovery exercises. Remove temporary debug access and document any accepted exception with an owner and expiry.
+
+## Exception management
+
+Some workloads may require a control that the default policy avoids, such as direct database publication, host networking, a device, or broader provider access. Treat that as a reviewed exception, not a hidden toggle. Record the business requirement, affected resources, threat introduced, compensating controls, approving owner, review date, and removal trigger.
+
+Do not weaken a whole Node or installation to accommodate one workload when a dedicated Node, network segment, or external service can isolate the exception. Revalidate exceptions after application, runtime, Node-role, or provider changes.
+
+## Verification and recovery
+
+For each hardening control, prove both the intended operation and the expected denial. Verify administrator recovery after disabling unused authentication, workload recovery after removing host access, build behavior under egress restrictions, certificate renewal with restricted DNS credentials, and database access through binding identities after Node and workload restart.
+
+Keep a recovery method that does not depend on the component being repaired. Backup keys must be accessible when the Gateway host is lost; administrator recovery must work when OIDC or email is unavailable; engine-native backups must be restorable when the control plane is unavailable. Store evidence and review it on a fixed schedule.

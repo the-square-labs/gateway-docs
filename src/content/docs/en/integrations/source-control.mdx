@@ -9,6 +9,8 @@ lastReviewed: 2026-08-30
 ---
 
 
+Source-control integration establishes which reviewed source may become a Gateway-managed artifact. The application owner owns repository and branch policy, the platform owner owns build and deployment settings, and the security owner approves provider permissions and secrets. Success means a specific commit can be traced through build evidence to an immutable artifact and a verified release.
+
 Configure source integrations under **Settings > Integrations**. Supported paths include GitLab, GitHub, generic Git, and External SSH according to the current connector and plan availability.
 
 Use a dedicated machine or application identity with read-only repository access unless a workflow explicitly requires more. Restrict allowed repositories and hosts. Verify webhook authenticity, branch selection, commit resolution, and credential rotation.
@@ -44,3 +46,21 @@ Removing an integration does not make dependent resources safe to rebuild. Inven
 ## Troubleshooting
 
 Separate authentication failure, allowlist denial, repository-not-found, revision resolution, webhook delivery, Build Worker admission, and entitlement failure. Preserve provider request IDs and Gateway task history without logging tokens, private keys, variables, or Build Secrets.
+
+## Production source workflow
+
+Pin the production source to a reviewed branch policy and an exact resolved commit. A branch name is selection input; the commit digest is the immutable evidence of what was built. Confirm the application root, package manager, build script, artifact directory, runtime platform, and publish/deploy policy before enabling automatic actions. Keep Build Secrets separate from ordinary runtime Variables and expose only the values required during the build stage.
+
+For Pages and managed Git builds, verify the complete chain: provider access, repository discovery, commit resolution, Build Worker admission, dependency fetch, artifact creation, vulnerability policy where enabled, immutable artifact identity, publication Tag or workload revision, and customer-facing health. A successful provider webhook or source clone is only the beginning of that chain.
+
+## Rotation, migration, and removal
+
+To rotate credentials, add the replacement to the provider and Gateway, verify discovery and one real build, then revoke the previous value. To migrate providers or repositories, freeze automatic deploys, record the last approved commit and artifact digest, configure the replacement source, compare the resolved tree, run a canary build, and explicitly move the production pointer only after verification.
+
+Before deleting a connector, list every Docker, Compose, Pages, registry, webhook, and automation dependency. Disable triggers first. Existing immutable artifacts may continue running, but future builds, refreshes, or source-based recovery can fail after the connector disappears. Keep the last approved artifact and rollback instructions until the new source path has survived an operational cycle.
+
+## Security review
+
+Review provider audit logs, installed application permissions, deploy keys, SSH host keys, webhook secrets, allowed organizations/repositories, and inactive bindings. Repository read access can expose proprietary source and configuration; write or workflow permissions can affect the software supply chain. Grant them only when the selected Gateway workflow requires them.
+
+Source integration does not replace repository review, protected branches, dependency governance, or artifact approval. Gateway adds controlled discovery, build, deployment, scopes, and audit around those practices; it should consume the organization's source policy rather than become an undocumented exception to it.

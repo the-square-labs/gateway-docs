@@ -17,6 +17,12 @@ For consequential work, ask the Workspace to create a plan, review assumptions, 
 
 AI Workspace and Gateway Inference are separate: Workspace access uses `ai:workspace:use`; inference access uses `feat:ai:use` and dedicated accounting.
 
+## Outcome and decision boundary
+
+AI Workspace reduces the time needed to understand Gateway state and carry out documented operations. It is useful when a platform lead wants a reviewed plan, an operator wants bounded investigation, or a developer needs the correct product workflow. It is not an autonomous administrator and it does not become the owner of an infrastructure decision.
+
+The requesting user owns the intended outcome and final approval. Resource owners validate operational impact, and security owners define which providers and data classes may enter model context. Success is not “the assistant answered”; success is that the intended Gateway state is reached, independently verified, and attributable through normal Tasks and audit records.
+
 ![AI Workspace plan with implementation and verification steps](/screenshots/product-tour/ai-workspace.png)
 
 ## Operating modes
@@ -52,3 +58,20 @@ External web pages, repository text, logs, and tool output can contain malicious
 If the response stream is interrupted, reload the conversation and inspect durable operation state before sending the same instruction again. If a plan pauses for input, answer the specific question rather than starting a duplicate chat. When a tool fails, diagnose the owning subsystem and retry only after confirming whether the previous operation completed.
 
 AI Workspace is not the incident authority. During production incidents, preserve logs and task IDs, use the documented runbook, and independently verify recovery.
+
+## Choosing the right operating surface
+
+Use ordinary Gateway screens for a known single-resource action where the impact is already understood. Use REST or MCP for repeatable automation with a maintained client. Use AI Workspace when the difficult part is discovery, sequencing, or explaining tradeoffs across several product areas. During an incident, use it to gather and organize evidence, but keep the incident commander and existing runbook in control.
+
+Do not approve a plan that hides targets behind phrases such as “all affected resources” or “fix everything.” Require exact resources, explicit non-goals, expected customer impact, rollback conditions, and verification from the customer-facing path. If the plan proposes a host shell command or direct database edit, stop and confirm that a supported Gateway operation cannot achieve the same result.
+
+### Operator review after execution
+
+1. Open the affected resources outside the chat and refresh their current state.
+2. Review durable Tasks and operation IDs rather than relying on response prose.
+3. Confirm audit attribution and any required approval record.
+4. Test the customer or user path that motivated the change.
+5. Remove temporary maintenance, debug access, or expanded scopes.
+6. Record unresolved risks and assign an owner and deadline.
+
+If the assistant reports success but the independent checks fail, treat the operation as incomplete. Preserve the conversation and operation identifiers, then continue from actual product state rather than asking the model to assume its previous action worked.

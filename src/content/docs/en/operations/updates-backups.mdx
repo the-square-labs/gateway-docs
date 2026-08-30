@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Updates and backups protect two different outcomes: updates move the platform forward, while backups make it possible to recover identity, desired state, service credentials, and application data after failure. The platform owner owns the update sequence; the security owner owns recovery keys; database and application owners own engine-native data backups and validation.
+
+Define the recovery point objective (how much data may be lost) and recovery time objective (how long restoration may take) before choosing backup frequency or update windows. Success is a tested restore, not the existence of archive files.
+
 Before a Gateway update, read release notes, verify compatibility floors, back up PostgreSQL and persistent files, preserve encryption/master keys, and record the running image references. Update through the supported installer or generated Compose configuration.
 
 Daemon updates are signed and managed per node. Keep mixed-version behavior within the documented compatibility window and verify reconnect, inventory, bindings, logs, and operations after each role update.
@@ -62,3 +66,22 @@ Update one failure domain at a time. For Relay Pool members, drain, update, veri
 9. Confirm audit continuity and record the recovery event.
 
 If only part of the recovery set is available, stop and assess the consequence. Generating replacement master keys or identities can permanently orphan encrypted state or managed nodes.
+
+## Rollback decision
+
+Decide the rollback trigger before starting an update: failed migration, inability to decrypt existing secrets, Relay authorization failure, incompatible daemon state, broken customer Routes, or another measurable condition. Keep the prior approved image references and the matching backup until the new release completes its observation window.
+
+Application rollback and data rollback are separate. Reverting a Gateway image does not reverse a completed PostgreSQL schema migration, and moving a workload back to an older artifact does not revert mutable volume or database data. Follow the release-specific compatibility guidance and restore data only from a coordinated recovery point when integrity requires it.
+
+### Operator validation after update
+
+| Layer | Required proof |
+| --- | --- |
+| Identity | Existing users sign in; MFA, OAuth, and decryption work |
+| Control plane | Migrations complete; background schedulers and audit continue |
+| Relay and Nodes | Versions are compatible; Nodes reconnect with fresh inventory |
+| Customer traffic | External DNS, TLS, Route health, and application response succeed |
+| Data | Managed databases are healthy and application bindings can query |
+| Automation | Builds, webhooks, notifications, and source connectors used by the installation work |
+
+Keep the update record with start and end time, versions, image digests, backup identifiers, operator, exceptions, and final verification. This makes the next update a controlled procedure instead of a reconstruction from shell history.

@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Use this checklist as an approval record, not as a list one operator silently ticks. The service owner defines business-critical paths, the platform owner proves infrastructure recovery, the security owner approves identity and exposure, and application owners prove data and rollback. Assign every section before the readiness review.
+
+A production-ready installation has known owners, tested recovery, observable customer paths, and evidence that common failures do not require improvising on the host. Passing a build or seeing green cards in the UI is necessary but not sufficient.
+
 ## Control plane
 
 - Canonical HTTPS URL, cookies, WebSockets, and OAuth redirects work.
@@ -69,3 +73,21 @@ An accepted temporary exception must state the customer impact, compensating con
 ## First-day observation
 
 After enabling business traffic, watch Route health, TLS, Relay pressure, node freshness, workload restarts, database connections, disk growth, notification queues, and audit activity. Keep the rollback owner available through the observation window and avoid unrelated platform changes.
+
+## Readiness review format
+
+Hold the review against a named release and installation. For each area, record **pass**, **accepted exception**, or **no-go**, plus an evidence link and owner. Do not carry evidence forward from an older release when the relevant lifecycle, daemon, Relay, database, or ingress component changed.
+
+Start with the three journeys that would create immediate business impact: administrator recovery, public customer traffic, and application access to persistent data. Then review supporting capabilities such as builds, Pages, notifications, AI, and optional integrations according to what the installation will actually use. Untested unused features do not block launch; enabled critical features do.
+
+### Minimum acceptance scenarios
+
+1. A new authorized user signs in, completes MFA, and is denied an out-of-scope resource.
+2. A supported workload is deployed, observed, restarted, and rolled back without host edits.
+3. A public Route is verified from an external network with the expected certificate and health behavior.
+4. A managed Node disconnects and reconnects without losing desired state.
+5. Gateway restarts while customer workloads remain in their documented state.
+6. A backup is restored into a clean compatible environment and required secrets decrypt.
+7. Alerts open and recover during a controlled failure, and the intended recipient receives them.
+
+The approval should state the scope that was tested. Do not claim that the whole product is validated when only one Node role, database engine, runtime profile, or update path was exercised.

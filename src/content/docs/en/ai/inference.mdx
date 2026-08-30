@@ -11,6 +11,12 @@ lastReviewed: 2026-08-30
 
 Gateway Inference is a separate data plane backed by a supervised OpenCodex inference core. Gateway owns provider connections, public model IDs, access rules, budgets, accounting, and user tokens.
 
+## Outcome and ownership
+
+Gateway Inference gives teams one governed endpoint for approved AI models without making every user manage provider credentials. The platform owner decides which providers and models are available, the security owner approves data-handling boundaries, and team leads set budgets and access. Individual users own their dedicated inference tokens and the data they send through the selected model.
+
+Success means an approved user can call a stable public model ID, usage is attributed to that user, limits fail predictably, and provider changes do not force client reconfiguration. Gateway controls routing and accounting; it does not replace the provider's availability, privacy terms, or contractual capacity guarantees.
+
 ## Administrator path
 
 1. Enable Inference in **Settings > General**.
@@ -26,6 +32,8 @@ Gateway Inference is a separate data plane backed by a supervised OpenCodex infe
 Create a `gwi_` token under **Profile > Authorizations > Inference API tokens**. Use `/api/inference/v1` for OpenAI-compatible clients and `/api/inference` as the Anthropic SDK base URL. The companion package can configure Codex and Claude Code without manually copying configuration.
 
 Prompts and model output are not stored in activity logs. Gateway stores normalized metadata, usage, cost, and routing state. Private upstream URLs are denied by default and require explicit administrative allowance.
+
+![Profile with inference usage, limits, and the client base URL](/screenshots/product-tour/profile.png)
 
 ## Provider and model lifecycle
 
@@ -60,3 +68,18 @@ Subscription providers, API-key providers, and local providers have different qu
 Gateway does not write prompt or model-output bodies into normal activity records, but the selected provider receives request content. Apply provider-specific retention, data-processing, and residency policy before publishing it to users.
 
 If requests fail, inspect inference core health, provider connection state, discovered models, publication rules, token scopes, user limits, capacity, and protocol compatibility in that order. Restarting the core is not a substitute for correcting an invalid provider or model contract.
+
+## Rollout and rollback decisions
+
+Introduce one provider and one non-critical published model first. Give access to a small group, set conservative request and spend limits, and compare Gateway usage with the provider statement. Add fallback sources only when they are genuinely compatible in protocol, modality, context, and output behavior. A lower-priced model with a similar name is not automatically a safe failover.
+
+To withdraw a model, stop granting new access, notify consumers, identify clients using the public ID, and provide a tested replacement. If a provider becomes unsafe or unavailable, disable that source and verify routing state before re-enabling the public model. Do not point an existing public ID at a materially different model merely to keep requests returning `200`.
+
+### Operator checks
+
+- Confirm the inference core reports healthy before publishing models.
+- Verify provider discovery timestamps and quota state are current.
+- Test both OpenAI-compatible and Anthropic-compatible paths that you advertise.
+- Confirm streaming closes cleanly and interrupted requests reach a terminal accounting state.
+- Test budget exhaustion, denied models, revoked tokens, and source failover.
+- Review usage anomalies and provider cost reconciliation on a fixed schedule.

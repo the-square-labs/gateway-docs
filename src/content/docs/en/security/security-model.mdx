@@ -9,7 +9,11 @@ lastReviewed: 2026-08-30
 ---
 
 
+Gateway's security model helps an organization centralize infrastructure operations without pretending that one console removes the need to secure hosts, networks, identities, and backups. The platform owner controls Gateway and managed-node placement, the security owner defines identity and secret policy, and resource owners approve access to their workloads and data.
+
 Gateway assumes managed hosts and administrators are consequential trust boundaries. It reduces reusable credentials and direct shell dependence through outbound daemon enrollment, PKI identities, resource scopes, audited operations, and bounded daemon roles.
+
+A secure deployment succeeds when authority is explicit, credentials are not reused across trust boundaries, mutations are verified by the owning runtime, and failures do not silently fall back to a less secure path. “Reachable” is not the same as “authorized,” and “visible in cached inventory” is not permission to mutate.
 
 Key principles:
 
@@ -60,3 +64,20 @@ Availability failures must not be “fixed” by introducing anonymous listeners
 ## Security limitations
 
 Gateway cannot protect a compromised administrator endpoint, malicious host root, unrestricted Docker socket owner, compromised external identity provider, or data deliberately exported by an authorized user. Use independent host hardening, network segmentation, endpoint security, backups, and organizational controls.
+
+## Security decision checklist
+
+Before adopting Gateway for a production environment, identify who controls the Gateway host, Relay, every managed host, the external identity provider, source-control providers, DNS, email, AI providers, and backup storage. Document which parties can obtain plaintext application data or credentials. If one person or system owns several boundaries, record that concentration of privilege rather than assuming product scopes remove it.
+
+For each new capability, answer four questions:
+
+1. What data or infrastructure can it reach?
+2. Which credential authorizes that access and where is it stored?
+3. Which audit or Task evidence proves what happened?
+4. What remains operational, and what must fail closed, when the dependency is unavailable?
+
+Review the model after material topology, identity, provider, or entitlement changes. A design approved for one Ingress and one private database may not remain appropriate after adding Build Workers, public database access, external AI providers, or cross-team automation.
+
+### Operator assurance
+
+Test denial as deliberately as success: an unscoped user, a revoked token, a Node with stale capability data, an unsigned or mismatched update, a workload without the binding identity, and a private outbound destination outside policy. Preserve the resulting audit and error evidence. Security controls that have never been exercised under failure should be treated as assumptions.

@@ -11,6 +11,8 @@ lastReviewed: 2026-08-30
 
 Gateway использует планы Community, Personal, Business и Enterprise. Доступность, условия коммерческого использования, лицензирование развёртывания Gateway и quotas отдельно размещённых сервисов — разные понятия.
 
+Выбирайте plan по operating requirements, а не по размеру организации. Сначала определите обязательные workflows, необходимые resource limits, security controls политики и требуемые покупателю support или commercial terms. Владелец installation отвечает за license health, а владельцы ресурсов должны знать, какие операции зависят от платных entitlements.
+
 Готовые платные функции проверяются на границе операции так же, как в UI. Понижение плана или истечение сохраняет данные ресурсов, блокируя новые premium-операции и отключая переключаемые premium-сервисы согласно правилам их жизненного цикла. Grace periods и точная доступность функций могут меняться с релизами продукта; проверяйте текущую матрицу до публикации.
 
 Установкам Community ключ не нужен. Ключ Business или Enterprise представляет один активный экземпляр Gateway; quotas ресурсов внутри экземпляра Gateway нельзя путать с отдельными quotas Wiolett Cloud.
@@ -47,3 +49,22 @@ Gateway сохраняет существующие premium-ресурсы и д
 - Восстановите entitlement до ручной замены сохранённых ресурсов.
 
 Не используйте старую терминологию `homelab` и не определяйте доступность функций по тексту pricing, screenshots или другому релизу Gateway.
+
+## Выбор и изменение plan
+
+Создайте короткую decision record с обязательными capabilities, ожидаемым числом ресурсов, environments, compliance controls и последствиями временной недоступности entitlement. До procurement approval проверьте реальные операции на целевом release. Название функции в договоре или matrix не доказывает наличие нужной Node capability или external provider в installation.
+
+Перед downgrade, expiry или переносом на другую installation:
+
+1. определите premium resources и automation, которые перестанут принимать новую работу;
+2. сохраните source settings, build artifacts, PKI, logging и SIEM configuration;
+3. подтвердите, какие работающие ресурсы продолжат работу, а какие services отключатся;
+4. сообщите operational deadline и владельца;
+5. восстановите entitlement и явно включите switchable services, где это требуется;
+6. проверьте клиентские пути, а не предполагайте автоматическое возобновление прежней конфигурации.
+
+Не удаляйте сохраненные ресурсы ради «очистки» entitlement warning. Их retained state — путь восстановления после возврата правильного plan.
+
+## Границы лицензирования
+
+Лицензия Gateway относится к активной installation согласно key и agreement. Credentials, quotas или subscriptions внешних providers — cloud DNS, source control, registries, email, AI и других hosted services — остаются отдельными. Аналогично usage Gateway Inference является operational accounting и требует сверки с provider для коммерческих решений.

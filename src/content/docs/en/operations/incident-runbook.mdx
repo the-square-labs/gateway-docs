@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+This runbook helps the incident lead protect customer service, establish which subsystem owns the failure, and choose a reversible recovery path. The incident lead owns priorities and communication; the platform operator owns Gateway and managed-node evidence; application and database owners validate their services. Do not let the person typing commands become the only person deciding risk.
+
+Success means customer impact is understood, further change is controlled, the authoritative runtime state is reconciled, and recovery is verified from the user-facing path. A green Dashboard alone is not recovery evidence.
+
 ## First five minutes
 
 1. Record start time, affected customer path, and recent changes.
@@ -73,3 +77,22 @@ Recovery requires:
 - queued operations and deliveries are understood;
 - temporary exposure or bypasses are removed;
 - a follow-up owner and deadline exist for every remaining risk.
+
+## Decision framework for the incident lead
+
+Prefer actions that preserve evidence and reduce blast radius. Pause unrelated automation before restarting shared services. If the control plane is unavailable but workloads still serve traffic, restore management without recreating healthy resources. If ingress is unhealthy, keep the hostname stable with maintenance mode or a tested rollback rather than changing DNS repeatedly. If data integrity is uncertain, stop writes before optimizing availability.
+
+Escalate immediately when the incident involves possible credential disclosure, damaged storage, unknown schema migration state, loss of Relay identity, inconsistent database binding ownership, or a release artifact that cannot be verified. These conditions can turn a routine restart into permanent loss or unauthorized access.
+
+### Operator evidence table
+
+| Evidence | Why it matters |
+| --- | --- |
+| External DNS, TLS, and application response | Confirms actual customer impact |
+| Gateway, PostgreSQL, Redis, and Relay health | Separates control-plane and data-plane failure |
+| Node last seen, capability state, and daemon logs | Identifies the runtime owner and stale inventory |
+| Task, operation, and request IDs | Prevents duplicate or ambiguous mutations |
+| Last approved version and artifact digest | Provides a known rollback target |
+| Database and volume backup status | Defines safe recovery options |
+
+After recovery, perform a short review while evidence is still available. Record the initiating change, why detection did or did not work, which manual steps were needed, and which verification would have caught the problem earlier. Convert temporary instructions into a tested runbook change rather than preserving undocumented shell history.

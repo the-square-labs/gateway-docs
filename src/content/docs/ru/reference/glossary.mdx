@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Используйте эти термины в runbooks, support requests, automation и architecture decisions. Некоторые привычные инфраструктурные слова имеют в Gateway конкретное значение ownership или lifecycle. Точная терминология важна: Container, Deployment, Compose Project, Pages Deployment и managed database по-разному откатываются и удаляются.
+
+## Ресурсы и владение
+
 **Additional Route** — Расположение с буквальным префиксом пути внутри управляемого Ingress Route.
 
 **Binding** — Долговечная связь, предоставляющая одному управляемому ресурсу доступ к другому, например идентичность приложения для базы данных.
@@ -16,6 +20,8 @@ lastReviewed: 2026-08-30
 **Build Worker** — Выделенный профиль Docker daemon, использующий BuildKit/containerd без сокета Docker Engine.
 
 **Deployment** — Стабильная идентичность приложения с сине-зелёными runtime-слотами и состоянием отката.
+
+**Desired owner** — Ресурс или подсистема Gateway, отвечающая за создание, reconciliation и удаление зависимого объекта. Объекты другого владельца нельзя удалять как ручную очистку.
 
 **Managed node** — Хост, выполняющий ограниченную роль daemon Gateway.
 
@@ -31,17 +37,37 @@ lastReviewed: 2026-08-30
 
 **Task** — Долговечная операция, например сборка, миграция, Deployment или обновление.
 
+## Identity и policy
+
 **Access List** — Переиспользуемая политика Ingress с IP-правилами и необязательной HTTP basic authentication.
 
 **Capability** — Возможность, о здоровом состоянии которой сообщает управляемый daemon; используется для допуска операций, безопасно поддерживаемых хостом.
 
-**Database binding listener** — TCP listener, принадлежащий целевому Docker daemon в приватной bridge network конкретной привязки. Это не отдельный Container-коннектор для каждой привязки.
-
-**Desired state** — Долговечная конфигурация, которую Gateway ожидает от владеющего daemon или сервиса.
+**Entitlement** — Полномочие plan на использование платной capability. Entitlement не доказывает готовность требуемого host, Node, provider или connector.
 
 **Folder** — Организационная граница и граница прав, группирующая поддерживаемые ресурсы Gateway.
 
+**Impersonation** — Явно помеченная и аудитируемая support-сессия администратора от имени другого пользователя. Она отделена от обычной сессии администратора.
+
 **Inference token** — Отдельные учётные данные `gwi_` для плоскости данных Gateway Inference, отделённые от обычных API-учётных данных Gateway.
+
+**Resource scope** — Permission, ограниченное конкретными ресурсами Gateway или ownership boundaries, а не всеми ресурсами типа.
+
+**System actor** — Сервис Gateway или scheduled process, записанный как инициатор операции вместо human session.
+
+## Runtime и connectivity
+
+**Control plane** — Сервисы Gateway и persistent state для authorization, coordination и audit операций. Некоторые managed workloads продолжают работу в документированном last-applied state при сбое control plane.
+
+**Database binding listener** — TCP listener, принадлежащий целевому Docker daemon в приватной bridge network конкретной привязки. Это не отдельный Container-коннектор для каждой привязки.
+
+**Data plane** — Runtime path клиентского трафика или private service connections: Ingress, Relay, Secure Links и запросы Gateway Inference.
+
+**Desired state** — Долговечная конфигурация, которую Gateway ожидает от владеющего daemon или сервиса.
+
+**Fail closed** — Отказ или отложенная операция, когда нельзя доказать authorization, ownership, identity, entitlement, capability или compatibility, вместо выбора менее безопасного fallback.
+
+**Immutable artifact** — Build или Pages output с неизменяемой content/release identity. Mutable pointers, например Pages Tags, выбирают immutable artifact.
 
 **Managed database** — Экземпляр PostgreSQL, Redis или ClickHouse, созданный и эксплуатируемый на Database Node.
 
@@ -49,10 +75,16 @@ lastReviewed: 2026-08-30
 
 **Pages Project** — Ресурс статического сайта с неизменяемыми Deployments, изменяемыми Tags, конфигурацией источника и Routes.
 
+**Reconciliation** — Сравнение durable desired state с текущим owner-reported state и применение или восстановление поддерживаемой разницы.
+
 **Reported state** — Последнее состояние инвентаря, capability или health, подтверждённое владеющим daemon.
 
 **Route-owned binding** — Связь Secure Link, создаваемая и выводимая из эксплуатации вместе с владеющим Ingress Route.
 
 **Runtime profile** — Ограниченный режим daemon или рабочей нагрузки с определённой capability и границей безопасности, например Build Worker, Databases, Default runtime или Secure Runtime.
 
+**Service address** — Role-specific reachable address, используемый peers, которые не могут обращаться к общему local address Node.
+
 **System PKI** — Скрытые центры сертификации и идентичности для управляемого транспорта Gateway, отделённые от пользовательской Internal PKI.
+
+Когда в support обсуждаются “restart”, “delete”, “ready” или “deployed”, называйте точный ресурс и owner. Restart Gateway application, Relay, daemon, Node, workload и database engine имеет разные последствия; завершенная Task и customer-verified outcome — тоже разные состояния.

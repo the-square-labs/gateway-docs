@@ -11,6 +11,8 @@ lastReviewed: 2026-08-30
 
 Gateway uses Community, Personal, Business, and Enterprise plans. Availability, commercial-use terms, Gateway deployment licensing, and separately hosted service quotas are different concepts.
 
+Choose a plan from the operating requirements, not from organization size. Start with the workflows that must be supported, the resource limits they need, the security controls required by policy, and the support or commercial terms required by the buyer. The installation owner is responsible for monitoring license health; resource owners should know which operations depend on paid entitlements.
+
 Ready paid features are enforced at the operation boundary as well as in the UI. Downgrade or expiry preserves resource data while blocking new premium operations and disabling switchable premium services according to their lifecycle rules. Grace periods and exact feature availability can change with product releases; review the current matrix before publication.
 
 Community installations do not require a key. A Business or Enterprise key represents one active Gateway instance; resource quotas inside a Gateway instance must not be confused with separate Wiolett Cloud quotas.
@@ -47,3 +49,22 @@ Existing Git-delivered workloads, source settings, build history, and internal-r
 - Restore entitlement before manually replacing preserved resources.
 
 Do not use old `homelab` terminology or infer feature availability from pricing copy, screenshots, or a different Gateway release.
+
+## Choosing and changing a plan
+
+Build a small decision record listing required capabilities, expected resource counts, environments, compliance controls, and the consequence if entitlement is temporarily unavailable. Test the actual operations on the target release before procurement approval. A feature name in a contract or matrix does not prove that the installation has the required Node capability or external provider.
+
+Before downgrade, expiry, or transfer to another installation:
+
+1. identify premium resources and automation that will stop accepting new work;
+2. preserve source settings, build artifacts, PKI, logging, and SIEM configuration;
+3. confirm which running resources remain operational and which services disable themselves;
+4. communicate the operational deadline and owner;
+5. restore entitlement and explicitly re-enable switchable services where required;
+6. verify customer paths rather than assuming the previous configuration resumed.
+
+Do not delete preserved resources to “clean up” an entitlement warning. Their retained state is the recovery path after the correct plan returns.
+
+## Licensing boundaries
+
+The Gateway license covers the active Gateway installation according to its key and agreement. Credentials, quotas, or subscriptions for external providers—cloud DNS, source control, registries, email, AI, or other hosted services—remain separate. Likewise, usage shown by Gateway Inference is operational accounting and should be reconciled with the provider for commercial decisions.

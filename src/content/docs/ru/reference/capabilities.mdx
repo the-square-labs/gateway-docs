@@ -18,7 +18,7 @@ lastReviewed: 2026-08-30
 | Управляемые и внешние базы данных | [Обзор баз данных](/ru/databases/overview/) |
 | Приватные привязки баз данных | [Привязки баз данных приложений](/ru/databases/bindings/) |
 | Pages | [Обзор Pages](/ru/pages/overview/) |
-| Мониторинг, уведомления, статус | [Обзор наблюдаемости](/ru/observability/overview/) |
+| Monitoring, logs, notifications и status | [Monitoring и операционные сигналы](/ru/observability/overview/) |
 | Идентичность и права | [Аутентификация, пользователи и группы](/ru/identity/auth-users-groups/) |
 | AI Workspace | [AI Workspace](/ru/ai/workspace/) |
 | Gateway Inference | [Gateway Inference](/ru/ai/inference/) |
@@ -35,6 +35,8 @@ lastReviewed: 2026-08-30
 
 Включение в план и готовность runtime — разные вещи. Отметка для возможности **In development** означает, что план должен включить её после выпуска, а не что текущий экземпляр Gateway уже может её использовать.
 
+Используйте этот указатель для трех вопросов оценки: владеет ли Gateway данным workflow, какая инфраструктурная prerequisite его обеспечивает и какой plan его допускает. Возможность может быть документирована и лицензирована, но недоступна в конкретной installation из-за неготового Node role, connector, provider или runtime capability.
+
 ## Текущие семейства продукта
 
 - **Ingress:** Domains, Routes, TLS, access lists, обслуживание, health checks, управляемые upstream и размещение nginx.
@@ -43,7 +45,7 @@ lastReviewed: 2026-08-30
 - **Pages:** неизменяемые статические Deployments, Tags, Routes, previews и необязательные Git-сборки.
 - **Nodes and Relay:** регистрация по ролям, отчёты capabilities, подписанные обновления, monitoring и работа Relay с несколькими участниками.
 - **Identity:** пользователи, группы, MFA, OIDC, токены, OAuth, области ресурсов и impersonation.
-- **Observability:** состояние, метрики, логи, Tasks, alerts, notifications, status pages, структурированное логирование, аудит и SIEM.
+- **Операционная видимость:** health, metrics, logs, Tasks, alerts, notifications, status pages, structured logging, audit и SIEM. Это связанные поверхности продукта, а не единый универсальный observability dashboard.
 - **Automation and AI:** REST, OAuth, MCP, AI Workspace, scenarios, Plan Mode и Gateway Inference.
 - **Security:** системная PKI, пользовательская Internal PKI, зашифрованные секреты, аудит, границы admission и проверки жизненного цикла fail-closed.
 
@@ -52,3 +54,21 @@ lastReviewed: 2026-08-30
 Entitlement плана не заменяет capability хоста. Secure Runtime требует здоровой capability gVisor, Git-сборки — выделенного Build Worker, управляемые базы данных — подготовленного Database Node, публичный Ingress — доступного Ingress Node, а приватные связи — здорового пути Relay.
 
 Перед включением возможности в production используйте страницу функции для проверки предварительных условий, последствий жизненного цикла и поведения восстановления. Поведение планов описано в разделе [Планы и права по тарифу](/ru/reference/plans-and-entitlements/).
+
+## Путь оценки
+
+Для product evaluation начинайте с бизнес-пути, а не с максимального списка функций. Выберите одно публичное приложение, одну private data dependency, один managed Node role и одну operator identity. Докажите deployment, access control, клиентский трафик, monitoring, recovery и audit этого пути. Затем добавляйте Git builds, Pages, managed databases, AI или SIEM только когда они соответствуют целевой operating model.
+
+Фиксируйте результат как:
+
+- **supported and verified** в проверенной installation;
+- **supported with an unmet prerequisite**;
+- **plan-restricted**;
+- **in development**; или
+- **outside Gateway's product boundary**.
+
+Так roadmap positioning, disabled UI control и неготовая runtime capability не смешиваются в один статус.
+
+## Граница продукта
+
+Gateway координирует инфраструктурные ресурсы и их поддерживаемый lifecycle. Он не заменяет Kubernetes, infrastructure-as-code, профессиональные monitoring/SIEM, host security, network firewalls, engine-native database tooling или disaster-recovery systems. Используйте эти системы рядом с Gateway, если организации нужна их глубина. Ценность Gateway — согласованный слой ownership, authorization, workflow и audit для поддерживаемых ресурсов, а не попытка поглотить все инфраструктурные дисциплины.

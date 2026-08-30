@@ -9,6 +9,8 @@ lastReviewed: 2026-08-30
 ---
 
 
+This area answers two management questions: how people prove who they are, and how Gateway limits what they can change. The identity owner maintains sign-in and recovery; resource owners define operational groups; security administrators review privileged access. Success means people can recover access without bypassing controls, and a role change can be applied and audited without rewriting every resource.
+
 Gateway supports independent OIDC, local-password, and email one-time-code authentication. Passkeys are enrolled after account creation. MFA policy can require enrollment before a user receives a normal session.
 
 Use groups as the normal permission boundary. Keep a small, auditable administrator group and separate operators, developers, observers, and automation. Blocking or deleting a user revokes access while preserving historical attribution. Restoring a deleted user leaves the account blocked until explicitly enabled.
@@ -50,3 +52,21 @@ Use impersonation only for a bounded support investigation. The session must rem
 ## Provisioning limitation
 
 Gateway does not currently provide SCIM provisioning. Maintain an external joiner/mover/leaver checklist and reconcile users and groups manually or through supported API/OAuth automation until SCIM is released.
+
+## Recovery and lockout prevention
+
+Treat identity configuration as a production dependency. Before changing the only working sign-in method, create and test a second administrator path in a separate browser profile. Keep recovery codes outside Gateway, verify that local-password recovery email reaches the intended mailbox, and record which team owns the OIDC application and its client secret. Do not disable the previous method until a fresh session can sign in, complete MFA, and reach an administrator-only page through the replacement path.
+
+If administrators are locked out, restore the failed external dependency or use the previously tested independent method. Avoid editing user, session, or group rows directly in PostgreSQL: bypassing the application can leave password, MFA, session, and audit state inconsistent. After access returns, review recent authentication events, active sessions, group membership, and recovery-code status before treating the incident as closed.
+
+## Verification checklist
+
+- Sign in through every enabled method with a non-production account.
+- Confirm MFA enrollment is enforced before a normal privileged session is issued.
+- Verify a blocked user cannot create a new session or use an existing token.
+- Verify a restored user remains blocked until explicitly enabled.
+- Test one allowed and one denied resource action for each operational group.
+- Confirm impersonation is visibly marked and the audit actor remains attributable.
+- Reconcile inactive users, unused groups, stale sessions, and outstanding invitations on a schedule.
+
+Authentication proves who the caller is; groups and scopes decide what that caller may do. A successful OIDC login must never be used as evidence that the user should receive broad Gateway authority.

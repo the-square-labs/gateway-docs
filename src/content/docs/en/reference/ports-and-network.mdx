@@ -9,6 +9,12 @@ lastReviewed: 2026-08-30
 ---
 
 
+This page turns Gateway connectivity into an ownership decision before it becomes a firewall incident. The platform owner defines placement and service addresses, the network owner approves paths, and service owners decide which public endpoints their applications require. Gateway does not open host firewalls or provide NAT traversal.
+
+The default objective is simple: users reach Gateway and public Ingress over HTTPS; managed Nodes initiate authenticated outbound connections to Relay; internal databases and control interfaces remain private. Add exposure only for a documented product path.
+
+## Connectivity summary
+
 | Path | Purpose |
 | --- | --- |
 | Client -> Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, inference proxy |
@@ -52,3 +58,21 @@ Changing an address can require DNS updates, certificate rotation, Route migrati
 ## Verification
 
 Test from the real source network, not only from the destination host. Confirm DNS, TCP reachability, TLS identity, HTTP or gRPC protocol behavior, and Gateway's reported health. A successful TCP connection alone does not prove authentication or application readiness.
+
+## Change and rollback procedure
+
+Before changing a public address, Relay endpoint, firewall rule, DNS record, or certificate identity, list every peer that uses the path and define a period when old and new paths coexist. Lower DNS TTL only when DNS is part of the change, and do it early enough to take effect. Keep the old route available until external verification and managed-node reconnects prove the new path.
+
+Roll back by restoring the previous address, DNS value, certificate, or assignment as one coordinated change. Avoid alternating between configurations while caches and long-lived connections are still active. After rollback, verify Relay sessions, node freshness, Routes, Pages, database bindings, webhooks, and source/provider egress used by the installation.
+
+### Operator diagnostics
+
+Use a layered check from the actual source:
+
+1. DNS returns the intended address.
+2. The network path and firewall allow the documented destination port.
+3. TLS presents the expected identity and trusted chain.
+4. The application protocol completes authentication or health checks.
+5. Gateway receives fresh owner-reported state.
+
+Record which layer fails. Opening more ports does not correct a certificate, authorization, policy, or application-readiness problem.

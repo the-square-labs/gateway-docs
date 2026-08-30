@@ -9,6 +9,8 @@ lastReviewed: 2026-08-30
 ---
 
 
+Source-control integration определяет, какой reviewed source может стать managed artifact Gateway. Владелец приложения отвечает за repository и branch policy, владелец платформы — за build и deployment settings, а владелец безопасности — за provider permissions и secrets. Успех означает трассировку конкретного commit через build evidence до immutable artifact и проверенного release.
+
 Настраивайте интеграции источников в **Settings > Integrations**. Поддерживаемые пути включают GitLab, GitHub, generic Git и External SSH согласно доступности текущего коннектора и плана.
 
 Используйте отдельную machine или application identity с доступом к репозиторию только для чтения, если процесс явно не требует большего. Ограничьте разрешённые репозитории и хосты. Проверяйте подлинность webhook, выбор ветки, разрешение commit и ротацию учётных данных.
@@ -44,3 +46,21 @@ External SSH — коннектор к именованному хосту, а �
 ## Диагностика
 
 Разделяйте ошибку аутентификации, отказ allowlist, repository-not-found, разрешение ревизии, доставку webhook, допуск Build Worker и ошибку entitlement. Сохраняйте request IDs provider и историю Tasks Gateway, не записывая токены, закрытые ключи, variables или Build Secrets.
+
+## Production-процесс исходного кода
+
+Привязывайте production source к проверенной branch policy и точному resolved commit. Имя ветки — вход выбора, а commit digest — неизменяемое доказательство того, что было собрано. До включения автоматических действий подтвердите application root, package manager, build script, artifact directory, runtime platform и publish/deploy policy. Храните Build Secrets отдельно от обычных runtime Variables и выдавайте только значения, необходимые на стадии build.
+
+Для Pages и управляемых Git builds проверяйте всю цепочку: provider access, repository discovery, commit resolution, admission Build Worker, загрузку зависимостей, создание artifact, vulnerability policy при ее наличии, immutable artifact identity, publication Tag или workload revision и customer-facing health. Успешный webhook провайдера или clone — только начало цепочки.
+
+## Ротация, миграция и удаление
+
+Для ротации добавьте замену у провайдера и в Gateway, проверьте discovery и одну реальную сборку, затем отзовите старое значение. Для миграции провайдера или репозитория остановите auto deploy, запишите последний одобренный commit и artifact digest, настройте новый source, сравните resolved tree, выполните canary build и только после проверки переместите production pointer.
+
+Перед удалением connector перечислите все зависимости Docker, Compose, Pages, registry, webhook и automation. Сначала отключите triggers. Уже работающие immutable artifacts могут продолжить работу, но будущие builds, refresh или source-based recovery сломаются после исчезновения connector. Храните последний одобренный artifact и инструкцию rollback, пока новый source path не пройдет полный операционный цикл.
+
+## Проверка безопасности
+
+Проверяйте provider audit logs, permissions установленного приложения, deploy keys, SSH host keys, webhook secrets, разрешенные organizations/repositories и неактивные bindings. Read-доступ к репозиторию может раскрывать закрытый source и конфигурацию; write или workflow permissions влияют на software supply chain. Выдавайте их только когда выбранный workflow Gateway действительно этого требует.
+
+Source integration не заменяет repository review, protected branches, dependency governance или artifact approval. Gateway добавляет controlled discovery, build, deployment, scopes и audit вокруг этих практик; он должен использовать source policy организации, а не становиться недокументированным исключением.

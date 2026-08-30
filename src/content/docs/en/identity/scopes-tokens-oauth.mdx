@@ -9,6 +9,8 @@ lastReviewed: 2026-08-30
 ---
 
 
+Programmatic access should be easier to revoke and narrower than a human administrator session. The automation owner defines the required workflow, the resource owner approves its reach, and the security owner reviews credential lifetime and storage. Success means the integration can perform its intended action, is denied elsewhere, and can be rotated without interrupting unrelated systems.
+
 Users manage API tokens under **Profile > Authorizations > API Tokens**. Secrets are shown once. Store them in a secret manager, assign the minimum scopes, and revoke unused tokens.
 
 OAuth clients delegate user authority with explicit redirect URIs and consent. Remote MCP uses the same resource and scope model as REST and the Console; it is not a privileged back door.
@@ -57,3 +59,23 @@ Handle authorization failures distinctly:
 ## Rotation and incident response
 
 Create the replacement, update the dependent system, verify successful use, and then revoke the old credential. After suspected disclosure, revoke first when operationally safe, inspect audit activity, invalidate related sessions separately, and rotate any downstream secret that may have been exposed.
+
+## Scope design and ownership
+
+Start from the operation, not from a role name. List the exact read and mutation calls the integration needs, then bind resource scopes to the smallest stable ownership boundary: a Folder, Node, Route, workload, database, or Pages Project. Add a global scope only when the workflow genuinely crosses all resources of that type. Separate view, reveal, export, console, mount, secret, and lifecycle permissions; ordinary read access must not imply access to credentials or host-sensitive operations.
+
+Every credential needs a human owner, a machine consumer, a purpose, an environment, and a removal condition. A token used by CI should not also be used for an operator's terminal session. Production and non-production OAuth clients should have different client IDs, redirect URIs, secrets, and consent records. When ownership changes, transfer or replace the credential rather than leaving it attached to a departed user's account.
+
+## Operational verification
+
+Before enabling automation in production:
+
+1. call a harmless read endpoint with the new credential;
+2. perform one intended mutation against a disposable resource;
+3. prove an out-of-scope resource is hidden or denied;
+4. confirm audit attribution identifies the expected user or OAuth client;
+5. verify token values, authorization headers, and callback parameters are redacted from logs;
+6. revoke the credential and prove the consumer fails closed;
+7. install the replacement and document the tested rotation order.
+
+Revoking an API token does not automatically terminate browser sessions, OAuth grants, inference tokens, or credentials stored in external providers. During an incident, inventory each credential family separately.

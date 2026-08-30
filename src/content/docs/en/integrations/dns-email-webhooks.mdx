@@ -9,6 +9,8 @@ lastReviewed: 2026-08-30
 ---
 
 
+These integrations connect Gateway decisions to systems outside its control. The platform owner defines the intended outcome, the external-service owner supplies least-privilege credentials, and the service owner verifies delivery from the recipient side. Success requires both Gateway acceptance and independent confirmation by DNS resolvers, mail recipients, or webhook consumers.
+
 Cloudflare integration can manage supported Domain records and DNS-01 challenges. Use a narrowly scoped API token and verify the intended account and zone before enabling reconciliation.
 
 Email configuration supports authentication flows and notification delivery where enabled. Test sender identity, TLS, deliverability, and rate limits before relying on email one-time codes.
@@ -41,3 +43,19 @@ If email one-time codes are enabled, maintain another administrator recovery pat
 Treat webhook delivery as a request to evaluate a source event, not proof of deployment. Verify the provider signature, repository allowlist, branch or tag policy, resolved commit, build admission, and final deployment task independently.
 
 Rotate connector and webhook secrets by installing the replacement, verifying it, and then revoking the old value. Do not expose full receiver responses, provider credentials, or internal daemon errors to untrusted callers.
+
+## Failure modes and recovery
+
+DNS failures commonly come from the wrong account or zone, insufficient token permissions, stale resolver caches, an unexpected proxy/CDN mode, or a challenge record that cannot be observed publicly. Compare the record in Gateway with the authoritative nameserver response and at least one independent resolver. During a migration, restore the recorded previous value if the new endpoint cannot be verified before the agreed rollback deadline.
+
+Email delivery has several independent stages: Gateway accepted the message, the SMTP provider accepted it, the receiving system accepted it, and the user can find it. Check each stage before changing authentication policy. If one-time-code delivery is degraded, keep the tested alternative administrator path available and avoid repeatedly requesting codes that trigger provider throttling.
+
+Webhook failures require the delivery record, attempt count, response class, and receiver-side correlation ID. A `2xx` response should mean the receiver durably accepted the event; processing may continue asynchronously. For retryable failures, make the receiver deduplicate by delivery or event ID. For terminal authentication failures, rotate the shared secret or signing key and verify both sides before replaying bounded failed deliveries.
+
+## Security boundaries
+
+Use HTTPS endpoints without credentials in the URL. Restrict outbound destinations to the expected public hosts or explicitly approved private CIDRs. Receivers must validate timestamps or replay windows where the integration supports them, compare signatures in constant time, limit request size, and avoid reflecting request bodies in error responses.
+
+DNS and email provider tokens are administrative credentials even when Gateway encrypts them at rest. Keep provider-side audit enabled, review their scope regularly, and revoke the old token only after the replacement has completed a real test operation.
+
+For business-critical authentication or notification, document an alternative communication and administrator-recovery path. External provider success and latency are outside Gateway's availability boundary, so do not make one untested provider the only way to access or operate the installation.
