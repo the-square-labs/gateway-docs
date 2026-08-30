@@ -1,0 +1,37 @@
+---
+title: Опубликуйте первый Route
+description: Подключите домен, сертификат и upstream через управляемый Ingress.
+section: Начало работы
+order: 7
+audience: [operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Опубликуйте первый Route
+
+Этот быстрый старт предполагает, что Node nginx находится в сети, а приложение доступно с этого Node.
+
+## Основной сценарий
+
+1. Откройте **Ingress > Domains** и добавьте hostname.
+2. Назначьте его Node nginx, который будет принимать публичный трафик.
+3. Настройте DNS через интеграцию Cloudflare или самостоятельно обновите внешние DNS-записи.
+4. Откройте **Ingress > SSL Certificates** и выпустите или загрузите сертификат.
+5. Откройте **Ingress > Routes** и создайте proxy Route для домена.
+6. Выберите ручной upstream или управляемую Gateway-цель типа Docker/Compose/Deployment.
+7. Включите TLS и выберите сертификат.
+8. Сохраните изменения, дождитесь реконсиляции nginx и проверьте публичный URL.
+
+{/* screenshot: id=first-route-editor; viewport=1440x900; description=Route editor with domain, TLS certificate, and managed upstream selected; redact=domains,node-names,container-names */}
+
+## Проверьте результат
+
+- DNS разрешает имя в адрес назначенного Ingress Node.
+- Цепочка сертификата доверенна и покрывает hostname.
+- Route сообщает о работоспособности.
+- Трафик WebSocket работает, если он включён.
+- Правила Access List работают как задумано.
+- На странице сведений о Node nginx отображается применённая ревизия конфигурации.
+
+Для подключения приватной рабочей нагрузки продолжите с раздела [Secure upstreams](../ingress/secure-upstreams.mdx). Для полного пути через несколько ресурсов используйте [Публикацию приложения](../journeys/publish-application.mdx).

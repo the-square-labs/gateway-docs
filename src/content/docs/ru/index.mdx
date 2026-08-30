@@ -1,0 +1,48 @@
+---
+title: Документация Good Gateway
+description: Управляйте приложениями, Ingress, Docker, базами данных, наблюдаемостью и AI из единой плоскости управления инфраструктурой.
+section: Начало работы
+order: 1
+audience: [operator, platform-engineer, security-admin, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Документация Good Gateway
+
+Good Gateway — это плоскость управления инфраструктурой для команд, которым нужен согласованный способ эксплуатации Ingress, рабочих нагрузок Docker, управляемых баз данных, сертификатов, наблюдаемости, доступа, автоматизации и AI-сервисов. Вы можете использовать полноценную Operations Console, REST API, OAuth, удалённые MCP-инструменты или AI Workspace. AI — это необязательная поверхность управления, а не зависимость для базового управления инфраструктурой.
+
+![Панель Gateway с Ingress, управляемой базой данных и состоянием Node](/screenshots/product-tour/dashboard.png)
+
+## Выберите свой сценарий
+
+- **Оцениваете продукт:** начните с [Обзора продукта](getting-started/product-tour.mdx), [Архитектуры](concepts/architecture.mdx) и [Возможностей](reference/capabilities.mdx).
+- **Устанавливаете новый экземпляр:** следуйте [Требованиям](getting-started/requirements.mdx), [Установке Gateway](getting-started/install.mdx) и [Первоначальной настройке](getting-started/initial-setup.mdx).
+- **Публикуете приложение:** пройдите полный сценарий [Публикации приложения](journeys/publish-application.mdx).
+- **Подключаете приложение к приватной базе данных:** используйте сценарий [Приватная база данных приложения](journeys/private-database.mdx).
+- **Эксплуатируете production:** прочитайте [чек-лист готовности production](operations/production-checklist.mdx), [Обновления и резервное копирование](operations/updates-backups.mdx) и [Операционный runbook по инцидентам](operations/incident-runbook.mdx).
+- **Интегрируете инструменты:** используйте [Области, токены и OAuth](identity/scopes-tokens-oauth.mdx) и справочник программного доступа в руководстве по операциям репозитория.
+
+## Модель продукта за минуту
+
+Gateway работает как центральное приложение с PostgreSQL и Redis. Управляемые демоны устанавливают исходящие соединения через Gateway Relay по аутентифицированному транспорту. Операторы задают желаемое состояние в Gateway, а демоны применяют ограниченные операции на своих хостах. Gateway централизованно хранит идентичность, авторизацию, аудит, связи между ресурсами и состояние восстановления.
+
+Наиболее важные цепочки ресурсов:
+
+```text
+Domain -> TLS certificate -> Ingress Route -> application upstream
+Git repository -> Build Worker -> immutable artifact -> Docker workload
+Application workload -> managed database binding -> private database identity
+Health and runtime events -> notifications -> status pages / SIEM
+```
+
+## Что входит в эту документацию
+
+Этот портал объединяет четыре вида материалов:
+
+- **Руководства:** инструкции, ориентированные на цель и настройку отдельной возможности.
+- **Сценарии:** полные успешные пути, охватывающие несколько областей Gateway.
+- **Runbook:** эксплуатационная диагностика, восстановление, обновления и подготовка к авариям.
+- **Справочник:** стабильная терминология, порты, статус функций, планы и границы безопасности.
+
+Возможности, доступные только по дорожной карте, явно помечаются и не должны восприниматься как доступные функции runtime.

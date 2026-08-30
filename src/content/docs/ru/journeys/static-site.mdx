@@ -1,0 +1,35 @@
+---
+title: Опубликуйте статический сайт с Pages
+description: Загрузите или соберите неизменяемое развёртывание сайта и направьте домен на release Tag.
+section: Сквозные сценарии
+order: 4
+audience: [developer, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Опубликуйте статический сайт с Pages
+
+## Путь загрузки артефакта
+
+1. Включите Pages в настройках функций.
+2. Создайте Pages Project и выберите размещение nginx.
+3. Загрузите собранный статический артефакт через resumable deploy API или удалённый MCP upload workflow.
+4. Завершите неизменяемый Deployment.
+5. Переместите системный `latest` Tag или пользовательский Tag на Deployment.
+6. Создайте Pages Route для публичного домена и выбранного Tag.
+7. Проверьте кэширование, конфигурацию runtime и откат, переместив Tag.
+
+## Путь сборки Git
+
+На поддерживаемых планах подключите репозиторий, обнаружьте `package.json`, выберите package manager и команду сборки, настройте Build Secrets и опубликуйте одобренный артефакт в запрошенный Tag.
+
+{/* screenshot: id=pages-project-release; viewport=1440x900; description=Pages Project with immutable deployments, latest tag, and public route; redact=domain,repository,commit-author */}
+
+## Конфигурация runtime
+
+Pages может отдавать публичную конфигурацию runtime из `/_gateway/pages/config.js` как `window.runtime.config`. Она общедоступна, ограничена размером 64 KiB и отдаётся с `no-store`. Никогда не помещайте в неё секреты.
+
+## Откат
+
+Переместите Tag Route обратно на заведомо исправный неизменяемый Deployment. Не изменяйте старый артефакт на месте.
