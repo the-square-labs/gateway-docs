@@ -40,6 +40,7 @@ export default defineConfig({
 				},
 			],
 			head: [
+				{ tag: 'script', attrs: { type: 'module', src: '/scripts/image-zoom.js' } },
 				{ tag: 'meta', attrs: { property: 'og:site_name', content: 'Good Gateway Documentation' } },
 				{ tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
 				{

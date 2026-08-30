@@ -11,7 +11,11 @@ lastReviewed: 2026-08-30
 
 An application binding gives one Container, Deployment, or eligible workload service private access to one managed database. Gateway creates a distinct engine user or role for the binding and grants only the database permissions that binding requires. The engine identity belongs to the binding, not to a transient workload process.
 
-## Transport and ownership model
+Use a binding when an application needs database access without sharing an owner credential or publishing the database to a broader network. The database owner approves the permissions, the application owner chooses how connection values enter the workload, and the platform owner keeps the Database and Docker Nodes available. Success means the application can perform its required work, cannot perform ungranted work, and keeps access after a controlled workload recreation without creating duplicate identities.
+
+The main risk is credential or permission reuse. Create a separate binding for each workload boundary, keep the database private by default, and retire the binding when the workload no longer needs it.
+
+## Operator details: transport and ownership model
 
 For every binding, the target Docker daemon owns a TCP listener on a dedicated bridge network. Gateway reconciles that listener as part of the binding's desired state. The private endpoint therefore stays associated with the workload environment rather than being implemented by a separate per-binding process.
 
@@ -60,7 +64,7 @@ Delete the binding through Gateway when the workload no longer needs access. Gat
 
 If a deletion is interrupted, leave the durable binding record in place and use its operation state for recovery. Manual role deletion is an exceptional recovery procedure because it can make a future reconciliation fail; use it only with an explicit, coordinated recovery plan.
 
-## Upgrade and compatibility notes
+## Operator details: upgrade and compatibility
 
 Current bindings use daemon-owned listeners and do not require a per-binding database connector image. During an upgrade from an older release, successful reconciliation can retire legacy connector containers after the new daemon and binding identity are ready. Do not delete legacy artifacts early: allow the recorded migration to prove the replacement path first.
 

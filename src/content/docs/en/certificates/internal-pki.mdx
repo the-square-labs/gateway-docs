@@ -11,6 +11,10 @@ lastReviewed: 2026-08-30
 
 Enterprise Internal PKI can create root and intermediate authorities, issue server/client/code-signing/email certificates, apply templates, publish CRLs, and export supported formats under explicit scopes.
 
+Use Internal PKI when the organization deliberately wants Gateway to operate a private trust domain for people, services, code signing, or email protection. The security owner defines policy and accepts the trust risk; PKI administrators operate authorities and templates; application owners consume certificates. Success is not merely issuing a certificate—it is proving the chain, intended use, renewal, revocation, backup, and recovery process before that certificate becomes a production dependency.
+
+PKI means public key infrastructure: the authorities, certificates, private keys, revocation records, and policy that let systems decide which identities to trust. A root certificate authority is the top-level trust anchor. An intermediate authority issues day-to-day certificates so the root can be used less often and protected more strongly.
+
 Private keys are encrypted with `PKI_MASTER_KEY`. Preserve this key independently from the database backup. Limit export permissions and audit every authority, certificate, revocation, and private-key operation.
 
 User-facing Internal PKI is separate from Gateway's hidden system PKI used for managed transport. Entitlement loss disables the user-facing feature without deleting authorities, certificates, templates, or audit history; system transport must continue to function.
@@ -20,6 +24,12 @@ User-facing Internal PKI is separate from Gateway's hidden system PKI used for m
 Create a root authority only when Gateway is intended to own that trust anchor. Prefer keeping the root offline or rarely used and issue operational certificates from an intermediate authority. Templates constrain subject, lifetime, key usage, extended key usage, and export behavior so operators do not reproduce policy manually for every request.
 
 Gateway's user-facing authorities must never be repurposed to replace the hidden system PKI, Database CA, daemon identities, or Relay service identities. Those internal trust domains have separate rotation and recovery contracts.
+
+## Governance decisions
+
+Before creating a root, approve its scope, owner, lifetime, permitted certificate purposes, incident contact, and decommissioning plan. Decide whether the root should be generated in Gateway or imported, whether private-key export is allowed, and which relying systems will consume certificate revocation lists (CRLs). If those decisions are not documented, creating the authority is premature.
+
+Use separate intermediate authorities for materially different environments or assurance levels. A compromised development issuer should not automatically threaten production, and a code-signing issuer should not be interchangeable with a general server-certificate issuer. Templates should encode these boundaries rather than relying on operator memory.
 
 ## Provision an authority hierarchy
 
@@ -37,11 +47,19 @@ Record the owner, purpose, template, subject, validity, renewal expectation, and
 
 Before renewal, verify that the subject and intended use are still valid. Revoke compromised or retired certificates, publish the updated CRL, and confirm relying systems consume it. Deleting a UI record is not a substitute for revocation when a certificate may still be trusted externally.
 
+Measure operational success through expiry coverage, revocation publication, audit completeness, and restore testing. Review certificates without owners, overly broad templates, unexpected private-key exports, unused intermediates, and CRLs that relying systems cannot reach. Private-key reveal or export should be rare, separately authorized, and followed by secure custody outside Gateway.
+
 ## Backup and recovery
 
 A database backup without `PKI_MASTER_KEY` cannot recover encrypted private keys. A key backup without the database cannot reconstruct authorities, templates, certificates, revocations, and audit relationships. Store and test both parts while keeping them operationally separate.
 
 After restore, verify authority chains, decryption, certificate export permissions, CRL publication, and audit continuity before issuing new material.
+
+## Operator details: incident and retirement
+
+If an issuing key is suspected to be compromised, stop new issuance, identify all descendant certificates, prepare a replacement hierarchy, publish revocation information, and coordinate trust-store changes with relying systems. Restoring the same compromised key is not recovery. Preserve audit evidence and the old public chain for investigation without continuing to trust it.
+
+Retiring an authority requires more than deleting it from navigation. Stop issuance, replace or expire descendants, retain revocation evidence for the required period, remove trust from clients, and only then remove the authority when Gateway confirms that dependent objects are resolved.
 
 ## Entitlement and deletion behavior
 

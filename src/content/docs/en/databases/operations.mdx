@@ -11,6 +11,10 @@ lastReviewed: 2026-08-30
 
 Database operations combine engine health with the infrastructure that makes the engine usable: database-node availability, storage, binding listeners, workload connectivity, and access identity. Monitor all of those layers before treating a failed application query as an engine incident.
 
+The operating goal is to protect data and restore the customer path with the smallest justified change. The database owner owns backup, integrity, and engine decisions; the platform owner owns Node and storage availability; the application owner verifies real queries and permission boundaries. A successful recovery restores the original client path, explains the failure, preserves evidence, and removes temporary access or exposure.
+
+Agree on recovery point objective (RPO), recovery time objective (RTO), escalation ownership, and restore evidence before the database becomes critical. Monitoring and restart controls reduce diagnosis time, but they do not replace a tested data-recovery plan.
+
 ## What to monitor
 
 For a running managed database, monitor engine health, database-node availability, storage growth, latency, connection pressure, recent operation results, and each binding's state. The database detail view also exposes the engine-specific metrics, logs, and eligible Explorer or Console functions.

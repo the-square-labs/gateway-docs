@@ -11,6 +11,10 @@ lastReviewed: 2026-08-30
 
 Managed databases provide Gateway-controlled PostgreSQL, Redis, and ClickHouse instances on database-profile nodes. Gateway owns the resource lifecycle and desired configuration; the database node owns the running engine and its local runtime. This separation is why an offline node does not erase the instance's recorded configuration, and why recovery should begin with node health rather than manual engine changes.
 
+The product decision is whether your team wants Gateway to own a bounded single-node database lifecycle or only record access to a database managed elsewhere. For a managed instance, the platform owner supplies a suitable Database Node, the database owner defines capacity, backup, and recovery requirements, and application owners consume the service through private bindings. Success means the instance is ready, data protection is proven, intended clients can connect with least privilege, and a Node or service restart has a documented recovery result.
+
+Managed does not mean maintenance-free or automatically highly available. Gateway automates provisioning, configuration, monitoring, and lifecycle actions, while your organization remains accountable for data classification, backups, restore tests, engine upgrades, capacity planning, and business continuity.
+
 ![Managed PostgreSQL overview with health and performance metrics](/screenshots/product-tour/managed-database.png)
 
 ## Before provisioning
@@ -18,8 +22,6 @@ Managed databases provide Gateway-controlled PostgreSQL, Redis, and ClickHouse i
 You need permission to create the database and use the selected database node. Confirm the engine and supported version, node availability, storage and memory requirements, backup plan, and whether external client access is actually necessary. Select capacity conservatively and leave room for engine overhead, temporary work, and recovery operations.
 
 Keep direct publication disabled unless an external client has a documented need. Private application connectivity should use bindings. Enabling direct publication is an intentional change to the instance's exposure and does not open a host firewall automatically.
-
-The Databases Node must pass the storage preflight used by the runtime: Gateway-managed databases use fixed-size preallocated ext4 images rather than an unbounded Docker volume. On VM or bare-metal hosts the required loop and mount capabilities are normally available. Containerized hosts require explicit loop-device and mount support; an unsupported host is rejected instead of silently falling back to weaker storage isolation.
 
 Read the curated version catalog in the UI before provisioning. Supported versions are an operational contract: do not pin an arbitrary upstream patch version or keep an obsolete engine only because its container can still start. For production data, document the upgrade path and restore compatibility before selecting a version.
 
@@ -43,13 +45,17 @@ Resize only within the engine and storage constraints. Back up before a substant
 
 For a planned change, record a before-state: engine version, storage usage, connection count, current bindings, publication state, latest successful backup, and the operation owner. After the change, compare the same signals and run a real client query. If the operation fails, preserve its Task and engine logs before retrying; repeated blind retries can replace useful evidence with secondary failures.
 
-Direct publication uses native TLS. Gateway issues the server certificate from its separate Database CA and keeps the private key in daemon-owned storage outside the database image. PostgreSQL and Redis expose one TLS endpoint; ClickHouse exposes HTTPS and its native TLS endpoint. Clients must trust the displayed Database CA and should pin the documented hostname or certificate fingerprint policy rather than disabling verification.
-
 ## Publication and retirement
 
 Direct TCP publication is opt-in and should be treated as a separate external-client contract. Verify the intended client, certificate trust, credentials, and network path after enabling it. Disabling publication removes that direct path but does not delete the instance or private workload bindings.
 
 Deletion is destructive. First remove or migrate dependent bindings, decide how long backups must be retained, and confirm that no external clients still require direct publication. Gateway then removes the managed instance and its related identity and storage state through its lifecycle. Do not manually remove engine users, internal network objects, or storage in an attempt to accelerate deletion; let the recorded operation finish so cleanup remains consistent.
+
+## Operator details: storage and direct TLS
+
+The Databases Node must pass the same storage preflight used by the runtime. Gateway-managed databases use fixed-size preallocated ext4 images rather than an unbounded Docker volume. VM and bare-metal hosts normally provide the required loop and mount capabilities. Containerized hosts require explicit loop-device and mount support; an unsupported host is rejected instead of silently falling back to weaker storage isolation.
+
+Direct publication uses native TLS. Gateway issues the server certificate from its separate Database CA and keeps the private key in daemon-owned storage outside the database image. PostgreSQL and Redis expose one TLS endpoint; ClickHouse exposes HTTPS and its native TLS endpoint. Clients must trust the displayed Database CA and should follow the documented hostname or certificate-fingerprint policy rather than disabling verification.
 
 ## Recovery decisions
 

@@ -30,7 +30,7 @@ Treat saved credentials as privileged infrastructure secrets. Grant view, edit, 
 
 ## Private-by-default access
 
-Use an application binding when a managed workload needs access to a managed database. A binding grants a separate least-privilege engine identity and reaches the database over a private, daemon-owned listener path. The listener is created directly by the target Docker daemon on a dedicated bridge network; there is no additional binding-side service to operate.
+Use an application binding when a managed workload needs access to a managed database. A binding grants a separate least-privilege engine identity and a private endpoint that Gateway preserves across normal workload recreation. There is no additional per-binding service for the application team to operate.
 
 This transport is distinct from the nginx/workload Secure Link connector. Secure Link remains a separate component for its own ingress and relay function. Do not treat a binding failure as evidence that the Secure Link component should be removed, recreated, or configured as database transport.
 
@@ -60,6 +60,10 @@ A green engine badge alone is not end-to-end proof. Confirm at least one real ap
 Managed instances are single-node resources. Gateway preserves desired state and coordinates recovery, but it does not turn a single database process into a multi-node high-availability cluster. Plan host redundancy, data replication, off-node backups, and recovery time according to the database's business criticality.
 
 Gateway configuration backups do not contain a usable substitute for database data backups. Likewise, deleting a managed database is expected to remove its managed storage; use a verified backup or migration target before approving deletion.
+
+## Operator details: private transport
+
+The private endpoint is a TCP listener owned by the target Docker daemon on a dedicated bridge network. Gateway reconciles that listener and the binding identity as durable desired state. The implementation is separate from the nginx/workload Secure Link connector, so diagnose database listener state and ingress Secure Link state as different paths.
 
 ## Next steps
 

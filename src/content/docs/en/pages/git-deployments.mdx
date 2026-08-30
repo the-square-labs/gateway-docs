@@ -66,7 +66,7 @@ Classify the failure before retrying:
 | Policy or admission | Build rejected before publication | Resolve the reported policy finding or obtain an explicit approved exception |
 | Publication | Deployment exists but Tag or Route did not move | Inspect auto-deploy settings and the Pages operation; do not rebuild a valid artifact |
 
-Cancellation stops the active build operation but does not delete previous Deployments or move an existing production Tag. A retry resolves the branch again according to the source workflow, so verify the exact commit attached to the resulting build instead of assuming it used the originally observed branch head.
+Cancellation stops the active build operation but does not delete previous Deployments or move an existing production Tag. Retrying a build keeps the original build's exact commit SHA, which makes the retry reproducible even if the configured branch has moved. Start a new source build when the newer branch head is the intended input.
 
 ## Manual releases and cleanup
 

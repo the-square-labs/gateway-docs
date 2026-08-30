@@ -11,9 +11,27 @@ lastReviewed: 2026-08-30
 
 Structured logging centralizes supported Gateway and daemon events with searchable fields and retention policy. Size storage for ingestion and retention, monitor ClickHouse health, and plan engine upgrades before old images become unsupported.
 
+Use structured logging when teams need one governed search surface instead of unrelated text files, and use SIEM export when security operations need a reduced audit stream in an external collector. These are related but separate products: application and platform logs support operational diagnosis; SIEM carries privacy-reduced audit events for security analysis. Enabling one does not make the other a backup.
+
+The platform owner provides ClickHouse capacity and retention limits, service owners define useful fields and data classification, and the security owner approves SIEM destinations and authentication. Success means a known event can be ingested, found, retained for the intended period, correlated without secrets, and—where required—delivered once safely to the external collector.
+
 SIEM destinations deliver audit-focused events through a durable outbox. Disabling SIEM pauses new delivery without deleting destination configuration or historical terminal records. Test signatures, retries, idempotency, and receiver capacity.
 
 Logs and SIEM payloads must not contain passwords, tokens, private keys, database connection URIs, prompts, model output, or raw binding credentials. Use request IDs and stable resource identifiers for correlation.
+
+## Decisions before onboarding data
+
+Define which services may write, which fields are allowed, how long data is retained, who can search it, and which events require external export. Estimate volume from events per second, average event size, and retention rather than choosing an arbitrary TTL. A longer retention period increases incident history but also storage cost and the impact of collecting sensitive data.
+
+Choose a schema mode deliberately:
+
+| Mode | Use when | Trade-off |
+| --- | --- | --- |
+| `reject` | Field quality must be enforced at ingestion | Producers must handle rejected events correctly |
+| `strip` | Known fields matter and unknown custom data should be discarded | Unexpected diagnostic context is removed |
+| `loose` | Teams need flexible sanitized custom fields | Governance and search consistency require more discipline |
+
+Create one logging environment per application or meaningful trust boundary. Do not use one shared ingest token across unrelated teams; tokens are write-only secrets and should be independently revocable.
 
 ## Structured logging workflow
 
@@ -27,11 +45,15 @@ Logs and SIEM payloads must not contain passwords, tokens, private keys, databas
 
 Request limits and event limits are separate. Batch ingestion can accept valid events while rejecting invalid members, so clients must inspect the structured response rather than assuming the whole batch succeeded.
 
+The official TypeScript SDK can batch, retry, flush, and carry trace or request context for Node.js services. Regardless of client, define a fallback for temporary Gateway unavailability and bound local buffering so logging failure cannot exhaust application memory or disk.
+
 ## Retention and capacity
 
 Per-environment TTL is only one boundary. Gateway housekeeping also enforces global row and approximate disk budgets. Monitor ClickHouse availability, merge pressure, disk growth, rejected ingestion, and the age of the newest event. Plan retention from incident and compliance requirements rather than leaving it unlimited.
 
 Disabling structured logging hides normal product surfaces and rejects new ingestion while preserving stored data and configuration. Re-enable only after the underlying health or entitlement condition is understood.
+
+Capacity success is not merely a healthy ClickHouse process. Confirm that the newest event timestamp advances, searches return expected recent data, retention removes old partitions, and ingestion rejects are understood. Gateway can pause ingestion when configured capacity is exhausted while existing search remains available; alert before reaching that boundary.
 
 ## SIEM delivery
 
@@ -39,6 +61,14 @@ Configure each HTTPS collector with the narrowest supported authentication metho
 
 If SIEM is disabled or entitlement is lost, destination configuration and historical terminal records remain. Confirm the receiver's last accepted event and Gateway's queue age before resuming normal operation.
 
+## Operator details: SIEM delivery contract
+
+SIEM destinations must use HTTPS and may authenticate with a bearer token, HMAC-SHA256, or one validated custom header. HMAC requests include a timestamp and signature over the exact raw JSON body; receivers should compare signatures in constant time and reject stale timestamps. Do not put credentials in the URL, query string, logs, or test tickets.
+
+Gateway delivers through a durable outbox and retries transient network errors, timeouts, rate limits, and server failures. Other client errors can become terminal failures. Use **Send test event** to validate a destination; the synthetic test does not create an audit event or queued delivery. Deleting a destination discards outstanding rows, while disabling it pauses delivery for later resumption.
+
 ## Data handling rules
 
 Define an allowlist of fields applications may send. Redact at the source, because downstream retention and export multiply the impact of a leaked secret. Use resource IDs, request IDs, trace IDs, and bounded error categories instead of raw credentials, prompts, environment dumps, or arbitrary request bodies.
+
+If a secret reaches logging, stop further emission, revoke or rotate the secret at its source, restrict access to the affected environment, and follow the organization's data-removal and incident process. Deleting a search result from view is not proof that all retained partitions, exports, or external SIEM copies have been remediated.

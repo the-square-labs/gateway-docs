@@ -11,9 +11,19 @@ lastReviewed: 2026-08-30
 
 Create destinations, templates, and alert rules for health, capacity, certificates, deployments, databases, builds, and platform state. Test each destination before relying on it.
 
+Notifications and status pages serve different audiences. Notifications ask an internal owner to act; a status page tells customers what they can expect. The service owner defines impact and priority, the on-call owner receives and resolves alerts, and the communications owner publishes customer-safe updates. Do not send the same raw technical payload to both audiences.
+
+The success criteria are explicit: a meaningful condition opens one actionable alert, recovery closes or resolves it, delivery reaches an owned channel, and a customer-facing incident contains accurate impact without exposing infrastructure details. A configured destination that has never passed an end-to-end test is not production-ready.
+
 Stateful alerts should open when a condition begins and recover when it clears. Configure thresholds and windows to avoid flapping. Include the resource, impact, timestamp, and operator action—not secrets or full daemon errors.
 
 Status pages expose selected service state to customers. Maintenance mode should appear as planned maintenance rather than an unexplained outage. Keep internal topology, private node names, and security-sensitive diagnostics off public pages.
+
+## Decide what deserves communication
+
+Classify events by customer impact and required action. Capacity trends may start as internal warnings; loss of a public customer journey may require both an urgent alert and a status incident. Avoid creating a public component for every daemon or Node. Components should match products or capabilities customers recognize and should have an owner who can publish updates.
+
+Agree on severity, acknowledgement time, update cadence, and closure criteria before the first incident. Planned maintenance should state the affected capability, expected window, and customer action. Security incidents may require a restricted communication process rather than immediate disclosure of diagnostic detail.
 
 ## Configure notifications
 
@@ -25,6 +35,8 @@ Status pages expose selected service state to customers. Maintenance mode should
 6. Trigger the condition in a safe environment and verify both open and recovery messages.
 
 Avoid alerts that operators cannot act on. Every urgent notification should identify the affected resource, customer impact, start time, current state, and the first safe diagnostic action.
+
+Notification templates use a canonical nested context. Keep templates small and test the exact destination rendering; historical flat variable names are not aliases and can render empty. Treat template changes as operational changes because a broken message can hide the resource, severity, or recovery state even when transport succeeds.
 
 ## Reduce noise
 
@@ -40,6 +52,10 @@ Create components that match customer-visible services, not internal daemon topo
 
 Maintenance mode on a managed Route can surface as planned maintenance. Confirm the public status view does not expose node names, private addresses, stack traces, resource IDs, or security details.
 
-## Failure and recovery
+Close an incident only after the customer path is verified, not merely when an internal alert turns green. Publish a final summary appropriate to the audience and preserve detailed technical findings in the internal incident record.
+
+## Operator details: delivery failure and recovery
 
 If delivery fails, inspect destination health, authentication, TLS validation, response status, retry history, and queue age. Do not rotate a credential without updating every dependent destination. After repair, send a new test and confirm queued delivery behavior before declaring the channel operational.
+
+Maintain a fallback contact path for a failed primary destination. During testing, verify open and recovery messages, deduplication, rendering, links, and timestamps. During a real outage, do not repeatedly recreate destinations or rules: preserve delivery history, repair the narrow failure, and confirm whether queued messages should still be delivered or have become obsolete.

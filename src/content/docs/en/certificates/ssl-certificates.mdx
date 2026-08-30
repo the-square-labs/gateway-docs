@@ -11,6 +11,10 @@ lastReviewed: 2026-08-30
 
 Gateway supports ACME certificates and uploaded certificates. ACME can use HTTP-01 or DNS-01. Uploaded material should include the complete chain and matching private key.
 
+The business outcome is predictable HTTPS ownership: every public Route has an identified certificate owner, a renewal method, enough warning before expiry, and a tested replacement path. Gateway owns issuance workflow, relationship tracking, and distribution to the required Ingress Nodes. Your team still owns Domain control, external DNS correctness, approval of certificate names, and the response to a compromised key.
+
+Choose automation when Gateway can reliably prove Domain control. Choose upload when an external certificate authority or corporate process owns issuance. In both cases, success means an external client validates the expected hostname and chain on every affected Route; a certificate marked **Active** but not attached and served is not a completed rollout.
+
 Attach certificates to Routes rather than copying files to nginx hosts manually. Gateway distributes node-local replicas only where enabled TLS Routes use them. Monitor expiry and renewal status, and test renewal before the remaining lifetime becomes operationally urgent.
 
 For HTTP-01 failures, verify Domain placement, public port 80, DNS, and challenge routing. For uploaded certificates, verify hostname coverage, chain order, key match, and supported encoding.
@@ -24,6 +28,12 @@ For HTTP-01 failures, verify Domain placement, public port 80, DNS, and challeng
 - Use **Upload** for certificates issued outside Gateway. Upload the private key, leaf certificate, and required intermediates as one coherent chain.
 
 Before issuing, confirm the Domain exists, its placement is final, and the requested names exactly match the intended Routes. Certificate issuance does not repair incorrect DNS or Route placement.
+
+## Ownership and risk decisions
+
+Assign an owner for renewal failures and an escalation window that is shorter than the remaining certificate lifetime. Review wildcard requests carefully: they reduce operational repetition but expand the impact of one private-key compromise. Give DNS connectors only the zone permissions needed for challenge records, and keep uploaded private keys out of tickets, chat, repositories, and local operator notes.
+
+Before changing a certificate shared by multiple Routes, review every deployment relationship shown by Gateway. Decide whether the change is a routine renewal, a planned authority migration, or an emergency key rotation; each has a different communication and rollback requirement.
 
 ## Issue and attach
 
@@ -43,7 +53,9 @@ Monitor remaining lifetime and the most recent renewal attempt. Test DNS connect
 
 Changing a certificate can affect multiple Routes. Review relationships before rotation, preserve the previous material until external verification succeeds, and avoid combining certificate replacement with unrelated ingress changes.
 
-## Failure handling
+The success criteria for renewal are: the new validity window is visible, Gateway reports successful distribution to every required Ingress Node, public clients receive the new chain, and no Route falls back to a default or stale certificate. Retain the previous certificate only as long as policy and incident rollback require; do not leave expired private-key material broadly accessible.
+
+## Operator details: failure handling
 
 - **HTTP-01 timeout:** verify public DNS, port 80, Domain placement, and challenge routing.
 - **DNS-01 failure:** verify connector authorization, account/zone selection, propagation, and stale challenge records.
@@ -52,3 +64,5 @@ Changing a certificate can affect multiple Routes. Review relationships before r
 - **Not distributed:** confirm an enabled TLS Route on that node actually references the certificate.
 
 Delete a certificate only after all Routes are detached and a replacement has been externally verified. Preserve exported material according to the organization's key-retention policy.
+
+If a key may be compromised, treat replacement as an incident rather than ordinary renewal. Issue a new keypair, update all dependent Routes, verify externally, revoke the old certificate where the authority supports revocation, and record the affected names and exposure window. A rollback must never restore a certificate whose private key is suspected to be compromised.
