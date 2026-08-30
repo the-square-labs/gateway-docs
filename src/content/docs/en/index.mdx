@@ -40,11 +40,27 @@ Gateway runs as a central application with PostgreSQL and Redis. Managed node da
 
 The most important resource chains are:
 
-```text
-Domain -> TLS certificate -> Ingress Route -> application upstream
-Git repository -> Build Worker -> immutable artifact -> Docker workload
-Application workload -> managed database binding -> private database identity
-Health and runtime events -> notifications -> status pages / SIEM
+```mermaid
+flowchart TB
+    subgraph ingress["Public application path"]
+        direction LR
+        domain["Domain"] --> certificate["TLS certificate"] --> route["Ingress Route"] --> upstream["Application upstream"]
+    end
+
+    subgraph delivery["Software delivery path"]
+        direction LR
+        repository["Git repository"] --> worker["Build Worker"] --> artifact["Immutable artifact"] --> workload["Docker workload"]
+    end
+
+    subgraph database["Private database path"]
+        direction LR
+        application["Application workload"] --> binding["Managed database binding"] --> identity["Private database identity"]
+    end
+
+    subgraph operations["Operational signal path"]
+        direction LR
+        events["Health and runtime events"] --> notifications["Notifications"] --> consumers["Status pages / SIEM"]
+    end
 ```
 
 ## What this documentation includes

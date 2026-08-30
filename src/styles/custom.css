@@ -65,11 +65,13 @@ header.header {
 }
 
 .gg-image-zoom {
-	width: min(96vw, 96rem);
-	max-width: none;
-	height: min(94vh, 70rem);
-	max-height: none;
+	width: fit-content;
+	max-width: 96vw;
+	height: fit-content;
+	max-height: 94vh;
+	margin: auto;
 	padding: 0;
+	box-sizing: border-box;
 	border: 1px solid var(--sl-color-gray-5);
 	border-radius: 0.5rem;
 	background: var(--sl-color-black);
@@ -85,20 +87,29 @@ header.header {
 .gg-image-zoom__content {
 	display: grid;
 	grid-template-rows: minmax(0, 1fr) auto;
-	width: 100%;
-	height: 100%;
+	width: fit-content;
+	max-width: 100%;
+	height: fit-content;
+	max-height: 94vh;
+	min-width: 0;
+	min-height: 0;
 	margin: 0;
 }
 
 .gg-image-zoom__image {
+	display: block;
 	align-self: center;
 	justify-self: center;
-	max-width: 100%;
-	max-height: 100%;
+	width: auto;
+	height: auto;
+	max-width: 96vw;
+	max-height: calc(94vh - 3.5rem);
 	object-fit: contain;
 }
 
 .gg-image-zoom__caption {
+	box-sizing: border-box;
+	width: 100%;
 	min-height: 2.75rem;
 	margin: 0;
 	padding: 0.75rem 4rem 0.75rem 1rem;

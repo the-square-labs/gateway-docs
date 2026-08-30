@@ -10,20 +10,12 @@ lastReviewed: 2026-08-30
 
 Gateway отделяет централизованные намерения и идентичность от выполнения операций на хостах.
 
-```text
-Users and automation
-        |
-  HTTPS / WebSocket
-        |
-Gateway application ---- PostgreSQL / Redis
-        |
- internal authenticated gRPC
-        |
-Gateway Relay :9443
-        |
- outbound managed-daemon sessions
-        |
-nginx / Docker / database / builder / monitoring hosts
+```mermaid
+flowchart TB
+    users["Пользователи и автоматизация"] -->|"HTTPS / WebSocket"| gateway["Приложение Gateway"]
+    gateway <-->|"Долговечное состояние и координация"| state[("PostgreSQL / Redis")]
+    gateway <-->|"Внутренний аутентифицированный gRPC"| relay["Gateway Relay<br/>TCP 9443"]
+    daemons["Управляемые хосты<br/>nginx · Docker · Databases · Build Worker · Monitoring"] -->|"Исходящие аутентифицированные сессии"| relay
 ```
 
 ## Плоскость управления

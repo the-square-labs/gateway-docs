@@ -40,11 +40,27 @@ Gateway работает как центральное приложение с P
 
 Наиболее важные цепочки ресурсов:
 
-```text
-Domain -> TLS certificate -> Ingress Route -> application upstream
-Git repository -> Build Worker -> immutable artifact -> Docker workload
-Application workload -> managed database binding -> private database identity
-Health and runtime events -> notifications -> status pages / SIEM
+```mermaid
+flowchart TB
+    subgraph ingress["Путь публичного приложения"]
+        direction LR
+        domain["Domain"] --> certificate["TLS-сертификат"] --> route["Ingress Route"] --> upstream["Приложение"]
+    end
+
+    subgraph delivery["Путь доставки ПО"]
+        direction LR
+        repository["Git-репозиторий"] --> worker["Build Worker"] --> artifact["Неизменяемый артефакт"] --> workload["Docker workload"]
+    end
+
+    subgraph database["Путь приватной базы данных"]
+        direction LR
+        application["Рабочая нагрузка приложения"] --> binding["Managed database binding"] --> identity["Приватная идентичность базы"]
+    end
+
+    subgraph operations["Путь эксплуатационных сигналов"]
+        direction LR
+        events["События состояния и runtime"] --> notifications["Уведомления"] --> consumers["Status pages / SIEM"]
+    end
 ```
 
 ## Что входит в эту документацию

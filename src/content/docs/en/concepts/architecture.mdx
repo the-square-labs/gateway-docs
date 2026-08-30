@@ -10,20 +10,12 @@ lastReviewed: 2026-08-30
 
 Gateway separates centralized intent and identity from host-local execution.
 
-```text
-Users and automation
-        |
-  HTTPS / WebSocket
-        |
-Gateway application ---- PostgreSQL / Redis
-        |
- internal authenticated gRPC
-        |
-Gateway Relay :9443
-        |
- outbound managed-daemon sessions
-        |
-nginx / Docker / database / builder / monitoring hosts
+```mermaid
+flowchart TB
+    users["Users and automation"] -->|"HTTPS / WebSocket"| gateway["Gateway application"]
+    gateway <-->|"Durable state and coordination"| state[("PostgreSQL / Redis")]
+    gateway <-->|"Internal authenticated gRPC"| relay["Gateway Relay<br/>TCP 9443"]
+    daemons["Managed hosts<br/>nginx · Docker · Databases · Build Worker · Monitoring"] -->|"Outbound authenticated sessions"| relay
 ```
 
 ## Control plane
