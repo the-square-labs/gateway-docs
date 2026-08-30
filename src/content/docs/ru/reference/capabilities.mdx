@@ -1,0 +1,55 @@
+---
+title: Указатель возможностей
+description: Найдите документацию для каждой текущей области продукта.
+section: Справочник
+order: 1
+audience: [evaluator, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Указатель возможностей
+
+| Область | Текущая документация |
+| --- | --- |
+| Ingress, Domains, Routes, TLS | [Обзор Ingress](../ingress/overview.mdx) |
+| Docker Containers и Deployments | [Обзор Docker](../docker/overview.mdx) |
+| Compose Projects | [Compose Projects](../docker/compose.mdx) |
+| Git-сборки и Build Workers | [Источники Git и Build Workers](../docker/git-builds.mdx) |
+| Управляемые и внешние базы данных | [Обзор баз данных](../databases/overview.mdx) |
+| Приватные привязки баз данных | [Привязки баз данных приложений](../databases/bindings.mdx) |
+| Pages | [Обзор Pages](../pages/overview.mdx) |
+| Мониторинг, уведомления, статус | [Обзор наблюдаемости](../observability/overview.mdx) |
+| Идентичность и права | [Аутентификация, пользователи и группы](../identity/auth-users-groups.mdx) |
+| AI Workspace | [AI Workspace](../ai/workspace.mdx) |
+| Gateway Inference | [Gateway Inference](../ai/inference.mdx) |
+| Безопасность и эксплуатация | [Модель безопасности](../security/security-model.mdx) |
+
+## Статус возможности
+
+| Статус | Значение |
+| --- | --- |
+| Ready | Доступно в текущем продукте при выполнении требований плана и runtime |
+| Ready, opt-in | Доступно, но скрыто или неактивно, пока администратор не включит функцию |
+| In development | Входит в направление продукта или позиционирование плана, но пока недоступно в общем случае |
+| Plan benefit | Коммерческое преимущество или преимущество уровня сервиса, а не функция runtime |
+
+Включение в план и готовность runtime — разные вещи. Отметка для возможности **In development** означает, что план должен включить её после выпуска, а не что текущий экземпляр Gateway уже может её использовать.
+
+## Текущие семейства продукта
+
+- **Ingress:** Domains, Routes, TLS, access lists, обслуживание, health checks, управляемые upstream и размещение nginx.
+- **Docker:** автономные Containers, сине-зелёные Deployments, инвентарь и жизненный цикл Compose, images, volumes, networks, registries, builds, migrations, archives, Tasks и monitoring.
+- **Databases:** внешние подключения, управляемые PostgreSQL/Redis/ClickHouse, Explorers, monitoring, direct TLS и приватные привязки приложений.
+- **Pages:** неизменяемые статические Deployments, Tags, Routes, previews и необязательные Git-сборки.
+- **Nodes and Relay:** регистрация по ролям, отчёты capabilities, подписанные обновления, monitoring и работа Relay с несколькими участниками.
+- **Identity:** пользователи, группы, MFA, OIDC, токены, OAuth, области ресурсов и impersonation.
+- **Observability:** состояние, метрики, логи, Tasks, alerts, notifications, status pages, структурированное логирование, аудит и SIEM.
+- **Automation and AI:** REST, OAuth, MCP, AI Workspace, scenarios, Plan Mode и Gateway Inference.
+- **Security:** системная PKI, пользовательская Internal PKI, зашифрованные секреты, аудит, границы admission и проверки жизненного цикла fail-closed.
+
+## Требования runtime
+
+Entitlement плана не заменяет capability хоста. Secure Runtime требует здоровой capability gVisor, Git-сборки — выделенного Build Worker, управляемые базы данных — подготовленного Database Node, публичный Ingress — доступного Ingress Node, а приватные связи — здорового пути Relay.
+
+Перед включением возможности в production используйте страницу функции для проверки предварительных условий, последствий жизненного цикла и поведения восстановления. Поведение планов описано в разделе [Планы и права по тарифу](plans-and-entitlements.mdx).

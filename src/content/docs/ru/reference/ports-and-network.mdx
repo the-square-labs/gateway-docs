@@ -1,0 +1,55 @@
+---
+title: Порты и сетевые пути
+description: Спланируйте минимально необходимую связность для Gateway и управляемых Nodes.
+section: Справочник
+order: 3
+audience: [network-engineer, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Порты и сетевые пути
+
+| Путь | Назначение |
+| --- | --- |
+| Client -> Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, inference proxy |
+| Managed daemon -> Relay `9443/tcp` | Аутентифицированное исходящее управление и поддерживаемый туннельный трафик |
+| Internet -> nginx `80/tcp` | HTTP и ACME HTTP-01, где используется |
+| Internet -> nginx `443/tcp` | Публичные HTTPS Routes и Pages |
+| Gateway/daemon -> external providers | DNS, OIDC, email, Git, registries, updates, ACME, AI providers |
+| Internal Gateway services | PostgreSQL, Redis, internal gRPC, callbacks inference core |
+
+Relay, а не приложение Gateway, является публичным владельцем `9443/tcp`. Gateway не открывает firewalls хоста и не предоставляет обход NAT. Удалённые Relay workers должны объявлять data endpoints, доступные назначенным управляемым хостам.
+
+Держите PostgreSQL, Redis, internal gRPC, inference core, порты владельца базы данных, управляющие интерфейсы daemon и Docker networks отдельных привязок приватными.
+
+## Направление соединений
+
+Управляемые daemons инициируют исходящие аутентифицированные соединения с Relay. Обычно операторы не открывают управляющие порты daemon для Gateway. Удалённые Relay workers — исключение: их объявленный endpoint `9443/tcp` должен быть доступен назначенным управляемым хостам.
+
+Ingress Nodes принимают публичный трафик приложений на портах 80 и 443 согласно требованиям Route и ACME. Docker и Database Nodes не нуждаются в публичных портах рабочих нагрузок или владельца для Secure Links. Опубликованный endpoint управляемой базы данных включается явно и должен ограничиваться отдельно.
+
+## Планирование firewall
+
+| Источник | Назначение | Когда требуется |
+| --- | --- | --- |
+| User/browser | Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, Inference |
+| Managed Node | assigned Relay `9443/tcp` | Всегда для управляемого контроля и поддерживаемых туннелей |
+| Internet/client | Ingress `80/tcp` | HTTP Route или ACME HTTP-01 |
+| Internet/client | Ingress `443/tcp` | HTTPS Routes и Pages |
+| Gateway/Node | DNS and update endpoints | Разрешение имён и загрузка подписанных обновлений |
+| Gateway/Build Worker | Git and registry providers | Обнаружение источника, входные данные сборки, push/pull |
+| Gateway | OIDC, SMTP, DNS, webhook, SIEM, AI providers | Только включённая интеграция |
+| Application client | published database TLS port | Только когда прямой доступ намеренно включён |
+
+По возможности используйте allowlists provider и egress policy, но включайте проверку сертификатов, redirects, DNS и endpoints пакетов/registry, необходимые выбранной функции. Не используйте широкое правило «allow all», чтобы скрыть нерешённую зависимость.
+
+## Выбор адресов
+
+Gateway записывает сообщённые локальные/публичные адреса и service addresses отдельных ролей. Выбирайте адреса по реальному пути peers: публичные клиенты к Ingress, управляемые хосты к Relay, межузловые операции Docker к доступным service addresses и сертификаты баз данных к опубликованным service IPs.
+
+Изменение адреса может потребовать обновления DNS, ротации сертификата, миграции Route или перебалансировки Relay. Проверьте каждого peer до удаления старого пути.
+
+## Проверка
+
+Проверяйте из реальной исходной сети, а не только с целевого хоста. Подтвердите DNS, доступность TCP, идентичность TLS, поведение протокола HTTP или gRPC и состояние, сообщаемое Gateway. Одно успешное TCP-соединение не доказывает аутентификацию или готовность приложения.
