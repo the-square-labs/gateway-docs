@@ -1,0 +1,39 @@
+---
+title: Migrations and container archives
+description: Move eligible workloads between nodes or export them as portable GWCA archives.
+section: Docker
+order: 6
+audience: [operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Migrations and container archives
+
+Migration moves an eligible workload between Docker nodes while preserving its Gateway identity and eligible resource grants. A GWCA archive packages an eligible workload for controlled export and import. Both workflows are operational changes, not backups: stateful volume data requires its own backup and restore plan.
+
+## Confirm eligibility first
+
+Cross-node migration performs capacity preflight, artifact and volume transfer, target verification, cutover, and cleanup recovery. The target must be online, have sufficient resources, support the selected runtime, and reach any required registry artifact.
+
+GPU-attached workloads, secure-runtime workloads, host bind mounts, and Compose Projects are not portable in the current workflow. Treat this as a hard boundary rather than a condition to work around by altering Gateway-owned runtime configuration.
+
+## Migrate a workload
+
+1. Record Routes, database bindings, grants, volume dependencies, and the planned maintenance window.
+2. Back up stateful volumes and confirm the target node has the required capacity and runtime profile.
+3. Start migration from the workload and follow the operation through transfer and target verification.
+4. Wait for cutover, then verify runtime health, routes, logs, and private application dependencies on the target.
+5. Retain the source until Gateway reports cleanup completion and the verification window has passed.
+
+If transfer, target startup, or cutover fails, inspect the operation stage. Use the provided cancellation or cleanup-recovery actions; manually deleting intermediate objects can prevent Gateway from completing or resuming safe cleanup.
+
+## Export and import GWCA archives
+
+GWCA archives can be self-contained or registry-backed. They include supported configuration and ordinary environment values, and can optionally include secrets and writable-layer changes. They never include volume contents.
+
+Before export, decide whether including secrets is necessary and ensure the archive is handled as sensitive material when it is. Before import, review the target node, image availability, runtime compatibility, network mapping, and occupied ports. Restore volumes separately, then verify the imported workload before routing traffic to it.
+
+## Rollback and cleanup consequences
+
+Migration rollback concerns the workload placement and runtime configuration; it does not reverse writes made by the application during a cutover. Keep the original volume backup and source evidence until the target is proven healthy. Deleting an archive does not delete a workload, and deleting the source after a migration should happen only through the completed migration lifecycle.

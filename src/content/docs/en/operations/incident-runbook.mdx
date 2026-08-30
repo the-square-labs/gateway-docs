@@ -1,0 +1,76 @@
+---
+title: Incident runbook
+description: Triage control-plane, Relay, node, ingress, database, and deployment incidents.
+section: Operations and security
+order: 3
+audience: [operator, sre]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Incident runbook
+
+## First five minutes
+
+1. Record start time, affected customer path, and recent changes.
+2. Check Gateway, PostgreSQL, Redis, and Relay health.
+3. Identify whether impact is control plane, ingress, one node, one workload, or a shared dependency.
+4. Freeze unrelated changes.
+5. Use maintenance mode or a status-page incident when customer impact is confirmed.
+
+## Relay unavailable
+
+Inspect the Relay service, identity volume, database reachability, image version, and public `9443/tcp`. Do not move the port back to the application or bypass authorization with a new public listener.
+
+## Node offline
+
+Existing workloads may continue. Check host power/network, daemon service, time, certificate identity, and outbound Relay reachability. Do not mutate from stale inventory.
+
+## Bad release
+
+For Deployments, roll back to the previous healthy slot. For Pages, move the Tag. For Git-built containers, redeploy the last approved digest. Preserve logs and operation history.
+
+## Database binding failure
+
+Check Relay, both nodes, database health, binding desired state, the target daemon's listener status, and the engine principal. Retry reconciliation before manual identity changes; there is no per-binding database connector container to restart or replace.
+
+## Closeout
+
+Confirm recovery from an external client, clear maintenance intentionally, document the root cause and detection gap, and create follow-up work for every temporary mitigation.
+
+## Control-plane unavailable
+
+Check the Gateway container/process, PostgreSQL, Redis, persistent volumes, disk pressure, migrations, and application logs. Preserve the existing encryption keys and database before attempting a replacement instance. If customer workloads continue, avoid broad host changes while restoring the control plane.
+
+After Gateway returns, verify sign-in, decryption, Relay health, background jobs, update discovery, notifications, and fresh node snapshots. Do not assume daemons reconciled merely because the Dashboard loads.
+
+## Ingress outage
+
+Follow [Ingress troubleshooting](../ingress/troubleshooting.mdx) from DNS through network, TLS, nginx apply, Route health, and upstream. Use maintenance mode when the virtual host should remain stable during repair. Preserve generated-config validation errors and external request evidence.
+
+## Workload operation stuck
+
+Inspect the durable Task, owning Node connection, daemon operation history, runtime resource, and request/operation ID. A browser timeout does not prove the command failed. Reconcile the first operation before starting a duplicate create, recreate, migration, or delete.
+
+If Force Cancel is available, understand whether it cancels only Gateway tracking or also dispatches cancellation to the owner. After cancellation, refresh runtime state and clear any interrupted-operation marker only through the supported reconciliation path.
+
+## Database unavailable
+
+Separate engine health, storage, direct publication, managed binding, and application-query failures. Verify the database Node, engine container, storage image/mount, monitoring snapshot, Relay path, target Docker Node, daemon-owned listener, binding identity, and application configuration.
+
+Do not delete the database or engine principal as a diagnostic step. Preserve storage and operation history, then retry the narrow failed reconciliation.
+
+## Communication and evidence
+
+Maintain one incident timeline with UTC timestamps, affected resources, user-visible impact, changes, task IDs, request IDs, decisions, and verification. Public updates describe impact and progress without exposing topology or security details.
+
+## Recovery gate
+
+Recovery requires:
+
+- the customer-facing path works from outside the managed network;
+- Gateway desired state matches current owner state;
+- alerts recover for the right reason;
+- queued operations and deliveries are understood;
+- temporary exposure or bypasses are removed;
+- a follow-up owner and deadline exist for every remaining risk.

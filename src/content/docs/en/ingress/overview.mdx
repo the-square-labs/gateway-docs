@@ -1,0 +1,53 @@
+---
+title: Ingress overview
+description: Operate domains, Routes, TLS, access controls, and nginx placement.
+section: Ingress
+order: 1
+audience: [operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Ingress overview
+
+Gateway uses managed nginx nodes as public ingress. A complete public service combines a Domain, certificate, Route, upstream, health policy, and node placement.
+
+Routes can proxy, redirect, or return 404. Proxy upstreams may be manual addresses, standalone containers, Deployments, Compose services, or ready Pages Tags. Additional Routes attach literal path prefixes such as `/api` to separate upstreams.
+
+Use **managed** nginx mode when Gateway should own a known-good base configuration. Use **integrate** mode when an existing nginx installation must retain its base config and load Gateway-managed includes.
+
+Operationally, verify DNS, certificate distribution, generated config validation, Route health, and public behavior after every placement or TLS change. A configuration is not complete merely because it saved successfully.
+
+## Resource ownership
+
+Ingress resources have separate lifecycles even when they appear as one public application:
+
+- a **Domain** owns the hostname and nginx placement;
+- an **SSL Certificate** owns certificate material and renewal state;
+- a **Route** owns request behavior, health policy, and its primary upstream;
+- an **Additional Route** owns one literal path-prefix override;
+- an **Access List** is reusable policy that can be attached to more than one Route;
+- a Route-owned Secure Link follows the Route and cannot be removed independently.
+
+Deleting one resource must not silently delete another reusable resource. Before deletion, inspect linked resources and decide whether the intended action is disable, maintenance, detach, migrate, or permanent removal.
+
+## Recommended creation order
+
+1. Enroll and validate the target Ingress node.
+2. Register the Domain and confirm its intended placement.
+3. Issue or upload the TLS certificate.
+4. Create the Route and select its upstream.
+5. Add access policy, headers, WebSockets, rewrites, or timeout overrides only when required.
+6. Enable the Route and wait for nginx configuration validation.
+7. Test HTTP and HTTPS from an external client.
+8. Confirm health history, access logs, and certificate distribution.
+
+## Safe operating rules
+
+- Keep one canonical owner for every hostname; do not create competing Routes for the same host outside Gateway.
+- Treat raw nginx configuration as an expert escape hatch. It disables some managed validation and lifecycle features.
+- Do not publish a private workload port merely because a Secure Link is temporarily unhealthy.
+- Use maintenance mode for deliberate customer-visible work and disable a Route only when traffic should stop entirely.
+- Migrate placement through the explicit workflow so Domains, Routes, certificates, health state, and DNS changes remain coordinated.
+
+Continue with [Domains, Routes, and TLS](domains-routes-tls.mdx) for configuration, [Secure upstreams](secure-upstreams.mdx) for private Docker targets, and [Ingress troubleshooting](troubleshooting.mdx) for failure diagnosis.

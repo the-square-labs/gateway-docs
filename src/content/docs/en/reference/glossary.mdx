@@ -1,0 +1,59 @@
+---
+title: Glossary
+description: Canonical product terminology for documentation and support.
+section: Reference
+order: 4
+audience: [all]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Glossary
+
+**Additional Route** — A literal path-prefix location inside a managed ingress Route.
+
+**Binding** — A durable relationship granting one managed resource access to another, such as an application database identity.
+
+**Build Worker** — A dedicated Docker-daemon profile using BuildKit/containerd without a Docker Engine socket.
+
+**Deployment** — A stable application identity with blue/green runtime slots and rollback state.
+
+**Managed node** — A host running a bounded Gateway daemon role.
+
+**Pages Deployment** — An immutable static-site artifact release.
+
+**Relay** — The long-lived authenticated data-plane service and public owner of `9443/tcp`.
+
+**Route** — A managed nginx traffic definition; persisted APIs may retain the historical `proxy-host` name.
+
+**Secure Link** — A supported private authenticated connection between Gateway-managed resources, not a general VPN.
+
+**Tag** — A mutable Pages release pointer targeting an immutable Deployment.
+
+**Task** — A durable long-running operation such as build, migration, deployment, or update.
+
+**Access List** — Reusable ingress policy containing IP rules and optional HTTP basic authentication.
+
+**Capability** — A feature reported healthy by a managed daemon, used to admit operations that the host can safely perform.
+
+**Database binding listener** — A TCP listener owned by the target Docker daemon on a binding-specific private bridge network. It is not a per-binding connector container.
+
+**Desired state** — The durable configuration Gateway expects an owning daemon or service to apply.
+
+**Folder** — An organizational and permission boundary grouping supported Gateway resources.
+
+**Inference token** — A dedicated `gwi_` credential for the Gateway Inference data plane, separate from ordinary Gateway API credentials.
+
+**Managed database** — A PostgreSQL, Redis, or ClickHouse instance provisioned and operated on a Database Node.
+
+**Operation ID** — A durable identifier used to reconcile a lifecycle command when its immediate response is lost or interrupted.
+
+**Pages Project** — A static-site resource containing immutable Deployments, mutable Tags, source configuration, and Routes.
+
+**Reported state** — The latest inventory, capability, or health state acknowledged by the owning daemon.
+
+**Route-owned binding** — A Secure Link relationship created and retired with its owning ingress Route.
+
+**Runtime profile** — A restricted daemon or workload mode with a defined capability and security boundary, such as Build Worker, Databases, Default runtime, or Secure Runtime.
+
+**System PKI** — Hidden certificate authorities and identities used for Gateway-managed transport; separate from user-facing Internal PKI.

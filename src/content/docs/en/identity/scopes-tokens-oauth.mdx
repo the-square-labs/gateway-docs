@@ -1,0 +1,60 @@
+---
+title: Scopes, API tokens, OAuth, and MCP
+description: Delegate programmatic authority safely.
+section: Identity and access
+order: 2
+audience: [security-admin, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Scopes, API tokens, OAuth, and MCP
+
+Users manage API tokens under **Profile > Authorizations > API Tokens**. Secrets are shown once. Store them in a secret manager, assign the minimum scopes, and revoke unused tokens.
+
+OAuth clients delegate user authority with explicit redirect URIs and consent. Remote MCP uses the same resource and scope model as REST and the Console; it is not a privileged back door.
+
+Use separate credentials for CI, monitoring, and interactive tools. Avoid long-lived administrator tokens. Resource-scope automation to the exact nodes, Routes, workloads, databases, or Pages Projects it owns.
+
+Regular `gw_` API credentials and OAuth credentials do not enter the Gateway Inference data plane. Inference uses dedicated `gwi_` user tokens.
+
+Audit token creation, use, and revocation. Rotate immediately after suspected disclosure and verify active sessions separately.
+
+## Choose the credential type
+
+| Credential | Use |
+| --- | --- |
+| Session | Interactive Operations Console access |
+| API token | Direct automation owned by one Gateway user |
+| OAuth client | Delegated user authorization and third-party applications |
+| Remote MCP OAuth | Tool clients that act through Gateway's MCP surface |
+| Inference token | Requests to the separate Gateway Inference data plane |
+
+Do not substitute one type for another merely because it is easier to copy. Credential type determines consent, revocation, scope evaluation, audit purpose, and the endpoint family it can access.
+
+## Create a least-privilege token
+
+1. Identify the exact operations and resources the automation owns.
+2. Create a dedicated user or service identity when attribution should be separate.
+3. Assign the minimum global and resource scopes.
+4. Create the token and capture the secret once.
+5. Store it in a secret manager and inject it at runtime.
+6. Test one allowed request and one denied request.
+7. Record the owner, purpose, expiry/rotation expectation, and dependent system.
+
+Avoid embedding tokens in repository URLs, command history, screenshots, or logs. A masked UI value cannot be recovered later; create a replacement and revoke the old token when the secret is lost.
+
+## OAuth and MCP
+
+Register exact redirect URIs and reject wildcard redirect behavior. Review requested scopes during consent and separate development clients from production clients. Remote MCP tools use the same authorization checks and resource visibility as REST and the Console; tool discovery does not grant permission to execute a tool.
+
+Handle authorization failures distinctly:
+
+- `401`: missing, expired, or invalid authentication;
+- `403`: authenticated identity lacks the required scope or entitlement;
+- `409`: current resource state or quota conflicts with the operation;
+- `422`: request validation failed.
+
+## Rotation and incident response
+
+Create the replacement, update the dependent system, verify successful use, and then revoke the old credential. After suspected disclosure, revoke first when operationally safe, inspect audit activity, invalidate related sessions separately, and rotate any downstream secret that may have been exposed.

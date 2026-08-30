@@ -1,0 +1,47 @@
+---
+title: Source-control integrations
+description: Connect GitLab, GitHub, generic Git, and External SSH safely.
+section: Integrations and automation
+order: 1
+audience: [platform-engineer, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Source-control integrations
+
+Configure source integrations under **Settings > Integrations**. Supported paths include GitLab, GitHub, generic Git, and External SSH according to the current connector and plan availability.
+
+Use a dedicated machine or application identity with read-only repository access unless a workflow explicitly requires more. Restrict allowed repositories and hosts. Verify webhook authenticity, branch selection, commit resolution, and credential rotation.
+
+Repository URLs must not contain embedded credentials. SSH host keys and HTTPS certificate validation must fail closed. Remove an integration only after dependent Docker, Compose, and Pages sources are identified and migrated.
+
+## Integration types
+
+- **GitLab:** project and group discovery, repository operations, webhooks, variables, CI-related workflows, and optional registry discovery according to entitlement.
+- **GitHub:** repository discovery and supported repository/Actions operations through the configured application or token path.
+- **Generic Git:** bounded authenticated repository access when a first-class provider is not required.
+- **External SSH:** administrator-configured host access with encrypted credentials, host-key verification, explicit scopes, and controlled command/file operations.
+
+External SSH is a connector to a named host; it is not a Gateway-managed Bastion node role.
+
+## Configure safely
+
+1. Create a dedicated provider or machine identity.
+2. Grant read-only repository access unless a documented workflow needs writes.
+3. Restrict organizations, groups, projects, repositories, and SSH hosts with allowlists.
+4. Add the integration under **Settings → Integrations**.
+5. Verify TLS or SSH host identity before saving credentials.
+6. Test repository discovery and access to one allowed revision.
+7. Test that an out-of-scope repository or host is denied.
+8. Configure webhook authenticity and delivery only after the read path works.
+
+## Source binding lifecycle
+
+Docker workloads, Compose Projects, and Pages Projects create their own source bindings. A source binding records the integration, repository, revision selection, build configuration, automation policy, and source-scoped Build Secrets.
+
+Removing an integration does not make dependent resources safe to rebuild. Inventory dependencies first, disable automatic actions, migrate each source binding, and verify the replacement revision and credentials.
+
+## Troubleshooting
+
+Separate authentication failure, allowlist denial, repository-not-found, revision resolution, webhook delivery, Build Worker admission, and entitlement failure. Preserve provider request IDs and Gateway task history without logging tokens, private keys, variables, or Build Secrets.

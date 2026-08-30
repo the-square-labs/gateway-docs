@@ -1,0 +1,44 @@
+---
+title: Database operations
+description: Monitor health, use logs and consoles, back up data, and recover failed bindings.
+section: Databases
+order: 4
+audience: [database-operator, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Database operations
+
+Database operations combine engine health with the infrastructure that makes the engine usable: database-node availability, storage, binding listeners, workload connectivity, and access identity. Monitor all of those layers before treating a failed application query as an engine incident.
+
+## What to monitor
+
+For a running managed database, monitor engine health, database-node availability, storage growth, latency, connection pressure, recent operation results, and each binding's state. The database detail view also exposes the engine-specific metrics, logs, and eligible Explorer or Console functions.
+
+A paused instance intentionally disables normal health, metrics, Explorer, and Console behavior until it is unpaused. Do not alert on that expected absence as an engine failure; record the pause window and verify that the service returns to **Ready** before re-enabling dependent workloads.
+
+## Logs, Explorer, and Console
+
+Use logs to classify startup, storage, authentication, permission, and recovery errors. Read an operation's stage before making a corrective change, especially after provisioning, resizing, or deletion. Use Explorer or Console only with the required read, write, or administrative permission, and avoid unbounded production queries through an operator interface.
+
+Gateway configuration backups do not replace database data backups. Use an engine-appropriate backup method, retain recovery evidence, and test restores against a separate target. Plan a backup before destructive lifecycle work, substantial resize, or a migration that involves persistent data.
+
+## Recover a failed workload binding
+
+Check a failed binding in this order:
+
+1. Confirm that the managed database is **Ready** and that its database node is online.
+2. Confirm the target Docker node and workload are online and reporting current state.
+3. Review the durable binding desired state and its most recent operation.
+4. Check that the daemon-owned listener is reconciled on the dedicated bridge network.
+5. Verify the binding's distinct engine principal and intended permissions.
+6. Check the workload's received configuration and application logs.
+
+Prefer reconciliation or a targeted retry after correcting the root cause. Do not remove Gateway-owned network objects or engine identities manually; doing so can turn a recoverable listener issue into a state mismatch or orphaned cleanup problem.
+
+## Operational changes and deletion
+
+Pause/unpause, restart, resize, credential rotation, certificate rotation, direct publication, binding deletion, and database deletion should each be followed by the relevant verification: engine health, client connection, route or listener state, logs, metrics, and recorded Task result. Direct publication is opt-in; monitor it as an external-client path separately from private bindings.
+
+When deleting a database, remove or migrate bindings first and wait for their listener and identity cleanup. A failed delete should remain in Gateway's operation history for recovery. Do not force-remove storage or users at the daemon or engine layer unless an explicit recovery procedure calls for it.

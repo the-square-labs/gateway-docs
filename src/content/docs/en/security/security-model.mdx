@@ -1,0 +1,63 @@
+---
+title: Security model
+description: Understand Gateway trust boundaries and fail-closed behavior.
+section: Operations and security
+order: 4
+audience: [security-admin, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Security model
+
+Gateway assumes managed hosts and administrators are consequential trust boundaries. It reduces reusable credentials and direct shell dependence through outbound daemon enrollment, PKI identities, resource scopes, audited operations, and bounded daemon roles.
+
+Key principles:
+
+- one-time enrollment rather than reusable node tokens;
+- mTLS and pinned Gateway identity for managed transport;
+- explicit resource scopes and separate reveal/export/mount permissions;
+- encrypted secrets at rest and masked output by default;
+- Gateway-owned internal containers excluded from user lifecycle APIs;
+- separate application identities for managed database bindings;
+- fail-closed behavior when ownership, entitlement, node state, or provider compatibility cannot be proven;
+- immutable audit attribution after account lifecycle changes.
+
+Gateway is not a host hardening product, firewall manager, general VPN, or replacement for engine-native backups. Secure the underlying operating systems and networks independently.
+
+## Trust boundaries
+
+| Boundary | Security responsibility |
+| --- | --- |
+| Gateway host | Protect application secrets, database access, container runtime, persistent volumes, and administrator access |
+| PostgreSQL and Redis | Keep private, authenticated, backed up, and restricted to Gateway services |
+| Relay | Preserve service identity, signed policy, database authorization path, and public `9443/tcp` ownership |
+| Managed Node | Protect daemon identity, systemd service, local runtime, storage, and role-specific privileges |
+| Build Worker | Isolate untrusted source builds from ordinary workloads and host-control endpoints |
+| Ingress Node | Protect TLS private keys, nginx configuration, logs, and public traffic |
+| Database Node | Protect owner credentials, storage images, Database CA material, and engine administration |
+| External provider | Apply provider-specific credential, retention, availability, and network controls |
+
+Administrators and anyone able to control the Gateway host Docker socket are trusted at a high level. Gateway-owned internal containers are hidden and protected from normal user lifecycle APIs, but this does not turn host-level Docker access into an untrusted boundary.
+
+## Identity and authorization
+
+Human sessions, API tokens, OAuth, MCP, daemon certificates, service identities, database binding principals, logging tokens, and inference tokens are separate credential families. They are not interchangeable. The backend rechecks scopes, resource ownership, entitlements, and current state even when the UI hides an action.
+
+Resource-scoped permissions limit which objects a user can see or mutate. Sensitive actions such as credential reveal, private-key export, host file access, console access, and secret mutation require distinct authority from ordinary read access.
+
+## Secret handling
+
+Secrets are encrypted at rest and masked in normal responses. Write-only values must be replaced rather than retrieved. Keep master keys outside database backups, redact logs and screenshots, and avoid passing credentials through command arguments or repository URLs.
+
+Managed database workloads receive binding-specific identities, not owner credentials. The target Docker daemon owns the private listener and allows only the intended stable workload identity on the binding network.
+
+## Fail-closed examples
+
+Gateway rejects or defers operations when it cannot prove current ownership, node capability, plan entitlement, provider/model compatibility, signed update provenance, network source identity, or required authorization. Cached inventory may remain visible for diagnosis but cannot authorize a mutation.
+
+Availability failures must not be “fixed” by introducing anonymous listeners, disabling certificate validation, exposing private ports, or copying owner credentials into workloads.
+
+## Security limitations
+
+Gateway cannot protect a compromised administrator endpoint, malicious host root, unrestricted Docker socket owner, compromised external identity provider, or data deliberately exported by an authorized user. Use independent host hardening, network segmentation, endpoint security, backups, and organizational controls.

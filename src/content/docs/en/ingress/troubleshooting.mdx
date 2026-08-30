@@ -1,0 +1,63 @@
+---
+title: Ingress troubleshooting
+description: Diagnose DNS, TLS, config, health, and upstream failures in the correct order.
+section: Ingress
+order: 5
+audience: [operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Ingress troubleshooting
+
+Use this order to avoid changing the wrong layer:
+
+1. **DNS:** resolve the hostname from an external client and confirm it points to the assigned ingress node.
+2. **Network:** confirm public 80/443 reachability and host firewall rules.
+3. **TLS:** inspect certificate hostname, chain, expiry, and distribution status.
+4. **nginx config:** verify the latest revision applied and configuration validation succeeded.
+5. **Route health:** inspect expected status/body and maintenance state.
+6. **Upstream:** test the application from the nginx node or inspect Secure Link health.
+7. **Logs:** correlate nginx access/error logs with workload logs and request IDs.
+
+Common mistakes include cross-node Domain/Route placement, stale external DNS after migration, HTTP-01 on a node without public port 80, a WebSocket application without WebSocket forwarding, and selecting a workload port that is not actually published or linked.
+
+## Symptom guide
+
+| Symptom | Most likely layer | First evidence |
+| --- | --- | --- |
+| Hostname does not resolve | DNS | External `A`/`AAAA` lookup and Domain placement |
+| Connection timeout | network | Public address, firewall, ports 80/443, node availability |
+| Certificate warning | TLS | Certificate hostname, chain, expiry, and assigned Route |
+| Immediate `404` | Route matching | Hostname, path prefix, enabled state, raw config |
+| Managed `503` | maintenance or unhealthy upstream | Maintenance state and health history |
+| `502`/`504` | upstream transport | Secure Link, target port, workload health, timeout settings |
+| WebSocket disconnects | protocol forwarding | WebSocket option, application path, proxy/read timeouts |
+| Changes never appear | apply/reconciliation | task state, nginx revision, node connection, validation error |
+
+## Collect evidence before changing state
+
+Record the failing hostname, path, time, client IP class, expected response, actual response, assigned node, Route ID, latest task ID, and relevant request ID. Preserve the generated-config validation error and bounded logs before retrying; repeated edits can erase the most useful evidence.
+
+Compare three views:
+
+1. Gateway desired state in the Route and Domain details;
+2. latest acknowledged state from the nginx node;
+3. externally observed DNS, TLS, and HTTP behavior.
+
+A mismatch between these views identifies whether the failure is control-plane state, node apply, or external infrastructure.
+
+## Safe recovery
+
+- Correct DNS only after the intended node placement is confirmed.
+- Correct a certificate assignment rather than disabling TLS globally.
+- Fix config validation before forcing another apply.
+- Use maintenance mode when the application must remain unavailable during repair.
+- Retry reconciliation only after the dependency that caused the failure is healthy.
+- Roll back the application or Route configuration when a known-good revision exists.
+
+Do not delete and recreate the Domain, certificate, or Route as a first response. That destroys relationship history and may introduce a second outage.
+
+## Recovery verification
+
+Test from an external client, then confirm the canonical hostname, certificate chain, status code, body, redirects, WebSockets, health history, and nginx logs. Close the incident only when public behavior and Gateway state agree.

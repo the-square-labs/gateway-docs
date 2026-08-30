@@ -1,0 +1,63 @@
+---
+title: Gateway Inference
+description: Operate the OpenAI- and Anthropic-compatible inference data plane.
+section: AI and inference
+order: 2
+audience: [ai-admin, developer, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Gateway Inference
+
+Gateway Inference is a separate data plane backed by a supervised OpenCodex inference core. Gateway owns provider connections, public model IDs, access rules, budgets, accounting, and user tokens.
+
+## Administrator path
+
+1. Enable Inference in **Settings > General**.
+2. Install and verify the inference core.
+3. Connect subscription, API, or local providers.
+4. Wait for model and quota discovery.
+5. Publish logical models with compatible sources and technical limits.
+6. Configure default and per-user limits.
+7. Grant `feat:ai:use` to a limited group.
+
+## User path
+
+Create a `gwi_` token under **Profile > Authorizations > Inference API tokens**. Use `/api/inference/v1` for OpenAI-compatible clients and `/api/inference` as the Anthropic SDK base URL. The companion package can configure Codex and Claude Code without manually copying configuration.
+
+Prompts and model output are not stored in activity logs. Gateway stores normalized metadata, usage, cost, and routing state. Private upstream URLs are denied by default and require explicit administrative allowance.
+
+## Provider and model lifecycle
+
+Provider connections store credentials and discovery state. Published models expose stable public IDs while routing to one or more compatible provider sources. Keep technical capabilities, context limits, modality support, pricing, and per-source constraints accurate; a provider model name alone is not a sufficient compatibility contract.
+
+After changing a provider, wait for discovery and publish only models that have at least one healthy compatible source. Removing a provider must not leave a public model silently routing to an incompatible source.
+
+## Request routing
+
+Gateway authenticates the `gwi_` token, resolves the published model, checks user and system limits, selects a compatible provider source, and records normalized accounting metadata. Sticky affinity may keep related requests on one source when the protocol requires continuity; failures release or clear affinity according to the request lifecycle.
+
+Streaming and non-streaming requests must reach one terminal state. Clients should handle provider errors, capacity exhaustion, rate limits, invalid continuation identifiers, and network interruption distinctly rather than retrying every failure against the same source.
+
+## Limits and accounting
+
+Configure system defaults first, then narrower per-user overrides. Test request, token, concurrency, and budget limits with a non-admin user. Usage and cost reporting are operational metadata; reconcile them with provider statements before using them for financial decisions.
+
+Subscription providers, API-key providers, and local providers have different quota and availability behavior. Do not present discovered provider capacity as a contractual guarantee.
+
+## Client verification
+
+1. Create a dedicated user token.
+2. List or select an allowed published model.
+3. Send one non-streaming text request.
+4. Send one streaming request and verify a clean terminal event.
+5. Test an unauthorized model and an exhausted limit.
+6. Verify activity metadata, usage, routing source, and redaction.
+7. Test provider disablement or failover in a safe environment.
+
+## Privacy and failure handling
+
+Gateway does not write prompt or model-output bodies into normal activity records, but the selected provider receives request content. Apply provider-specific retention, data-processing, and residency policy before publishing it to users.
+
+If requests fail, inspect inference core health, provider connection state, discovered models, publication rules, token scopes, user limits, capacity, and protocol compatibility in that order. Restarting the core is not a substitute for correcting an invalid provider or model contract.

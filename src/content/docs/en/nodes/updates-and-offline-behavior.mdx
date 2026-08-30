@@ -1,0 +1,58 @@
+---
+title: Node updates and offline behavior
+description: Update daemons and recover nodes without losing desired state.
+section: Nodes and Relay
+order: 3
+audience: [operator, sre]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Node updates and offline behavior
+
+Check compatibility before updating Gateway, Relay, and daemons. Apply signed daemon updates through the Node lifecycle and verify reconnect, version, inventory, logs, health, and managed bindings.
+
+When a node goes offline, workloads may continue locally but Gateway mutations are disabled. Diagnose host availability, daemon service, system time, certificate identity, DNS, and outbound Relay access. Avoid deleting the Node record while the old daemon may reconnect.
+
+After recovery, verify desired-state reconciliation for Routes, workloads, database bindings, certificate material, and monitoring. A green connection alone does not prove every dependent resource recovered.
+
+## Before an update
+
+1. Read the component release notes and compatibility floor.
+2. Confirm the installation update channel is intentional: Stable for production releases or Preview for explicitly accepted prereleases.
+3. Verify the Node is online and not running a conflicting lifecycle operation.
+4. Record its current version, capabilities, active workloads, and recent errors.
+5. For a Relay Pool, drain and update one member at a time.
+6. Ensure an operator can reach the host if automatic recovery fails.
+
+Gateway and daemons verify signed update manifests and checksums. Do not replace a failed signed update with an unsigned binary copied from another host.
+
+## Update verification
+
+After the daemon restarts, verify more than its version:
+
+- authenticated reconnect and fresh last-seen time;
+- complete capability report;
+- inventory and metrics refresh;
+- role-specific service health;
+- pending task reconciliation;
+- Routes, certificates, workloads, Compose projects, and database bindings owned by that Node;
+- alerts generated or cleared as expected.
+
+## Offline behavior by responsibility
+
+An offline control connection does not automatically stop host services. nginx, containers, managed databases, and other previously applied services can continue from local state. Gateway prevents mutations that require a live owner and shows cached inventory only for diagnosis.
+
+Database bindings can continue through a healthy Relay and database path during an application-only Gateway restart. A Relay outage is different: it interrupts new private-link admissions and managed-node control traffic even when local workloads continue.
+
+## Recovery sequence
+
+1. Restore host power and network reachability.
+2. Verify system time, DNS, and Relay endpoint connectivity.
+3. Inspect the daemon systemd unit and bounded logs.
+4. Confirm the daemon certificate and Node identity were not replaced.
+5. Wait for reconnect and fresh inventory.
+6. Review failed or interrupted operations before retrying them.
+7. Verify each dependent resource family owned by the Node.
+
+Do not delete an offline Node merely to clear a warning. Deletion changes durable ownership and can leave the still-running old daemon unable to reconcile safely.

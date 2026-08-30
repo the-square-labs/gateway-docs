@@ -1,0 +1,41 @@
+---
+title: Images, volumes, and networks
+description: Manage shared Docker resources without breaking ownership boundaries.
+section: Docker
+order: 7
+audience: [operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Images, volumes, and networks
+
+Images, volumes, and networks are Docker-daemon resources that can be shared by several workloads. Gateway reports and manages eligible resources, but safe cleanup still depends on knowing who owns and references them. Treat an offline node's inventory as last-known information until synchronization has completed.
+
+## Images
+
+Images are node-local inventory. Pull an image when a workload needs it, inspect its digest and provenance before production use, and prefer immutable digests for releases. Repository-built artifacts should be tracked by digest rather than by a mutable tag.
+
+Before removing an image or running a prune, check active Containers, inactive Deployment rollback slots, in-progress Tasks, and any expected recovery action. A node-local cleanup can make a later restart fail until the image is pulled again. Remove only images that are confirmed unused, and wait for daemon synchronization before judging whether a cleanup completed.
+
+## Volumes
+
+Gateway-managed local volumes are the supported destination for new persistent mounts. A volume outlives a Container unless it is deleted separately, which is useful for planned recreation but dangerous when the data is no longer backed up.
+
+Before moving, recreating, exporting, or deleting a workload, identify all attached volumes and make an engine-appropriate backup of stateful data. Deleting a volume is destructive and cannot be undone by recreating the workload. Container archive exports do not include volume contents, so volume restore is a separate recovery step.
+
+## Networks
+
+Networks provide workload-to-workload connectivity and may be private implementation resources. A network created by a managed workload or a higher-level owner must not be removed manually: Routes, database bindings, service discovery, and reconciliation can depend on it.
+
+Compose-owned non-external networks stay under the external Compose workflow. External or intentionally shared networks remain global resources and should be removed only after every referenced workload has been detached. Check node state and references first; an apparent unused network on an offline node is not sufficient evidence for deletion.
+
+## Safe cleanup checklist
+
+1. Wait for the Docker node to be online and current inventory to synchronize.
+2. Identify the resource owner and every active, rollback, or recovery reference.
+3. Back up data before any volume change.
+4. Perform one cleanup action through Gateway and follow its Task.
+5. Verify expected workload health and storage/network attachment afterwards.
+
+If a deletion Task fails, do not retry with a daemon-level force removal. Read the failure, restore the missing prerequisite or detach the recorded dependency, then retry the intended Gateway action.

@@ -1,0 +1,39 @@
+---
+title: Databases overview
+description: Manage external connections and private managed PostgreSQL, Redis, and ClickHouse instances.
+section: Databases
+order: 1
+audience: [database-operator, platform-engineer, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Databases overview
+
+Gateway brings two different database models into one operational surface: saved external connections and managed database instances. The difference is ownership. An external connection records access to a service operated elsewhere; a managed instance has a Gateway-controlled lifecycle on a database-profile node.
+
+## Resource model
+
+Managed PostgreSQL, Redis, and ClickHouse instances are private by default. Gateway coordinates engine configuration, storage, credentials, health, logs, operations, and application bindings. The selected database node runs the engine, while Gateway retains the desired resource state and its relationships to workloads.
+
+An external connection does not transfer database ownership to Gateway. Gateway stores its connection configuration and credentials encrypted at rest, subject to explicit permission, but the external database's availability, backup, access policy, and engine lifecycle remain the responsibility of its operator.
+
+## Private-by-default access
+
+Use an application binding when a managed workload needs access to a managed database. A binding grants a separate least-privilege engine identity and reaches the database over a private, daemon-owned listener path. The listener is created directly by the target Docker daemon on a dedicated bridge network; there is no additional binding-side service to operate.
+
+This transport is distinct from the nginx/workload Secure Link connector. Secure Link remains a separate component for its own ingress and relay function. Do not treat a binding failure as evidence that the Secure Link component should be removed, recreated, or configured as database transport.
+
+Direct TCP publication is an explicit opt-in for external clients. It does not open host firewalls automatically and should be enabled only for an identified client path with appropriate credentials and certificate trust. Publishing an instance does not change the private binding model used by workloads.
+
+## Lifecycle and operational boundaries
+
+The database detail view brings together health, metrics, engine settings, credentials, certificates, resizing, pause/unpause, restart, logs, and eligible Explorer or Console access. Available actions depend on engine, node connectivity, instance health, and your granted permissions.
+
+Pause preserves data while intentionally disabling engine compute. A paused instance does not provide normal health, metrics, Explorer, or Console behavior until it is unpaused. Restart is useful for a controlled operational action; it is not a repair for unresolved storage, authentication, or node failures.
+
+## Next steps
+
+- [Provision and retire a managed database](./managed-databases)
+- [Create private application bindings](./bindings)
+- [Monitor and recover database operations](./operations)

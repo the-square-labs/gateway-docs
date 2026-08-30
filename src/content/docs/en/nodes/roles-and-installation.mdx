@@ -1,0 +1,55 @@
+---
+title: Node roles and installation
+description: Select the correct daemon profile and validate its prerequisites.
+section: Nodes and Relay
+order: 2
+audience: [operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Node roles and installation
+
+Use the generated installer command from the Node creation flow. It contains bounded enrollment material and the pinned Gateway identity.
+
+- **nginx:** requires nginx, public ingress ports where applicable, configuration validation, and log access.
+- **Docker:** requires a supported Docker Engine and permissions for the configured runtime operations.
+- **database:** requires dedicated storage and the kernel/storage facilities documented by the installer.
+- **builder:** requires dedicated BuildKit/containerd capacity and should not have a Docker Engine socket.
+- **monitoring:** provides supported monitoring collection.
+- **Relay supervisor/worker:** extends Relay capacity and resilience with explicit placement.
+
+After installation, validate capability reporting rather than assuming host packages imply support. GPU, Secure Runtime, builder, storage, and migration features depend on reported healthy capabilities.
+
+## Choose the role
+
+- **Ingress:** terminates TLS and serves public Domains and Routes. It needs nginx configuration validation, certificate storage, logs, and public ports where applicable.
+- **Docker:** manages ordinary application workloads and Docker resources. It needs a supported Docker Engine and the privileges required for the selected runtime features.
+- **Build Worker:** runs Git builds on isolated BuildKit/containerd services. It must be dedicated to builds and must not expose an ordinary Docker Engine socket to the builder profile.
+- **Databases:** runs managed PostgreSQL, Redis, and ClickHouse with dedicated storage preparation and a restricted Docker daemon profile.
+- **Monitoring:** collects supported host health and metrics without receiving workload lifecycle permissions.
+- **Relay:** installs the Relay supervisor, advertises a reachable address, and joins the Secure Link Relay Pool.
+
+## Standard enrollment flow
+
+1. Open **Nodes** and select **Add Node**.
+2. Select the intended Node Type and read its description.
+3. Enter a stable operator-facing name.
+4. For Relay, enter the address that participating nodes can reach on TCP `9443`.
+5. Create the pending Node.
+6. Copy the generated one-time installation command.
+7. Run the command on the intended Linux host.
+8. Keep the result dialog open while the daemon installs and enrolls; it closes automatically when that specific Node becomes online.
+9. Open the Node detail and verify role, hostname, version, capabilities, metrics, and service addresses.
+
+The **Add relay node** action in Relay settings opens the same enrollment flow with Relay preselected and locked. Relay members appear as ready pool capacity only after enrollment and health reporting succeed.
+
+## Host preparation
+
+Use a dedicated host or VM whenever the role owns a strong trust boundary. Confirm DNS, system time, outbound Relay reachability, package/runtime prerequisites, persistent storage, and systemd availability before running the installer. Do not copy an installer command between pending Node records.
+
+Database nodes require the installer's storage preflight. Build Workers require dedicated execution and storage capacity. Relay nodes require a reachable advertised address and should be placed in distinct failure domains when the pool is intended to provide resilience.
+
+## Verification and cleanup
+
+Enrollment is complete only when the daemon reports the expected capabilities and the first inventory/metrics snapshot arrives. If installation fails before enrollment, inspect the local service and installer logs. Delete the pending record only when abandoning that identity; a token from a deleted Node must not be reused.

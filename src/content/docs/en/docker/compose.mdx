@@ -1,0 +1,63 @@
+---
+title: Compose Projects
+description: Discover, adopt, deploy, revise, and operate single-node Compose applications.
+section: Docker
+order: 4
+audience: [platform-engineer, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Compose Projects
+
+Gateway discovers external Docker Compose applications and can manage single-node Compose Projects as durable resources. A project groups services, configuration, immutable revisions, lifecycle operations, logs, Routes, and database bindings under one stable identity.
+
+External discovery is available on every plan. Creating or adopting a managed single-node project requires Personal or higher. Git-backed Compose builds require Business or Enterprise and an online dedicated Build Worker.
+
+## External and managed projects
+
+An **external** project is discovered from canonical Docker Compose labels. Gateway shows inventory, status, service health, monitoring, and aggregated logs, but does not read a host Compose file or mutate the project until an operator explicitly adopts it.
+
+A **managed** project stores its authored Compose YAML, variables, protected secret keys, and immutable revisions in Gateway. The Docker daemon applies the selected revision through Gateway's pinned Compose runtime. Managed lifecycle remains single-node; multi-node application clusters and same-node replica scaling are **In development**.
+
+Project-owned child containers, named volumes, and non-external networks are controlled through the Compose Project. They are hidden or protected from conflicting standalone lifecycle actions. Images and explicitly external or shared resources remain global Docker resources.
+
+## Create a managed project
+
+1. Open **Docker > Compose** and select **New Project**.
+2. Choose an online Docker node with the Compose capability.
+3. Enter a complete single-file Compose configuration.
+4. Provide non-secret variables and identify protected secret keys separately.
+5. Run validation and resolve unsupported options, missing variables, port conflicts, or policy violations.
+6. Create the project and follow the first apply operation to completion.
+7. Verify every expected service, health state, network, volume, and aggregated log stream.
+
+Manual projects are image-only: images must already be pullable by the target node. Business and Enterprise can attach an allowlisted Git source. Bounded Compose `build` sections are then resolved by isolated Build Workers, vulnerability policy is applied, and the resulting immutable revision pins approved image digests before deployment.
+
+## Adopt an external project
+
+Adoption is an explicit ownership transfer. Open the discovered project, choose **Adopt**, and provide the complete configuration that Gateway should own. Gateway validates and prepares the first immutable revision before applying it.
+
+Confirm that the submitted YAML matches the running application's services, volumes, networks, variables, and secrets. Gateway never trusts a label-supplied host path as source input. After adoption, future changes must go through new revisions rather than direct child-container mutation.
+
+## Revisions and lifecycle
+
+Editing configuration creates a new immutable revision. Use **Pull & Apply** to pull required images and apply the active revision, **Start** or **Stop** for project lifecycle, and **Change revision** to reapply an earlier valid revision. Inactive revisions can be removed when no operation uses them; the active revision cannot be deleted.
+
+{/* screenshot: id=compose-project-revision; viewport=1440x900; description=Managed Compose Project with revision validation, diagnostics, services, and Pull & Apply action; redact=project-name,repository-url,image-registry,environment-values,secret-names */}
+
+Lifecycle work is represented by durable operations and Tasks. Reloading the page does not cancel an operation. If cancellation is available, refresh the project and daemon-reported state before starting a replacement action.
+
+## Routes and database bindings
+
+Routes and Secure Links can target a managed Compose service by stable project and service identity rather than an ephemeral container name. Managed database bindings update the project's revision while preserving authored configuration and protected secrets. Removing a service or binding must go through a new revision so Gateway can reconcile dependent relationships safely.
+
+## Drift and troubleshooting
+
+Gateway reports drift when observed runtime state no longer matches the active revision. Check the current operation, Docker node connectivity, Compose capability, image pull access, service logs, variables, secrets, and daemon diagnostics before retrying.
+
+Do not repair a managed project by deleting its child containers, networks, or revision metadata manually. For an external project, make configuration changes through its original Compose workflow until adoption is complete.
+
+## Delete a project
+
+Bring a managed project down and remove dependent Routes or bindings before deletion. Deleting the Gateway project record removes its managed revision history, but runtime volumes are not deleted automatically. Back up or remove persistent data separately according to the application's retention requirements.

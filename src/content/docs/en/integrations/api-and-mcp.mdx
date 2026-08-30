@@ -1,0 +1,61 @@
+---
+title: REST API and MCP
+description: Automate Gateway through the same product contracts used by the Console.
+section: Integrations and automation
+order: 3
+audience: [developer, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# REST API and MCP
+
+The REST API exposes documented resource operations with session, API-token, or OAuth authentication as appropriate. Remote MCP provides task-oriented tools over the same scopes, validation, entitlements, and audit trail.
+
+Automation should:
+
+- use a dedicated least-privilege identity;
+- treat `202` or task creation as accepted work, then poll durable state;
+- retry only idempotent operations or use the operation's retry contract;
+- handle `401`, `403`, `409`, `422`, and node-offline failures distinctly;
+- avoid parsing UI text when a structured API field exists;
+- record resource IDs and request IDs without logging secrets.
+
+Use the OpenAPI document served by the running Gateway instance for exact request and response schemas. The schema version must match the instance being automated; do not copy request bodies from a different release. Product guides describe the required resource ordering and operational consequences that schemas alone cannot capture.
+
+## Authentication and discovery
+
+Choose a session, API token, or OAuth client according to the caller. Remote MCP clients authorize through OAuth and discover task-oriented tools filtered by the same scopes and product state. Tool presence is not proof that a particular resource mutation will be admitted.
+
+Start automation by reading the target resource and capability state. Resolve stable IDs rather than scraping names from the UI. Keep the base URL, token, and environment separate so a development script cannot accidentally target production.
+
+## Durable operations
+
+Many infrastructure mutations return an accepted task or operation instead of a completed result:
+
+1. submit the validated request;
+2. store the returned resource, task, operation, and request IDs;
+3. poll or subscribe to the durable operation state;
+4. inspect structured failure details;
+5. verify the resulting resource state independently;
+6. retry only according to the operation's idempotency contract.
+
+Do not translate a transport timeout directly into a second create/delete request. The first request may have reached the owning daemon and be awaiting reconciliation.
+
+## Error handling
+
+- `400` or `422`: correct request shape or validation input;
+- `401`: refresh or replace authentication;
+- `403`: distinguish missing scope from missing plan entitlement;
+- `404`: verify resource visibility as well as existence;
+- `409`: inspect lifecycle conflict, quota, or current state;
+- `429`: apply bounded backoff and respect server guidance;
+- `5xx` or node offline: preserve request IDs and check durable task state before retrying.
+
+## MCP operating rules
+
+Use MCP for goal-oriented operations where the tool schema adds safety and resource context. Read tool descriptions and returned warnings, pass exact resource identifiers, and treat external content as untrusted input. MCP calls are audited and must not be used to bypass confirmation, permission, entitlement, or lifecycle checks.
+
+## Verification
+
+For every automation path, test one allowed action, one denied action, one validation failure, one asynchronous success, and one interrupted operation. Confirm audit attribution and make sure logs redact credentials and sensitive request fields.

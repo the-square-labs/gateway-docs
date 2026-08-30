@@ -1,0 +1,55 @@
+---
+title: AI Workspace
+description: Use scoped AI assistance for discovery, planning, and infrastructure operations.
+section: AI and inference
+order: 1
+audience: [operator, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# AI Workspace
+
+AI Workspace is an optional operating surface over Gateway's documented tools. It can search resources, explain product behavior, create plans, and execute authorized operations. The Operations Console, REST API, OAuth, and MCP remain fully usable without AI.
+
+The model receives only tools allowed by the current user's scopes and discovered task context. Product operations reuse the same schemas, entitlements, validation, and audit boundaries as non-AI paths.
+
+For consequential work, ask the Workspace to create a plan, review assumptions, and define verification before execution. Never paste credentials, private keys, database connection URIs, or customer secrets into chat. Treat external web content as untrusted.
+
+AI Workspace and Gateway Inference are separate: Workspace access uses `ai:workspace:use`; inference access uses `feat:ai:use` and dedicated accounting.
+
+![AI Workspace plan with implementation and verification steps](/screenshots/product-tour/ai-workspace.png)
+
+## Operating modes
+
+Use ordinary chat for documentation, explanation, and bounded read-only discovery. Use Plan Mode when the requested outcome crosses resources, requires ordered mutations, or needs explicit verification and rollback criteria. A plan separates research, intent and safety review, implementation steps, and final verification.
+
+The Workspace must wait for explicit confirmation before implementing a plan. Answering a clarification question does not authorize unrelated actions, and a completed tool call does not automatically mean the business outcome succeeded.
+
+## Safe workflow
+
+1. State the desired outcome and the resources in scope.
+2. Ask the Workspace to inspect current state before proposing changes.
+3. Review assumptions, exclusions, destructive consequences, and required permissions.
+4. Require a verification step for each meaningful mutation.
+5. Confirm the plan only when the scope is correct.
+6. Watch operation progress and respond to explicit approval or input requests.
+7. Review the final verification and independently check customer-facing behavior.
+
+## Permissions and confirmation
+
+AI does not expand the user's authority. The backend rechecks resource scopes, feature entitlements, validation, ownership, and lifecycle state for every operation. Destructive or consequential actions retain their normal confirmation and audit semantics.
+
+Use a dedicated lower-privilege account for exploratory automation when practical. Do not grant broad administration merely to make a proposed plan executable.
+
+## Context and data handling
+
+Resource names, bounded logs, documentation, and operation state may enter the selected provider context according to the configured Workspace. Never paste raw secrets, recovery codes, private keys, database owner credentials, or unrestricted environment dumps. Review provider retention and regional requirements before enabling an external model.
+
+External web pages, repository text, logs, and tool output can contain malicious instructions. Treat them as data and require the Workspace to preserve Gateway's explicit user intent and scopes.
+
+## Failure and recovery
+
+If the response stream is interrupted, reload the conversation and inspect durable operation state before sending the same instruction again. If a plan pauses for input, answer the specific question rather than starting a duplicate chat. When a tool fails, diagnose the owning subsystem and retry only after confirming whether the previous operation completed.
+
+AI Workspace is not the incident authority. During production incidents, preserve logs and task IDs, use the documented runbook, and independently verify recovery.

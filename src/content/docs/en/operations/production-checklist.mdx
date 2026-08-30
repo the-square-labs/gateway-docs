@@ -1,0 +1,72 @@
+---
+title: Production readiness checklist
+description: Validate a Gateway installation before it carries business workloads.
+section: Operations and security
+order: 1
+audience: [operator, sre, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Production readiness checklist
+
+## Control plane
+
+- Canonical HTTPS URL, cookies, WebSockets, and OAuth redirects work.
+- PostgreSQL, Redis, Relay identity, encryption keys, and uploaded artifacts are persistent and backed up.
+- Relay owns public `9443/tcp` and recovers after restart.
+- License state and required entitlements are healthy.
+
+## Identity
+
+- Two independent administrator recovery paths exist.
+- MFA and group scopes are tested with real non-admin users.
+- API/OAuth/MCP credentials are least-privilege and inventoried.
+
+## Managed nodes
+
+- Every role reports expected capabilities and update channel.
+- Offline behavior, daemon restart, node restart, and reconnect are tested.
+- Firewalls allow only documented traffic.
+
+## Workloads and data
+
+- Deploy, health check, rollback, logs, backup, and restore are proven.
+- Managed database bindings survive Gateway, Relay, daemon, node, and workload recreation tests.
+- No owner credentials are present in workload configuration.
+
+## Customer traffic
+
+- DNS, TLS renewal, ingress migration, maintenance mode, and upstream failure are tested.
+- Notifications and status-page communication reach their intended recipients.
+
+## Operations
+
+- Update and rollback runbooks have owners.
+- Disk, certificate, database, queue, Relay, and node alerts are active.
+- An incident drill has been completed without relying on undocumented shell changes.
+
+## Evidence package
+
+Do not approve production from visual inspection alone. Preserve evidence for:
+
+- installation version and image digests;
+- backup completion and a recent restore test;
+- external DNS/TLS/HTTP verification;
+- non-admin permission tests;
+- Node restart and reconnect tests for every deployed role;
+- Gateway, Relay, daemon, and workload restart behavior;
+- database binding query results before and after recreation;
+- alert open/recovery and notification delivery;
+- update and rollback rehearsal;
+- unresolved exceptions with owner and expiry.
+
+## Go/no-go gate
+
+Deployment is **no-go** when administrator recovery is untested, persistent keys are not backed up, Relay has a single unknown recovery path, node capability errors are ignored, customer traffic cannot be verified externally, or a database binding requires manual container/role repair.
+
+An accepted temporary exception must state the customer impact, compensating control, owner, deadline, and rollback trigger. “Works on the current host” is not a production-readiness argument.
+
+## First-day observation
+
+After enabling business traffic, watch Route health, TLS, Relay pressure, node freshness, workload restarts, database connections, disk growth, notification queues, and audit activity. Keep the rollback owner available through the observation window and avoid unrelated platform changes.

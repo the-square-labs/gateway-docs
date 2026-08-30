@@ -1,0 +1,43 @@
+---
+title: Managed databases
+description: Provision, resize, pause, restart, publish, and retire managed database instances.
+section: Databases
+order: 2
+audience: [database-operator, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Managed databases
+
+Managed databases provide Gateway-controlled PostgreSQL, Redis, and ClickHouse instances on database-profile nodes. Gateway owns the resource lifecycle and desired configuration; the database node owns the running engine and its local runtime. This separation is why an offline node does not erase the instance's recorded configuration, and why recovery should begin with node health rather than manual engine changes.
+
+![Managed PostgreSQL overview with health and performance metrics](/screenshots/product-tour/managed-database.png)
+
+## Before provisioning
+
+You need permission to create the database and use the selected database node. Confirm the engine and supported version, node availability, storage and memory requirements, backup plan, and whether external client access is actually necessary. Select capacity conservatively and leave room for engine overhead, temporary work, and recovery operations.
+
+Keep direct publication disabled unless an external client has a documented need. Private application connectivity should use bindings. Enabling direct publication is an intentional change to the instance's exposure and does not open a host firewall automatically.
+
+## Provision and verify
+
+1. Choose the engine, supported version, database node, storage size, and memory profile.
+2. Review the private-by-default network posture and any direct publication setting.
+3. Create the instance and follow the provisioning operation to completion.
+4. Wait for the instance to show **Ready** before creating an application binding or relying on Explorer, Console, or metrics.
+5. Verify engine health, recent logs, storage reporting, and a permitted connection path.
+
+Provisioning failures commonly result from unavailable nodes, capacity limits, storage preparation, unsupported engine settings, or engine startup. Read the operation result before retrying. Repeated restarts or recreation attempts can obscure the original failure and are not a replacement for correcting storage or configuration prerequisites.
+
+## Change an existing instance
+
+Pause and unpause control compute while retaining the database data. Expect normal health, metrics, Explorer, and Console actions to be unavailable while the instance is paused. Restart creates a brief service interruption and should be announced to dependent applications when they cannot reconnect automatically.
+
+Resize only within the engine and storage constraints. Back up before a substantial capacity change, follow the resize operation, then verify storage reporting and application behavior. Credential rotation affects direct clients that use those credentials; application bindings retain their own engine identities. Certificate rotation can briefly recreate the database service, so clients must continue trusting the Gateway Database CA.
+
+## Publication and retirement
+
+Direct TCP publication is opt-in and should be treated as a separate external-client contract. Verify the intended client, certificate trust, credentials, and network path after enabling it. Disabling publication removes that direct path but does not delete the instance or private workload bindings.
+
+Deletion is destructive. First remove or migrate dependent bindings, decide how long backups must be retained, and confirm that no external clients still require direct publication. Gateway then removes the managed instance and its related identity and storage state through its lifecycle. Do not manually remove engine users, internal network objects, or storage in an attempt to accelerate deletion; let the recorded operation finish so cleanup remains consistent.

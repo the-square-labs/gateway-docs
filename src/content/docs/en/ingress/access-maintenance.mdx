@@ -1,0 +1,53 @@
+---
+title: Access lists and maintenance mode
+description: Restrict ingress and place applications into an explicit maintenance state.
+section: Ingress
+order: 3
+audience: [operator, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Access lists and maintenance mode
+
+Access lists combine IP rules and optional HTTP basic authentication. Apply the narrowest list that meets the requirement and test both an allowed and denied client. Treat stored basic-auth secrets as credentials and rotate them when membership changes.
+
+Maintenance mode is available for enabled managed Routes that are not using raw configuration. It preserves the HTTP/HTTPS virtual host, returns HTTP 503, pauses managed health checks, and exposes maintenance state to alerts and status pages.
+
+Use maintenance mode for deliberate customer-visible work. Do not simulate maintenance by deleting a Route, disabling TLS, or pointing to a dummy upstream; those actions destroy useful state and make recovery harder.
+
+Before leaving maintenance mode, confirm the upstream is healthy, migrations completed, and dependent databases or Secure Links are ready.
+
+## Access-list workflow
+
+1. Define the smallest set of allow or deny rules that represents the intended audience.
+2. Add HTTP basic authentication only when the client can protect and rotate the credential.
+3. Attach the list to a test Route or a low-risk hostname first.
+4. Verify one allowed address and one denied address from outside the nginx host.
+5. Review nginx access logs to confirm the decision came from the intended policy.
+6. Attach the policy to additional Routes only after the test is conclusive.
+
+Changing a reusable Access List affects every attached Route. Before editing shared policy, inspect its relationships and create a separate list when one application needs a different boundary.
+
+## Enter maintenance safely
+
+Before enabling maintenance mode:
+
+- confirm that the Route is managed and enabled;
+- record the current health state and active deployment;
+- publish a status-page incident when customers are expected to notice;
+- ensure operators retain an administrative path that is not blocked by the application Route;
+- decide which verification proves the maintenance task is complete.
+
+Gateway keeps the virtual host and TLS behavior in place while returning `503`. This makes monitoring and customer communication explicit and avoids DNS or certificate churn.
+
+## Exit and verify
+
+1. Verify the upstream directly or through its managed health check.
+2. Confirm database bindings, migrations, and dependent services are ready.
+3. Disable maintenance mode.
+4. Make an external request over the canonical hostname.
+5. Verify status code, expected body, TLS, redirects, and WebSocket behavior where applicable.
+6. Resolve the status-page incident only after the external check succeeds.
+
+If the Route remains unavailable, re-enable maintenance rather than repeatedly toggling unrelated settings. Use [Ingress troubleshooting](troubleshooting.mdx) to identify the failed layer.

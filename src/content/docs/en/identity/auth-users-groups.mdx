@@ -1,0 +1,53 @@
+---
+title: Authentication, users, and groups
+description: Configure sign-in methods, MFA, user lifecycle, and group-based access.
+section: Identity and access
+order: 1
+audience: [security-admin, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Authentication, users, and groups
+
+Gateway supports independent OIDC, local-password, and email one-time-code authentication. Passkeys are enrolled after account creation. MFA policy can require enrollment before a user receives a normal session.
+
+Use groups as the normal permission boundary. Keep a small, auditable administrator group and separate operators, developers, observers, and automation. Blocking or deleting a user revokes access while preserving historical attribution. Restoring a deleted user leaves the account blocked until explicitly enabled.
+
+Impersonation is an administrative support flow and must remain distinguishable in session purpose and audit records. Stop impersonation to restore the original administrator session; do not issue normal API tokens from an impersonated session.
+
+Gateway does not provide SCIM. Document the organization's manual or external provisioning process accordingly.
+
+{/* screenshot: id=groups-scope-editor; viewport=1440x900; description=Permission group editor with global and resource-scoped grants; redact=group-names,user-emails,resource-names */}
+
+## Authentication design
+
+Enable at least two administrator recovery paths before depending on an external identity provider. Test OIDC redirect and logout behavior, email delivery, local-password recovery, MFA enrollment, and recovery codes with non-production accounts.
+
+OIDC proves identity but does not automatically grant broad product access. Gateway permissions remain explicit. If the external provider is unavailable, only independently configured methods can restore access.
+
+## User lifecycle
+
+1. Create or invite the user through an approved authentication path.
+2. Require MFA according to policy before granting sensitive scopes.
+3. Add the user to role-based groups rather than assigning one-off permissions where possible.
+4. Verify the user can access one intended resource and is denied one out-of-scope resource.
+5. Review sessions, tokens, and group membership when the user's role changes.
+6. Block the account immediately when access must stop.
+7. Delete only after ownership and automation dependencies are transferred.
+
+Blocking stops new use without erasing attribution. Deletion remains visible in audit history. Restoring a deleted record does not silently reactivate it.
+
+## Group design
+
+Separate platform administration, security administration, application operation, development, read-only observation, and automation. Use resource-scoped grants for one folder, Route, Node, workload, database, or Pages Project instead of granting an entire product area.
+
+Keep the administrator group small and maintain a documented break-glass path. Test permission changes with a real non-admin session; an administrator view cannot prove that deny boundaries work.
+
+## Impersonation and support
+
+Use impersonation only for a bounded support investigation. The session must remain visibly marked and auditable. Do not change credentials, create durable administrator tokens, or perform unrelated work while impersonating another user. Stop impersonation before returning to normal administration.
+
+## Provisioning limitation
+
+Gateway does not currently provide SCIM provisioning. Maintain an external joiner/mover/leaver checklist and reconcile users and groups manually or through supported API/OAuth automation until SCIM is released.

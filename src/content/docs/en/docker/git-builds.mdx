@@ -1,0 +1,39 @@
+---
+title: Git sources and Build Workers
+description: Build immutable Docker and Pages artifacts in a dedicated execution boundary.
+section: Docker
+order: 5
+audience: [platform-engineer, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Git sources and Build Workers
+
+Git source support connects an approved repository revision to an immutable build artifact. It can supply a Docker Container, Deployment, or Pages release, but the resulting workload still follows the lifecycle of its owning resource. A source connection is not permission to change a production route or traffic target by itself.
+
+## Prerequisites and ownership
+
+Use a supported, allowlisted source integration and authorize only the repository access needed for the build. Select an exact branch revision, then confirm the assigned dedicated Build Worker is online. The worker accepts one build at a time, uses isolated BuildKit and containerd state, applies fixed resource limits, denies insecure build entitlements, and clears cache between jobs.
+
+Build Secrets are source-scoped and mounted as secrets during the build. Do not put credentials in build arguments, image references, repository URLs, committed configuration, or logs. The build worker owns execution isolation; the registry holds the produced artifact; the target Docker node later pulls and runs that artifact.
+
+## Build and review the artifact
+
+1. Connect the integration and choose the repository, branch, and intended revision.
+2. Configure the build input and source-scoped secrets.
+3. Start the build and follow its Task from worker assignment through artifact publication.
+4. Review redacted logs, vulnerability findings, policy result, source commit, and immutable artifact digest.
+5. Select the approved digest in the owning Container, Deployment, or Pages workflow.
+
+Automatic build and automatic deploy are independent controls. Keep automatic deployment disabled until the health and rollback path is proven for that workload. A successful build only proves that an artifact exists; it does not prove that the application starts correctly on a target node.
+
+## Failure handling
+
+If a build cannot start, check source authorization, worker availability, entitlement, and integration state. If it fails after start, use the phase and logs to separate dependency, secret, policy, build-definition, or artifact-publication failures. Correct the source or build configuration, then run a new build. Retrying produces a new operation and preserves the previous history.
+
+When the worker or source automation is unavailable, existing history remains useful for diagnosis, but new builds must not be assumed to run. Do not substitute a mutable image tag for the missing immutable artifact; wait for a verified build or use a separately approved image.
+
+## Cleanup and rollback
+
+Removing a source connection prevents future source-driven work but does not delete an already deployed runtime or its artifact automatically. Before revoking the connection, decide which artifacts remain required for a rollback. Artifact retention is governed by the registry and the owning resource's active, rollback, in-progress, pinned, and recent-successful history.

@@ -1,0 +1,65 @@
+---
+title: Hardening checklist
+description: Reduce control-plane, node, credential, and supply-chain risk.
+section: Operations and security
+order: 5
+audience: [security-admin, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Hardening checklist
+
+- Keep Gateway and daemon hosts patched and dedicated to their roles where practical.
+- Restrict PostgreSQL and Redis to the private application network.
+- Expose only HTTPS and Relay ports required by the deployment.
+- Require MFA for administrators and minimize administrator membership.
+- Store master keys and backups outside the Gateway host.
+- Use resource-scoped service credentials and short rotation intervals.
+- Prefer immutable image digests and dedicated Build Workers.
+- Deny host bind mounts and privileged/device access unless an explicit supported workflow requires them.
+- Keep managed databases private and use binding identities.
+- Test certificate renewal and preserve the system PKI used for internal transport.
+- Send audit events to an independently controlled SIEM where required.
+- Review source integrations, registry credentials, OAuth clients, tokens, and active sessions regularly.
+- Remove temporary maintenance, debug exposure, and manual host changes after incidents.
+
+Do not publish screenshots, support bundles, or logs until secrets, internal addresses, customer names, and repository URLs have been redacted.
+
+## Control plane
+
+- Run Gateway on a dedicated VM or host and restrict direct shell and Docker access.
+- Keep PostgreSQL, Redis, internal gRPC, and the inference core on private networks.
+- Protect `.env`, encryption keys, PKI keys, uploaded artifacts, and Relay identity with restrictive ownership and backups.
+- Use HTTPS on the canonical public URL and verify cookie, WebSocket, OAuth, and proxy behavior.
+- Disable unused authentication methods and integrations.
+
+## Managed nodes
+
+- Use one enrollment identity per host role and never copy daemon certificates between hosts.
+- Restrict outbound destinations to Gateway/Relay and required providers where practical.
+- Protect systemd units, configuration, update trust anchors, runtime sockets, and local storage.
+- Keep Ingress, Build Worker, Database, and Relay roles isolated according to their risk.
+- Alert on stale last-seen time, capability degradation, disk pressure, and update incompatibility.
+
+## Workloads and builds
+
+- Prefer digest-pinned images and review source, build logs, vulnerability policy, and provenance boundaries.
+- Run Git builds only on dedicated Build Workers.
+- Use managed volumes instead of host bind mounts.
+- Do not grant privileged mode, arbitrary devices, host networking, or host filesystem access without an explicit supported requirement.
+- Store runtime and Build Secrets through their separate encrypted paths.
+
+## Data and private connectivity
+
+- Keep managed databases unpublished by default.
+- Use one binding identity per application relationship and verify owner credentials never enter workload configuration.
+- Protect Gateway-owned binding networks and daemon-owned listeners from user lifecycle actions.
+- Back up application data through engine-native procedures and test restore independently from Gateway recovery.
+- Keep direct database TLS enabled unless a deliberate private-network exception is documented.
+
+## Operational assurance
+
+Review administrator membership, group scopes, tokens, OAuth clients, source integrations, DNS connectors, SMTP credentials, SIEM destinations, and active sessions on a fixed schedule. Test denial paths with non-admin identities.
+
+Run incident, restore, update, Relay failover, node restart, workload recreation, and database binding recovery exercises. Remove temporary debug access and document any accepted exception with an owner and expiry.

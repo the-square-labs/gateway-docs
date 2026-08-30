@@ -1,0 +1,44 @@
+---
+title: DNS, email, and webhooks
+description: Configure external delivery systems and test failure behavior.
+section: Integrations and automation
+order: 2
+audience: [operator, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# DNS, email, and webhooks
+
+Cloudflare integration can manage supported Domain records and DNS-01 challenges. Use a narrowly scoped API token and verify the intended account and zone before enabling reconciliation.
+
+Email configuration supports authentication flows and notification delivery where enabled. Test sender identity, TLS, deliverability, and rate limits before relying on email one-time codes.
+
+Webhooks can trigger supported deployment or automation workflows. Use generated secrets, verify signatures, make receivers idempotent, and distinguish an accepted operation from a completed deployment. Do not return internal daemon errors or credentials in webhook responses.
+
+## DNS connectors
+
+Use a dedicated Cloudflare token restricted to the intended account, zones, and DNS permissions. Verify the zone allowlist before enabling managed records or DNS-01 challenges. Gateway should own only records explicitly attached to managed Domains; unrelated records remain external state.
+
+For a migration, record current values and TTL, confirm the target Ingress address, apply the change, and verify resolution from independent public resolvers. Do not delete the old endpoint until customer traffic reaches the new placement.
+
+## Email
+
+Configure sender identity, SMTP host, port, TLS mode, and authentication according to the provider. Send a test message and check the actual inbox, spam classification, SPF/DKIM/DMARC alignment, and provider rate limits.
+
+If email one-time codes are enabled, maintain another administrator recovery path. A successful SMTP connection does not prove users can receive authentication messages.
+
+## Notification webhooks
+
+1. Create an HTTPS receiver with bounded request size and timeout.
+2. Configure authentication or HMAC signing.
+3. Send a test event and verify the signature against the raw request body.
+4. Return a deterministic success response only after the receiver has durably accepted the event.
+5. Make retries idempotent using the event or delivery identifier.
+6. Monitor delivery history, latency, retries, and terminal failures.
+
+## Deployment webhooks
+
+Treat webhook delivery as a request to evaluate a source event, not proof of deployment. Verify the provider signature, repository allowlist, branch or tag policy, resolved commit, build admission, and final deployment task independently.
+
+Rotate connector and webhook secrets by installing the replacement, verifying it, and then revoking the old value. Do not expose full receiver responses, provider credentials, or internal daemon errors to untrusted callers.

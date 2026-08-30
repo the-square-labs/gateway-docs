@@ -1,0 +1,52 @@
+---
+title: Docker overview
+description: Choose between containers, Deployments, Compose Projects, and Git-backed delivery.
+section: Docker
+order: 1
+audience: [operator, platform-engineer, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Docker overview
+
+Gateway gives Docker workloads a durable product identity rather than treating a running container as the whole application. That identity holds configuration, access grants, lifecycle history, relationships, and the desired state that Gateway can reconcile after an interruption.
+
+Choose the highest-level lifecycle that matches the application:
+
+- **Container:** one directly managed runtime with a focused configuration and lifecycle.
+- **Deployment:** a stable application identity with two runtime slots for health-gated blue/green releases and rollback.
+- **Compose Project:** a discovered external application or a Gateway-managed single-node application with validated configuration, immutable revisions, lifecycle operations, logs, Routes, and database bindings.
+- **Git source:** a delivery input for Containers, Deployments, and Pages. It is not a separate application entity.
+
+## Ownership boundaries
+
+Gateway owns the metadata and desired state for resources it creates or adopts. The target Docker daemon owns the runtime process, image cache, local storage implementation, and network attachment. A managed resource can therefore be unavailable while its desired state remains recorded; recovery starts by restoring daemon or node connectivity, then allowing Gateway to reconcile.
+
+Some Docker objects belong to a higher-level owner. Deployment slots are controlled through their Deployment, and Compose-labelled containers are grouped under their discovered project context. Do not mutate owner-managed children through a standalone lifecycle path: direct changes can create drift between the running daemon state and Gateway's recorded configuration.
+
+Gateway-managed internal resources may include labels, runtime names, networks, volumes, credentials, build artifacts, and task records. Treat these as implementation details unless an action in Gateway explicitly exposes them. Deleting or renaming them through Docker tooling can break reconciliation, routing, or a future rollback.
+
+## How lifecycle work is performed
+
+Long-running changes are represented as Tasks or operations. An operation records intent, progresses through daemon work, and finishes with a success or failure result that can be inspected later. Starting a second conflicting action while one is active can be rejected or deferred; wait for the current operation before retrying.
+
+Before changing a workload, review its dependent Routes, database bindings, grants, mounted volumes, source settings, and restart policy. Before deleting it, decide whether its data and public entry points must be retained elsewhere. A successful runtime stop is not the same as a completed deletion.
+
+## Safe operational sequence
+
+1. Confirm the selected Docker node is online and has the required runtime capability.
+2. Inspect the resource owner and related resources before editing configuration.
+3. Make one intentional lifecycle change and follow its Task to completion.
+4. Verify health, application logs, and the expected route or private connection.
+5. Keep a known-good image or prior Deployment slot until the recovery window has passed.
+
+If an operation fails, use its diagnostics to distinguish image, configuration, storage, port, permission, and node-connectivity failures. Correct the identified prerequisite and retry from Gateway. Do not remove Gateway-owned Docker objects as a generic recovery step.
+
+## Next steps
+
+- [Manage a standalone container](./containers)
+- [Release a blue/green Deployment](./deployments)
+- [Manage Compose Projects](./compose)
+- [Use Git sources and Build Workers](./git-builds)
+- [Manage shared images, volumes, and networks](./images-volumes-networks)

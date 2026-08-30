@@ -1,0 +1,45 @@
+---
+title: Structured logging and SIEM
+description: Centralize operational logs and export audit events without leaking secrets.
+section: Observe and notify
+order: 3
+audience: [sre, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Structured logging and SIEM
+
+Structured logging centralizes supported Gateway and daemon events with searchable fields and retention policy. Size storage for ingestion and retention, monitor ClickHouse health, and plan engine upgrades before old images become unsupported.
+
+SIEM destinations deliver audit-focused events through a durable outbox. Disabling SIEM pauses new delivery without deleting destination configuration or historical terminal records. Test signatures, retries, idempotency, and receiver capacity.
+
+Logs and SIEM payloads must not contain passwords, tokens, private keys, database connection URIs, prompts, model output, or raw binding credentials. Use request IDs and stable resource identifiers for correlation.
+
+## Structured logging workflow
+
+1. Enable the feature and verify ClickHouse health.
+2. Create a logging environment for one application or trust boundary.
+3. Attach a schema when field validation is required, or use loose mode deliberately.
+4. Set retention and request/event budgets appropriate for expected traffic.
+5. Create a write-only ingest token and store it in the application's secret manager.
+6. Send a synthetic event with known fields and request ID.
+7. Search for the event and verify timestamp, severity, labels, and retention state.
+
+Request limits and event limits are separate. Batch ingestion can accept valid events while rejecting invalid members, so clients must inspect the structured response rather than assuming the whole batch succeeded.
+
+## Retention and capacity
+
+Per-environment TTL is only one boundary. Gateway housekeeping also enforces global row and approximate disk budgets. Monitor ClickHouse availability, merge pressure, disk growth, rejected ingestion, and the age of the newest event. Plan retention from incident and compliance requirements rather than leaving it unlimited.
+
+Disabling structured logging hides normal product surfaces and rejects new ingestion while preserving stored data and configuration. Re-enable only after the underlying health or entitlement condition is understood.
+
+## SIEM delivery
+
+Configure each HTTPS collector with the narrowest supported authentication method. Validate certificate trust, request signing, receiver idempotency, accepted batch size, retry behavior, and durable delivery history. The outbox records delivery progress so a temporary collector outage does not require operators to recreate events manually.
+
+If SIEM is disabled or entitlement is lost, destination configuration and historical terminal records remain. Confirm the receiver's last accepted event and Gateway's queue age before resuming normal operation.
+
+## Data handling rules
+
+Define an allowlist of fields applications may send. Redact at the source, because downstream retention and export multiply the impact of a leaked secret. Use resource IDs, request IDs, trace IDs, and bounded error categories instead of raw credentials, prompts, environment dumps, or arbitrary request bodies.

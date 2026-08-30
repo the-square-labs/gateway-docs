@@ -1,0 +1,67 @@
+---
+title: Domains, Routes, and TLS
+description: Configure the canonical ingress resource chain.
+section: Ingress
+order: 2
+audience: [operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Domains, Routes, and TLS
+
+## Domains
+
+Register each hostname once and assign it to an eligible nginx node with a detected public service address. A Route and its Domain must remain on the same node. Cloudflare-managed Domains can reconcile A/AAAA records; external DNS remains the operator's responsibility.
+
+## Certificates
+
+Issue Let's Encrypt certificates through HTTP-01 or DNS-01, or upload existing material. HTTP-01 requires the assigned node to be publicly reachable on port 80. Gateway distributes private key material only to nodes with enabled TLS Routes that use it.
+
+## Routes
+
+Choose the Domain, behavior, upstream, TLS certificate, and health policy. Enable WebSockets, rewrites, headers, buffering, or timeout changes only when required by the application.
+
+## Migration
+
+Use the explicit ingress migration workflow to move a Domain and its Routes. Cloudflare DNS can be changed during cutover; external DNS requires an operator-confirmed update. Verify the target before removing the source placement.
+
+![Route details with domain, ingress placement, health check, target, and certificate](/screenshots/product-tour/ingress-route.png)
+
+## Prerequisites and permissions
+
+The target Ingress node must be online, report a usable service address, and support the intended certificate challenge. The caller needs access to the Domain, Route, certificate, target workload, and any reusable Access List involved in the change.
+
+For externally managed DNS, lower TTL before a planned migration and record the current records. For Cloudflare-managed DNS, verify the connector scope and zone allowlist before asking Gateway to mutate records.
+
+## Configure the complete chain
+
+1. Create or select the Domain and place it on an Ingress node.
+2. Confirm DNS points to the selected public service address.
+3. Issue or upload a certificate covering the exact hostname.
+4. Create the Route and select proxy, redirect, or 404 behavior.
+5. Select the upstream and application protocol.
+6. Attach TLS, access policy, health checks, and protocol options.
+7. Save and wait for nginx validation and apply.
+8. Verify the public endpoint from outside the managed network.
+
+For wildcard or multi-name certificates, verify every hostname before reuse. Certificate existence alone does not mean it is distributed; distribution follows enabled TLS Route placement.
+
+## Change and deletion consequences
+
+- Moving a Domain changes where all of its Routes are served.
+- Replacing a certificate affects every attached TLS Route after distribution.
+- Disabling a Route preserves configuration but stops the managed virtual host.
+- Deleting a Route retires Route-owned Secure Links but does not delete reusable certificates or Access Lists.
+- Deleting a Domain requires its dependent Routes to be removed or migrated first.
+- Deleting an uploaded certificate removes Gateway's managed copy only after dependencies are detached.
+
+## Verification checklist
+
+- External DNS resolves to the intended node.
+- HTTP behavior is deliberate: redirect, response, or disabled.
+- HTTPS serves the expected certificate and complete chain.
+- Health checks use the intended path and expected status.
+- WebSocket and timeout settings match the application.
+- nginx configuration is valid and the latest revision is acknowledged.
+- Access and error logs show the external verification request.

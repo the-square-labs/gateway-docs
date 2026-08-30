@@ -1,0 +1,40 @@
+---
+title: Blue/green Deployments
+description: Release and roll back a service through health-gated runtime slots.
+section: Docker
+order: 3
+audience: [platform-engineer, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Blue/green Deployments
+
+A Deployment owns one stable application identity and two runtime slots. Gateway prepares a new release in the inactive slot, evaluates its health, and switches traffic only when the release is ready. The formerly active slot remains available as the rollback candidate until it is retired by the Deployment lifecycle.
+
+Manage slots through the Deployment rather than as individual Containers. The Deployment owns traffic switching, release history, rollback eligibility, and the relationship between the two runtime children. Editing an active child directly creates state drift and weakens the guarantees that make rollback safe.
+
+## Prerequisites
+
+Use an immutable image digest or an approved build artifact. Before starting a release, confirm the target node is online, the image can be pulled, secrets and volumes are correct, resource limits fit the node, and the health route checks the application path that matters to users. Review dependent Routes and database bindings as part of the same change.
+
+## Release a new version
+
+1. Open the Deployment and prepare the new image and configuration.
+2. Review the release input, including environment, secrets, volumes, runtime selection, and health check.
+3. Start the release and follow the Task while Gateway prepares the inactive slot.
+4. Wait for the health check to pass.
+5. Allow the traffic switch to complete, then verify a real request, application logs, and metrics.
+6. Keep the previous slot intact until the agreed rollback window has passed.
+
+Webhook-triggered releases use the same authorization and health-gating path. A webhook request does not bypass the Deployment's ownership or turn a failed build into a public release.
+
+## Failure and rollback
+
+If preparation or health validation fails before traffic switches, the existing active slot remains the serving version. Inspect the operation for image-pull, startup, health, secret, volume, or capacity errors; correct the cause and begin a new release rather than modifying the failed slot in place.
+
+If a customer-visible regression appears after cutover, use the explicit rollback action. It restores traffic to the retained known-good slot and records the event in the Deployment history. Verify the Route, application health, and logs after rollback. Do not delete the newer slot until the incident record and the desired follow-up are clear.
+
+## Retirement consequences
+
+Removing a Deployment removes its managed slots and can remove access relationships that belong only to that resource. First detach or migrate Routes, database bindings, and persistent data that must survive. A Deployment rollback protects a prior runtime slot; it is not a substitute for backing up mutable volume data.

@@ -1,0 +1,45 @@
+---
+title: Containers
+description: Create, update, observe, recreate, duplicate, and remove standalone containers safely.
+section: Docker
+order: 2
+audience: [operator, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Containers
+
+A Container is the direct-management option for one Docker runtime. Gateway stores its configuration and access relationships, while the selected Docker daemon starts and supervises the actual process. Use a Container when blue/green release slots or multi-service project ownership are not required.
+
+## Before you begin
+
+You need access to the target Docker node and permission to create or change the Container. Confirm that the image is available from a permitted registry, the node has capacity, and the requested runtime is supported. Review ports, Routes, database bindings, managed volumes, and secrets before choosing a name: those relationships can affect later rename, migration, or deletion work.
+
+New host bind mounts are rejected. Use Gateway-managed local volumes for new persistent data. Legacy bind mounts can remain during an ordinary update, but once removed they cannot be added back through Gateway.
+
+The Default runtime is available on supported Docker nodes. The secure gVisor runtime requires a healthy reported capability and cannot be combined with GPUs, devices, host bind mounts, migration, or archive export.
+
+## Create and update a Container
+
+1. Select the Docker node and image, preferably an immutable digest for a production workload.
+2. Set the command, entrypoint, environment, encrypted secrets, labels, ports, restart policy, resource limits, health checks, and managed volumes.
+3. Review the resolved configuration and create the Container.
+4. Follow the create Task until the daemon reports the runtime state.
+5. Check health, logs, and any Route or private database connection before sending application traffic.
+
+Use **Recreate** when a runtime configuration change requires a replacement process. Gateway preserves the stable resource identity while creating the intended runtime again. Use **Duplicate** when you need a separate resource with independent access grants and lifecycle history. Use **Rename** only after reviewing dependent Routes, bindings, and integrations.
+
+## Verify and operate
+
+The detail view is the operational record: confirm the desired and observed state, health result, image identity, recent Tasks, and logs. Use console or file access only for the scopes granted to you, and avoid using an interactive console as the normal deployment path.
+
+After a restart or daemon reconnection, Gateway should reconcile the saved desired state. If the Container is running but cannot serve traffic, check its health check, listening port, Route target, environment, and application log in that order.
+
+## Failure handling and cleanup
+
+An image pull failure, unavailable registry credential, port conflict, invalid mount, unsupported runtime capability, or exhausted node resource must be corrected before retrying. The Task history identifies the stage that stopped; retries without changing the prerequisite usually repeat the same failure.
+
+Before deletion, inspect Routes, database bindings, grants, volumes, source settings, and exported data. Deleting the Container removes its resource grants, so a later Container with the same name does not inherit access. Volume deletion is a separate destructive action; retain or back up persistent data before removing either resource.
+
+![Container Overview with runtime details and Secure Link telemetry](/screenshots/product-tour/container-secure-link.png)

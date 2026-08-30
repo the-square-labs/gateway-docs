@@ -1,0 +1,55 @@
+---
+title: SSL certificates
+description: Issue, upload, renew, distribute, and troubleshoot public TLS certificates.
+section: Certificates and PKI
+order: 1
+audience: [operator, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# SSL certificates
+
+Gateway supports ACME certificates and uploaded certificates. ACME can use HTTP-01 or DNS-01. Uploaded material should include the complete chain and matching private key.
+
+Attach certificates to Routes rather than copying files to nginx hosts manually. Gateway distributes node-local replicas only where enabled TLS Routes use them. Monitor expiry and renewal status, and test renewal before the remaining lifetime becomes operationally urgent.
+
+For HTTP-01 failures, verify Domain placement, public port 80, DNS, and challenge routing. For uploaded certificates, verify hostname coverage, chain order, key match, and supported encoding.
+
+{/* screenshot: id=certificate-detail-renewal; viewport=1440x900; description=Certificate detail with issuer, expiry, linked Routes, and renewal state; redact=domains,serial-number,certificate-body */}
+
+## Choose the certificate path
+
+- Use **HTTP-01** when the hostname already resolves to the assigned Ingress node and public port 80 is reachable.
+- Use **DNS-01** when wildcard names are required or HTTP validation is not practical. Configure a supported DNS connector with the smallest zone scope.
+- Use **Upload** for certificates issued outside Gateway. Upload the private key, leaf certificate, and required intermediates as one coherent chain.
+
+Before issuing, confirm the Domain exists, its placement is final, and the requested names exactly match the intended Routes. Certificate issuance does not repair incorrect DNS or Route placement.
+
+## Issue and attach
+
+1. Open **SSL Certificates** and create the certificate.
+2. Select ACME or upload and provide the required names/material.
+3. Wait for validation and issuance to complete.
+4. Open each dependent Route and select the certificate.
+5. Enable TLS and apply the Route.
+6. Wait for distribution to the assigned Ingress node.
+7. Verify the public chain, hostname, protocol, and expiry from an external client.
+
+Gateway distributes private key material only to nodes that currently need it. Do not copy managed certificate files between nginx hosts; manual copies escape relationship tracking, rotation, and cleanup.
+
+## Renewal and rotation
+
+Monitor remaining lifetime and the most recent renewal attempt. Test DNS connector credentials and HTTP challenge reachability before expiry becomes urgent. For uploaded material, create or update the managed certificate through Gateway and verify every attached Route after replacement.
+
+Changing a certificate can affect multiple Routes. Review relationships before rotation, preserve the previous material until external verification succeeds, and avoid combining certificate replacement with unrelated ingress changes.
+
+## Failure handling
+
+- **HTTP-01 timeout:** verify public DNS, port 80, Domain placement, and challenge routing.
+- **DNS-01 failure:** verify connector authorization, account/zone selection, propagation, and stale challenge records.
+- **Key mismatch:** confirm the uploaded private key corresponds to the leaf certificate.
+- **Incomplete chain:** include intermediates in issuer order and exclude unrelated roots.
+- **Not distributed:** confirm an enabled TLS Route on that node actually references the certificate.
+
+Delete a certificate only after all Routes are detached and a replacement has been externally verified. Preserve exported material according to the organization's key-retention policy.

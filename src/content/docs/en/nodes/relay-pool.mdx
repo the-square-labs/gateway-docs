@@ -1,0 +1,56 @@
+---
+title: Relay and Relay Pool
+description: Operate the managed-node transport and optional multi-member Relay Pool.
+section: Nodes and Relay
+order: 4
+audience: [operator, network-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Relay and Relay Pool
+
+The local Relay is a required long-lived data-plane service and the sole public owner of `9443/tcp`. It authenticates managed-node sessions and supported private tunnel traffic.
+
+A Relay Pool adds supervisor/worker members and fault-domain-aware placement. Operators verify distinct physical domains, advertise reachable worker endpoints, rebalance explicitly, drain members, and apply signed rolling updates one member at a time.
+
+Gateway does not create firewall rules, NAT traversal, or a general overlay network. Every assigned managed host must reach its worker data endpoint. During a Relay incident, preserve the identity volume and avoid introducing an alternate unauthenticated path.
+
+## Topology
+
+Every installation has a local Relay service associated with Gateway. Additional Relay Nodes run a supervisor that enrolls through the standard Node identity flow and manages a Relay worker. Gateway distributes signed policy and workload assignments; managed nodes establish authenticated outbound connections to their assigned Relay endpoints.
+
+Relay is transport, not workload ownership. Ingress, Docker, database, monitoring, and builder daemons continue to own their host operations. Relay carries authenticated control and supported private streams without becoming a general network tunnel.
+
+## Add a Relay Node
+
+1. Prepare a dedicated host in the intended physical or network failure domain.
+2. Ensure its advertised address is reachable by participating nodes on TCP `9443`.
+3. Open **Settings → Relay** and choose **Add relay node**, or create a Relay from **Nodes**.
+4. Enter the display name and reachable Relay Address.
+5. Run the generated one-time installer command on the target host.
+6. Wait for the enrollment dialog to close after that Node becomes online.
+7. Confirm the Relay instance reports ready before assigning or rebalancing traffic.
+
+A pending Relay Node is not pool capacity. Do not treat a created database record or installed supervisor as ready until Gateway has verified the worker endpoint and health state.
+
+## Placement and assignment
+
+Place members in distinct failure domains when resilience matters. Confirm every managed host can reach every Relay that may be assigned to it. Assignment spread controls how many ready Relays receive new workload connections; increasing spread improves redundancy but consumes additional connections and memory.
+
+Rebalance is explicit. Use it after adding capacity, changing placement, or recovering a member; do not assume existing assignments move automatically merely because a new Relay is online.
+
+## Drain, update, and remove
+
+1. Drain the member so new tunnels stop selecting it.
+2. Allow existing streams to finish or disconnect them explicitly when the incident requires it.
+3. Apply the signed supervisor/worker update.
+4. Verify worker readiness, version, and reconnect.
+5. Return the member to service and observe new assignments.
+6. Remove a remote Relay identity only after it is drained and no assignments depend on it.
+
+Removing the Gateway record does not replace normal host decommissioning. Uninstall the supervisor and remove host material through the documented operational process.
+
+## Incident checks
+
+For a Relay warning, inspect the local Relay or remote worker process, identity volume, PostgreSQL authorization path, advertised endpoint, listener on `9443`, policy freshness, and assigned-node reachability. Preserve logs and identity before restart. After recovery, verify node reconnects, Secure Links, database bindings, active streams, assignment state, and the Dashboard warning.

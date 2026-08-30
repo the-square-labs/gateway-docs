@@ -1,0 +1,55 @@
+---
+title: Ports and network paths
+description: Plan the minimum required connectivity for Gateway and managed nodes.
+section: Reference
+order: 3
+audience: [network-engineer, operator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Ports and network paths
+
+| Path | Purpose |
+| --- | --- |
+| Client -> Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, inference proxy |
+| Managed daemon -> Relay `9443/tcp` | Authenticated outbound control and supported tunnel traffic |
+| Internet -> nginx `80/tcp` | HTTP and ACME HTTP-01 where used |
+| Internet -> nginx `443/tcp` | Public HTTPS Routes and Pages |
+| Gateway/daemon -> external providers | DNS, OIDC, email, Git, registries, updates, ACME, AI providers |
+| Internal Gateway services | PostgreSQL, Redis, internal gRPC, inference-core callbacks |
+
+The Relay—not the Gateway application—is the public owner of `9443/tcp`. Gateway does not open host firewalls or provide NAT traversal. Remote Relay workers must advertise data endpoints reachable from assigned managed hosts.
+
+Keep PostgreSQL, Redis, internal gRPC, the inference core, database owner ports, daemon control interfaces, and binding-specific Docker networks private.
+
+## Connectivity direction
+
+Managed daemons initiate outbound authenticated connections to Relay. Operators normally do not expose daemon control ports to Gateway. Remote Relay workers are the exception: their advertised `9443/tcp` endpoint must be reachable from the managed hosts assigned to them.
+
+Ingress nodes receive public application traffic on ports 80 and 443 according to Route and ACME requirements. Docker and Database Nodes do not need public workload or owner ports for Secure Links. A published managed database endpoint is an explicit opt-in and should be restricted independently.
+
+## Firewall planning
+
+| Source | Destination | Required when |
+| --- | --- | --- |
+| User/browser | Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, Inference |
+| Managed Node | assigned Relay `9443/tcp` | Always for managed control and supported tunnels |
+| Internet/client | Ingress `80/tcp` | HTTP Route or ACME HTTP-01 |
+| Internet/client | Ingress `443/tcp` | HTTPS Routes and Pages |
+| Gateway/Node | DNS and update endpoints | Name resolution and signed update download |
+| Gateway/Build Worker | Git and registry providers | Source discovery, build input, push/pull |
+| Gateway | OIDC, SMTP, DNS, webhook, SIEM, AI providers | Enabled integration only |
+| Application client | published database TLS port | Only when direct access is deliberately enabled |
+
+Use provider allowlists and egress policy where practical, but include certificate validation, redirects, DNS, and package/registry endpoints required by the selected feature. Do not use a broad “allow all” rule to hide an unresolved dependency.
+
+## Address selection
+
+Gateway records reported local/public addresses and role-specific service addresses. Choose addresses based on the actual peer path: public clients to Ingress, managed hosts to Relay, cross-node Docker operations to reachable service addresses, and database certificates to the published service IPs.
+
+Changing an address can require DNS updates, certificate rotation, Route migration, or Relay rebalance. Verify every peer before removing the old path.
+
+## Verification
+
+Test from the real source network, not only from the destination host. Confirm DNS, TCP reachability, TLS identity, HTTP or gRPC protocol behavior, and Gateway's reported health. A successful TCP connection alone does not prove authentication or application readiness.

@@ -1,0 +1,65 @@
+---
+title: Updates, backups, and restore
+description: Upgrade Gateway and daemons while preserving recovery options.
+section: Operations and security
+order: 2
+audience: [operator, sre]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Updates, backups, and restore
+
+Before a Gateway update, read release notes, verify compatibility floors, back up PostgreSQL and persistent files, preserve encryption/master keys, and record the running image references. Update through the supported installer or generated Compose configuration.
+
+Daemon updates are signed and managed per node. Keep mixed-version behavior within the documented compatibility window and verify reconnect, inventory, bindings, logs, and operations after each role update.
+
+Back up:
+
+- PostgreSQL;
+- persistent Gateway artifact/configuration volumes;
+- encryption and PKI master keys;
+- Relay identity volume;
+- engine-native database backups;
+- external DNS, identity-provider, email, registry, and SIEM configuration held outside Gateway.
+
+A restore test must prove sign-in, decryption, node reconnection, Relay authorization, Routes, certificates, managed database bindings, and audit continuity. A backup that has never been restored is not a recovery plan.
+
+## Build the recovery set
+
+Document the owner, location, retention, encryption method, and restore order for every backup component. Keep master keys and recovery credentials outside the Gateway host and outside the same failure domain as the database backup.
+
+PostgreSQL is the authoritative store for identities, desired state, relationships, operations, and audit metadata. Persistent volumes hold artifacts and service identity material that cannot be reconstructed from PostgreSQL alone. Engine-native managed database backups protect application data; a control-plane backup is not a substitute.
+
+## Gateway update procedure
+
+1. Read the release notes and required intermediate versions.
+2. Confirm the active update channel and target version.
+3. Verify recent PostgreSQL and persistent-volume backups.
+4. Record current Gateway, Relay, and daemon versions and image digests.
+5. Confirm PostgreSQL, Redis, Relay, and disk health.
+6. Place customer-facing services into maintenance only when the update requires it.
+7. Apply the supported update without replacing persistent volumes or master keys.
+8. Wait for Gateway readiness and schema migration completion.
+9. Verify Relay, sign-in, Dashboard bootstrap, node reconnects, Routes, and database bindings.
+10. Remove maintenance only after external verification.
+
+Do not treat a running container as a successful update. The application must decrypt existing secrets, read prior state, reconcile background services, and expose healthy customer paths.
+
+## Daemon and Relay updates
+
+Update one failure domain at a time. For Relay Pool members, drain, update, verify, and return each member before moving to the next. For ordinary Nodes, verify role-specific resources after reconnect. Do not update every ingress, database, or Relay member simultaneously unless the environment has an independently tested recovery path.
+
+## Restore procedure
+
+1. Provision a clean compatible Gateway environment.
+2. Restore PostgreSQL and persistent volumes from the same recovery point.
+3. Restore encryption, PKI, and Relay identity material with original permissions.
+4. Start internal dependencies, Gateway, and Relay in the documented order.
+5. Verify sign-in and decryption before permitting mutations.
+6. Allow managed nodes to reconnect with their existing identities.
+7. Reconcile Routes, certificates, workloads, database bindings, notifications, and integrations.
+8. Restore application databases through engine-native procedures where required.
+9. Confirm audit continuity and record the recovery event.
+
+If only part of the recovery set is available, stop and assess the consequence. Generating replacement master keys or identities can permanently orphan encrypted state or managed nodes.

@@ -1,0 +1,49 @@
+---
+title: Pages overview
+description: Host immutable static-site releases with Tags, Routes, previews, and runtime configuration.
+section: Pages
+order: 1
+audience: [developer, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Pages overview
+
+Pages publishes static sites as Projects with immutable Deployments and mutable Tags. A Deployment is a fixed artifact produced by a manual upload or a Git build. A Tag is a movable named pointer to one Deployment. Routes target Tags, never raw Deployments, which makes promotion and rollback deliberate operational actions instead of changes to an already published artifact.
+
+## Resource model and ownership
+
+A Pages Project owns its deployment history, Tags, Routes, runtime configuration, access relationships, and retention behavior. Gateway stores each published artifact centrally and materializes it on the assigned nginx nodes. Nginx serves the applied Pages configuration, while Gateway remains the source of truth for which Tag a Route should use.
+
+Deployments are immutable: changing site files, build output, or source input creates a new Deployment. Tags are mutable: moving a Tag changes which already-created Deployment it selects. The system-managed `latest` Tag tracks the appropriate current deployment; use custom Tags for named environments, release channels, or an explicit promotion gate.
+
+## Publish from Git or manually
+
+For a Git-backed release, a supported source integration and Build Worker produce a new immutable Deployment. For a manual release, provide the ready static-site artifact and create a new Deployment from it. In either path, review the resulting artifact and deployment identity before moving a public Tag.
+
+Creating a Deployment does not publish it to a custom domain. Publication starts when a Route targets a Tag that points to that Deployment. This allows a team to verify a release before promotion and lets an incident rollback move a Tag without rewriting the prior artifact.
+
+## Routes, previews, and runtime configuration
+
+Custom Routes target Tags only. Verify the Domain, TLS certificate, nginx placement, and Tag target before announcing a release. Optional wildcard previews use immutable deployment hostnames; they are useful for reviewing a particular artifact without changing a public Tag.
+
+Runtime configuration is public client-side data and is separate from the immutable artifact identity. It is exposed to the site as `window.runtime.config`, with a `Default` object and whole-object Tag overrides. Immutable previews use `Default`; a Tag Route uses its override when present or falls back to `Default`. Do not place secrets, credentials, or private topology in runtime configuration.
+
+## Promote, roll back, and verify
+
+1. Create a new immutable Deployment through Git or manual publishing.
+2. Review its build or upload result and test the artifact through an appropriate preview or controlled route.
+3. Move the intended Tag to the verified Deployment.
+4. Verify the Route's DNS and TLS path, the expected response, static assets, and browser-visible runtime configuration.
+5. Monitor the Route, nginx application state, and project operations after promotion.
+
+To roll back, move the Route's Tag to a previous known-good Deployment. The older artifact remains unchanged, and the rollback is recorded as a Tag publication change. Keep runtime configuration backward-compatible while a Tag can move between releases; changing runtime configuration does not create a new Deployment.
+
+## Lifecycle consequences
+
+Deleting a Deployment removes that immutable release from future selection and can eliminate a rollback target. Remove it only after retention requirements and Tag references have been reviewed. Deleting a Tag or Route changes reachability, not the contents of the selected Deployment. Disabling Pages removes the feature from normal navigation while preserving project data.
+
+## Next step
+
+- [Build and publish a Pages deployment from Git](./git-deployments)

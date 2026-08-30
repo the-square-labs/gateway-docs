@@ -1,0 +1,52 @@
+---
+title: Tasks, events, and audit
+description: Interpret long-running operation state and immutable security history.
+section: Reference
+order: 4
+audience: [operator, security-admin, developer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Tasks, events, and audit
+
+**Tasks** represent durable long-running work such as builds, deployments, migrations, imports, provisioning, and updates. Follow status, progress, logs, error code, and retry/cancel availability. Do not start duplicates merely because a browser disconnected.
+
+**Events** update live UI state and trigger supported operational workflows. Consumers must revalidate authorization and tolerate reconnect or replay boundaries.
+
+**Audit records** attribute security- and configuration-relevant actions to users or system actors. User blocking or deletion does not remove historical attribution. Export to SIEM when independent retention or correlation is required.
+
+Audit details should identify the action and resource without storing secrets, raw credentials, private keys, prompts, or model output.
+
+## Task lifecycle
+
+Typical task states distinguish queued, running, waiting, succeeded, failed, cancelled, and interrupted work. The available states and actions depend on the operation. Progress is evidence from the owning worker or daemon, not a browser animation.
+
+Record the Task ID before leaving a long-running operation. Reloading the page must reconnect to durable state rather than creating a second operation. If a command response is lost, inspect both the Task and the owner before retrying.
+
+## Retry, cancel, and force cancel
+
+Retry only when the task contract marks the operation retryable or reconciliation proves the previous attempt reached a terminal state. Cancel requests are cooperative when the owner supports cancellation. Force Cancel can stop Gateway from waiting on an abandoned operation, but it does not justify assuming the underlying runtime action never occurred.
+
+After cancellation or interruption, refresh the resource from its owner and resolve any operation marker before starting another mutation.
+
+## Events and realtime state
+
+Realtime events reduce UI latency but are not the only source of truth. Clients must tolerate disconnect, replay, duplicate delivery, and an event arriving before a refreshed snapshot. After reconnect, load the authoritative snapshot and merge newer events by stable resource identity.
+
+Events that trigger automation must recheck current authorization, ownership, entitlement, and lifecycle state. Historical permission at event creation does not authorize a later mutation.
+
+## Audit interpretation
+
+Audit records identify actor, action, resource, timestamp, outcome, and relevant request context. System and automation actors must remain distinguishable from human sessions and impersonation. Blocking or deleting a user preserves historical attribution.
+
+Audit is not a debug log. Use operational logs and Tasks for implementation detail, and use audit for security and configuration accountability. Export to independently controlled SIEM storage when retention or correlation must survive a Gateway incident.
+
+## Investigation checklist
+
+1. Identify the resource and customer-visible effect.
+2. Find the initiating audit record and request ID.
+3. Find the durable Task or operation.
+4. Compare desired state with current owner state.
+5. Review bounded operational logs.
+6. Record retry, cancellation, rollback, and final verification.

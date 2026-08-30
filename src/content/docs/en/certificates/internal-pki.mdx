@@ -1,0 +1,49 @@
+---
+title: Internal PKI
+description: Operate user-facing certificate authorities and certificate issuance separately from system transport PKI.
+section: Certificates and PKI
+order: 2
+audience: [security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Internal PKI
+
+Enterprise Internal PKI can create root and intermediate authorities, issue server/client/code-signing/email certificates, apply templates, publish CRLs, and export supported formats under explicit scopes.
+
+Private keys are encrypted with `PKI_MASTER_KEY`. Preserve this key independently from the database backup. Limit export permissions and audit every authority, certificate, revocation, and private-key operation.
+
+User-facing Internal PKI is separate from Gateway's hidden system PKI used for managed transport. Entitlement loss disables the user-facing feature without deleting authorities, certificates, templates, or audit history; system transport must continue to function.
+
+## Trust model
+
+Create a root authority only when Gateway is intended to own that trust anchor. Prefer keeping the root offline or rarely used and issue operational certificates from an intermediate authority. Templates constrain subject, lifetime, key usage, extended key usage, and export behavior so operators do not reproduce policy manually for every request.
+
+Gateway's user-facing authorities must never be repurposed to replace the hidden system PKI, Database CA, daemon identities, or Relay service identities. Those internal trust domains have separate rotation and recovery contracts.
+
+## Provision an authority hierarchy
+
+1. Confirm the Enterprise entitlement and required PKI scopes.
+2. Generate or import the root authority.
+3. Back up `PKI_MASTER_KEY` and the Gateway database through separate protected procedures.
+4. Create an intermediate authority for the intended environment or organizational boundary.
+5. Create templates for server, client, code-signing, or email certificates.
+6. Issue a test certificate and verify its chain, key usage, lifetime, and export format.
+7. Publish and test the CRL location before production issuance.
+
+## Issue and operate certificates
+
+Record the owner, purpose, template, subject, validity, renewal expectation, and revocation contact for every certificate. Grant private-key export only to identities that need the key material. A user who can inspect certificate metadata does not automatically need authority or key-export permissions.
+
+Before renewal, verify that the subject and intended use are still valid. Revoke compromised or retired certificates, publish the updated CRL, and confirm relying systems consume it. Deleting a UI record is not a substitute for revocation when a certificate may still be trusted externally.
+
+## Backup and recovery
+
+A database backup without `PKI_MASTER_KEY` cannot recover encrypted private keys. A key backup without the database cannot reconstruct authorities, templates, certificates, revocations, and audit relationships. Store and test both parts while keeping them operationally separate.
+
+After restore, verify authority chains, decryption, certificate export permissions, CRL publication, and audit continuity before issuing new material.
+
+## Entitlement and deletion behavior
+
+If the entitlement is lost, Gateway preserves authorities and certificates but disables user-facing PKI operations. It must not disable system transport. Before deleting an authority, resolve all child intermediates and certificates and preserve required revocation evidence.

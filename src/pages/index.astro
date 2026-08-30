@@ -1,0 +1,18 @@
+---
+const destination = '/en/';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<meta http-equiv="refresh" content={`0;url=${destination}`} />
+		<link rel="canonical" href={`https://docs.goodgateway.dev${destination}`} />
+		<title>Good Gateway Documentation</title>
+	</head>
+	<body>
+		<p><a href={destination}>Open Good Gateway documentation</a></p>
+		<script is:inline define:vars={{ destination }}>window.location.replace(destination);</script>
+	</body>
+</html>

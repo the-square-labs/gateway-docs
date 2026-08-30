@@ -1,0 +1,54 @@
+---
+title: Observability overview
+description: Combine health, metrics, logs, events, audit, and customer-facing status.
+section: Observe and notify
+order: 1
+audience: [operator, sre]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Observability overview
+
+Gateway observes control-plane state, node health, workload health, ingress behavior, database health, build activity, inference usage, and security events.
+
+Use resource health for immediate state, metrics for trends, logs for diagnosis, durable Tasks for operation progress, notifications for action, status pages for customer communication, audit for attribution, and SIEM for external security analysis.
+
+Design alerts around sustained customer impact and meaningful state transitions. Avoid duplicating every low-level event into a notification channel.
+
+{/* screenshot: id=observability-dashboard; viewport=1440x900; description=Monitoring dashboard with health, metrics, active alerts, and recent events; redact=resource-names,addresses,user-email */}
+
+## Signal types
+
+| Signal | Best use | Common mistake |
+| --- | --- | --- |
+| Health | Current service readiness | Treating one green badge as proof of end-to-end availability |
+| Metrics | Capacity and trends | Alerting on every short-lived spike |
+| Logs | Detailed diagnosis | Sending secrets or unbounded payloads |
+| Tasks | Durable operation progress | Assuming an accepted task already completed |
+| Events | Resource state transitions | Using event volume as a health metric |
+| Audit | Who changed what | Replacing operational logs with audit records |
+| Notifications | Operator action | Forwarding every informational event |
+| Status pages | Customer communication | Publishing private topology or raw errors |
+
+## Build an operating view
+
+1. Start from customer-facing Routes and business services.
+2. Map each service to its ingress, workload, database, storage, and external dependencies.
+3. Define the health signal and SLO that represent customer impact.
+4. Add resource-capacity alerts with sustained windows.
+5. Route urgent events to an owned notification destination.
+6. Create a public status component only for information customers should see.
+7. Test failure and recovery, not only notification delivery.
+
+## Diagnosis workflow
+
+Use the Dashboard for triage, then open the affected resource. Compare live health with recent metrics, Tasks, events, and logs. Correlate by stable resource ID, operation ID, request ID, and timestamp. If the displayed state is based on a cached snapshot, restore the owning Node connection before mutating the resource.
+
+For database monitoring, collection starts in the background after Gateway bootstrap and when a managed database becomes ready; opening the database page is not a prerequisite. A first page visit may briefly wait for history or the first real snapshot, but it must not manufacture a healthy state from absent data.
+
+## Verify observability itself
+
+Monitor the monitoring path: node freshness, ClickHouse health, notification queue delivery, status-page publication, SIEM outbox age, and storage retention. An observability system that silently stops collecting must generate a separate platform warning.
+
+Keep telemetry long enough for incident reconstruction, but apply explicit retention and size budgets. Do not use logs as an uncontrolled data archive.

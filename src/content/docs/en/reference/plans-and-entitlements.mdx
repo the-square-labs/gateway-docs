@@ -1,0 +1,50 @@
+---
+title: Plans and entitlements
+description: Interpret Community, Personal, Business, and Enterprise availability safely.
+section: Reference
+order: 2
+audience: [evaluator, administrator]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Plans and entitlements
+
+Gateway uses Community, Personal, Business, and Enterprise plans. Availability, commercial-use terms, Gateway deployment licensing, and separately hosted service quotas are different concepts.
+
+Ready paid features are enforced at the operation boundary as well as in the UI. Downgrade or expiry preserves resource data while blocking new premium operations and disabling switchable premium services according to their lifecycle rules. Grace periods and exact feature availability can change with product releases; review the current matrix before publication.
+
+Community installations do not require a key. A Business or Enterprise key represents one active Gateway instance; resource quotas inside a Gateway instance must not be confused with separate Wiolett Cloud quotas.
+
+## Plan progression
+
+| Plan | Typical capability boundary |
+| --- | --- |
+| Community | Core ingress, Docker, external databases, monitoring, identity, automation, AI Workspace, Inference, and up to the documented Community resource limits |
+| Personal | Community plus managed databases, managed single-node Compose lifecycle, Pages, status pages, archive/migration operations, and unlimited documented core quotas |
+| Business | Personal plus Git push-to-deploy, isolated Build Workers, Secure Runtime, vulnerability admission, structured logging, audit export, and optional external registry access |
+| Enterprise | Business plus Internal PKI, SIEM audit export, enterprise identity roadmap capabilities, and dedicated commercial benefits |
+
+The exact feature matrix is release-specific. Product pages identify prerequisites and this page explains lifecycle behavior; pricing and contract terms belong to the applicable commercial agreement.
+
+## Enforcement
+
+Ready paid features are enforced in backend operation boundaries as well as the Console. REST, OAuth, MCP, AI Workspace, background workers, and public token endpoints do not bypass entitlement checks.
+
+Missing entitlement returns a permission-style failure without deleting existing resources. Reached plan quotas block creation while preserving current records. A protected policy inconsistency fails closed rather than guessing a more permissive plan.
+
+## Downgrade and expiry
+
+Gateway preserves existing premium resources and data. New premium resources and one-shot premium operations are blocked. Switchable services such as Internal PKI, SIEM export, and structured logging are disabled while retaining configuration and stored data; they are not automatically re-enabled after entitlement returns.
+
+Existing Git-delivered workloads, source settings, build history, and internal-registry artifacts remain readable. New source builds and automation stop until the required plan returns. Existing Secure Runtime workloads remain manageable, but selecting Secure Runtime for a new or previously default-runtime workload requires Business.
+
+## Operational checks
+
+- Verify the installation ID and intended active instance before applying a key.
+- Monitor expiry and local grace deadline.
+- Test required premium operations before a production launch.
+- Record which services will stop accepting new work after downgrade.
+- Restore entitlement before manually replacing preserved resources.
+
+Do not use old `homelab` terminology or infer feature availability from pricing copy, screenshots, or a different Gateway release.

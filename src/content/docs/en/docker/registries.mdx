@@ -1,0 +1,35 @@
+---
+title: Registries and image trust
+description: Configure registry credentials, mappings, the internal registry, and external ingress.
+section: Docker
+order: 8
+audience: [operator, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Registries and image trust
+
+Registries supply the images that Docker nodes run and the artifacts that Build Workers publish. Gateway keeps registry credentials and access decisions separate from the workload configuration that consumes an image. This separation lets an operator rotate registry access without exposing a password in a Container, Deployment, or source definition.
+
+## Configure trusted access
+
+Store private registry credentials in Gateway and scope them to the intended build or runtime path. Configure a separate trusted token-service origin only when the registry intentionally delegates Bearer authentication to that service. Confirm the registry endpoint, repository access, and certificate trust before a production rollout.
+
+Never put registry passwords in image references, Git URLs, build arguments, logs, archive names, or screenshots. If authentication fails, diagnose the registry credential, repository permission, token-service configuration, and target-node reachability rather than repeatedly restarting the workload.
+
+## Internal registry behavior
+
+Gateway's internal Distribution registry stores approved build artifacts by immutable digest. It retains artifacts needed by active workloads, rollback slots, in-progress operations, pinned references, and recent successful builds. It does not require a public domain for internal Gateway use.
+
+An image's presence in the internal registry does not make it a public release. A workload must still be configured to use the digest, successfully pull it on its target node, and pass its operational verification.
+
+## Optional external Docker-client access
+
+External Docker-client access is a distinct entitlement and ingress configuration. It requires selected nginx placement, a Domain, TLS certificate, and a repository- or action-scoped token. Each token request rechecks current authorization and entitlement, so revoking either takes effect for subsequent access.
+
+Enable external access only when a real client workflow requires it. Validate TLS, authentication, and the minimum repository/action permissions with a non-production client before relying on it for automation. Removing the ingress configuration stops client access but does not delete internally retained artifacts.
+
+## Incident and cleanup guidance
+
+For a failed pull, first confirm the exact image digest, registry mapping, credential scope, and node network path. For an unexpected image, compare its digest with the approved build record rather than trusting a tag. Before removing a registry configuration, identify workloads and rollback candidates that still need it; change them to an approved alternative first.

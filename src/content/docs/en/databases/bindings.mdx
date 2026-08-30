@@ -1,0 +1,45 @@
+---
+title: Application database bindings
+description: Give workloads private, least-privilege database access that survives recreation.
+section: Databases
+order: 3
+audience: [platform-engineer, developer, security-admin]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Application database bindings
+
+An application binding gives one Container, Deployment, or eligible workload service private access to one managed database. Gateway creates a distinct engine user or role for the binding and grants only the database permissions that binding requires. The engine identity belongs to the binding, not to a transient workload process.
+
+## Transport and ownership model
+
+For every binding, the target Docker daemon owns a TCP listener on a dedicated bridge network. Gateway reconciles that listener as part of the binding's desired state. The private endpoint therefore stays associated with the workload environment rather than being implemented by a separate per-binding process.
+
+The daemon listener and the binding's engine identity are separate but coordinated records. Each binding has its own database principal, so one workload's credential rotation, deletion, or permission change does not silently change another workload's access. Recreating a bound workload preserves the binding relationship and its distinct engine identity; Gateway reconciles the listener and injects the current connection settings again.
+
+The nginx/workload Secure Link connector is a separate real component. It serves its ingress and relay purpose and is not the transport implementation for managed database bindings. Troubleshoot binding listener state and database readiness independently from Secure Link health unless the reported operation explicitly identifies an ingress/relay issue.
+
+## Create a binding
+
+Before creating a binding, confirm that the managed database is **Ready**, the target Docker node is online, the workload is eligible, and you have access to both resources. Review the intended database or role permissions and make sure the workload can consume the delivered connection settings without placing them in source control.
+
+1. Select the managed database and the target workload.
+2. Choose the intended least-privilege database access.
+3. Create the binding and wait for Gateway to provision its engine identity and reconcile the daemon-owned listener.
+4. Apply or recreate the workload only when its configuration change requires it.
+5. Verify a real application query, then inspect binding telemetry and workload and database logs.
+
+Use private bindings for workload access even when direct TCP publication is enabled for an external client. Publication is opt-in and does not replace binding isolation.
+
+## Reconciliation and failure handling
+
+Desired binding state remains durable through workload recreation, Docker daemon restart, node reconnection, and Relay restart. Reconciliation restores the daemon-owned listener and confirms the engine identity without creating a new identity for every transient runtime. This is how Gateway avoids orphan roles after normal restart and recreation paths.
+
+For a failed binding, diagnose in this order: managed database readiness; target database node; target Docker node; binding desired state; daemon listener state; engine identity and permissions; then application configuration. Inspect the binding operation and telemetry before retrying. Do not delete the engine role, bridge network, or listener manually as a general repair tactic, because that can desynchronize the durable record from the database and daemon.
+
+## Delete and recover
+
+Delete the binding through Gateway when the workload no longer needs access. Gateway removes the listener relationship and retires the binding's engine identity as part of one recorded lifecycle, preventing the normal deletion path from leaving unused identities behind. Delete the binding before deleting the database or the workload whenever possible, then verify that the listener, telemetry, and engine principal cleanup have completed.
+
+If a deletion is interrupted, leave the durable binding record in place and use its operation state for recovery. Manual role deletion is an exceptional recovery procedure because it can make a future reconciliation fail; use it only with an explicit, coordinated recovery plan.

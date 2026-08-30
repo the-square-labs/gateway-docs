@@ -1,0 +1,46 @@
+---
+title: Notifications and status pages
+description: Route actionable events and communicate service impact publicly.
+section: Observe and notify
+order: 2
+audience: [operator, sre]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Notifications and status pages
+
+Create destinations, templates, and alert rules for health, capacity, certificates, deployments, databases, builds, and platform state. Test each destination before relying on it.
+
+Stateful alerts should open when a condition begins and recover when it clears. Configure thresholds and windows to avoid flapping. Include the resource, impact, timestamp, and operator action—not secrets or full daemon errors.
+
+Status pages expose selected service state to customers. Maintenance mode should appear as planned maintenance rather than an unexplained outage. Keep internal topology, private node names, and security-sensitive diagnostics off public pages.
+
+## Configure notifications
+
+1. Create the destination and store credentials through the encrypted settings path.
+2. Send a test notification and verify sender identity, signature, rendering, and delivery latency.
+3. Create an alert rule for one meaningful resource condition.
+4. Select a threshold, evaluation window, recovery window, and severity.
+5. Route it to an owned on-call or operational channel.
+6. Trigger the condition in a safe environment and verify both open and recovery messages.
+
+Avoid alerts that operators cannot act on. Every urgent notification should identify the affected resource, customer impact, start time, current state, and the first safe diagnostic action.
+
+## Reduce noise
+
+- Use sustained windows for CPU, memory, disk, latency, and error-rate thresholds.
+- Alert on a state transition rather than repeating the same unchanged state.
+- Separate warning capacity from critical customer impact.
+- Suppress or annotate alerts during explicit maintenance rather than deleting the rule.
+- Review stale, permanently muted, or ownerless rules regularly.
+
+## Operate status pages
+
+Create components that match customer-visible services, not internal daemon topology. Map incidents to affected components, publish concise updates, and distinguish investigating, identified, monitoring, and resolved states according to the communication process.
+
+Maintenance mode on a managed Route can surface as planned maintenance. Confirm the public status view does not expose node names, private addresses, stack traces, resource IDs, or security details.
+
+## Failure and recovery
+
+If delivery fails, inspect destination health, authentication, TLS validation, response status, retry history, and queue age. Do not rotate a credential without updating every dependent destination. After repair, send a new test and confirm queued delivery behavior before declaring the channel operational.

@@ -1,0 +1,61 @@
+---
+title: Nodes and daemons
+description: Understand managed host identities, capabilities, and role boundaries.
+section: Nodes and Relay
+order: 1
+audience: [operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Nodes and daemons
+
+A Node is Gateway's durable identity for one managed host role. The daemon reports hostname, version, health, inventory, metrics, service addresses, and role-specific capabilities through an outbound authenticated session.
+
+Gateway separates Ingress, Docker, Databases, Build Worker, Monitoring, and Relay responsibilities. Select the exact role during enrollment and do not reuse a daemon identity for a different trust boundary.
+
+The Node detail page is the primary place to inspect connectivity, capability mismatches, update readiness, resource pressure, recent operations, and the last synchronized state. A stale snapshot can support read-only diagnosis but never authorizes a mutation.
+
+![Managed Nodes grouped by role and operational status](/screenshots/product-tour/nodes.png)
+
+{/* screenshot: id=node-detail-capabilities; viewport=1440x900; description=Online node detail with version, capabilities, metrics, and update status; redact=hostname,addresses,certificate-data */}
+
+## Identity and state
+
+Creating a Node first creates a pending durable identity. The generated enrollment token is single-use and bound to that identity. Successful enrollment installs a daemon certificate and changes the Node to an online managed host; deleting and recreating the record intentionally creates a different identity.
+
+Gateway distinguishes several kinds of state:
+
+- **desired state:** what operators configured in Gateway;
+- **reported state:** the latest inventory and capability report acknowledged by the daemon;
+- **runtime state:** live service health and active operations;
+- **cached snapshot:** the last known read model used when a node is briefly unavailable.
+
+Cached data supports diagnosis but never authorizes a mutation. Actions that need current host state fail closed when the daemon is offline or its capabilities are stale.
+
+## Role boundaries
+
+| Role | Owns |
+| --- | --- |
+| Ingress | nginx configuration, certificates, Routes, access and traffic telemetry |
+| Docker | containers, Deployments, Compose, images, volumes, networks, builds and migration endpoints |
+| Build Worker | isolated Git build execution and artifact admission |
+| Databases | managed database engines, storage images, direct endpoints and database telemetry |
+| Monitoring | host metrics without workload lifecycle access |
+| Relay | authenticated node transport and supported private tunnels |
+
+Do not treat role labels as cosmetic. Each installer, daemon profile, capability set, update artifact, and permission boundary is different.
+
+## Operational checks
+
+For every production Node, confirm:
+
+- hostname and displayed name identify the correct physical host;
+- service addresses are reachable from their intended peers;
+- version and compatibility state are current;
+- expected capabilities are healthy rather than merely present;
+- storage, memory, CPU, and disk pressure have alerts;
+- update and recovery procedures are documented;
+- the Node belongs to the correct folder and permission scopes.
+
+Continue with [Node roles and installation](roles-and-installation.mdx) before enrollment and [Node updates and offline behavior](updates-and-offline-behavior.mdx) before production rollout.

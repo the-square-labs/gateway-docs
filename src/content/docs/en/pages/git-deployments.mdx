@@ -1,0 +1,47 @@
+---
+title: Pages Git deployments
+description: Build static sites from source and publish approved immutable artifacts.
+section: Pages
+order: 2
+audience: [developer, platform-engineer]
+status: ready
+lastReviewed: 2026-08-30
+---
+
+# Pages Git deployments
+
+A Pages Git deployment turns one selected repository revision into a new immutable static-site Deployment. The Git source and Build Worker produce the artifact; the Pages Project owns the published deployment history; Tags and Routes control when that artifact reaches users.
+
+## Before you begin
+
+Connect a supported Git integration and choose a repository and branch that the integration is permitted to read. Confirm that a dedicated Build Worker is online, the project has the correct build definition, and required source-scoped Build Secrets are available. Build Secrets are for the isolated build boundary; runtime configuration is public and must not contain those secrets.
+
+Review the repository's `package.json` when it is used for build discovery, choose the appropriate package manager and build command, and ensure the output is a static-site artifact. A Git deployment does not make a server-side application runtime available through Pages.
+
+## Build a deployment
+
+1. Select the repository, branch, and intended revision for the Pages Project.
+2. Configure build discovery, package manager, build command, and source-scoped Build Secrets.
+3. Start the build and follow the operation on its assigned isolated Build Worker.
+4. Review the redacted build log, policy result, source revision, and immutable output.
+5. Create or select the resulting Deployment, then test it before moving a production Tag.
+
+The build is intentionally separate from publication. A completed build creates a candidate immutable Deployment; it does not change a custom Tag or Route. Automatic build and automatic deploy should be treated as independent controls, with automatic deploy enabled only after the health, promotion, and rollback path is understood.
+
+## Promote and verify
+
+Move the intended Tag to the approved Deployment. Routes target that Tag, so the move is the promotion event. Verify the public domain's DNS and TLS behavior, the returned document and static assets, client-visible `window.runtime.config`, and project operation status. Use an immutable preview where configured to inspect a specific artifact without moving a public Tag.
+
+Keep a previous known-good Deployment available for the rollback window. Runtime configuration must remain compatible while the same Tag can select either release: changing it can alter site behavior without creating a new Deployment or changing artifact hashes.
+
+## Failed build, cancellation, and rollback
+
+A failed or cancelled build must not change the active public release. Inspect the worker assignment and logs to distinguish source authorization, dependency, build command, Build Secret, policy, or artifact-output failures. Correct the cause and retry; each retry creates a new operation rather than mutating the historical result.
+
+If a promoted release causes an incident, move the Route's Tag back to the prior verified Deployment. Then verify the route response, assets, runtime configuration, and nginx application state. Do not edit or replace the failed Deployment in place: its immutable record is important for diagnosis and rollback evidence.
+
+## Manual releases and cleanup
+
+A manual Pages release follows the same promotion model: create a new immutable Deployment from the prepared static artifact, verify it, and move a Tag only when ready. Git history is useful for provenance, but it is not required for a manual artifact to participate in the same Tag and Route lifecycle.
+
+When disconnecting a Git source, decide which existing Deployments remain required for rollback. Removing the source stops future source-driven builds; it does not automatically unpublish an existing Tag or delete a deployed artifact. Review Tag references and retention before deleting any Deployment.
