@@ -8,7 +8,6 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-# Blue/green Deployments
 
 A Deployment owns one stable application identity and two runtime slots. Gateway prepares a new release in the inactive slot, evaluates its health, and switches traffic only when the release is ready. The formerly active slot remains available as the rollback candidate until it is retired by the Deployment lifecycle.
 

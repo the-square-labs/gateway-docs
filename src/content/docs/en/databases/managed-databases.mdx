@@ -8,7 +8,6 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
-# Managed databases
 
 Managed databases provide Gateway-controlled PostgreSQL, Redis, and ClickHouse instances on database-profile nodes. Gateway owns the resource lifecycle and desired configuration; the database node owns the running engine and its local runtime. This separation is why an offline node does not erase the instance's recorded configuration, and why recovery should begin with node health rather than manual engine changes.
 
