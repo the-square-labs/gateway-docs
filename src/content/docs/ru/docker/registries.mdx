@@ -11,6 +11,14 @@ lastReviewed: 2026-08-30
 
 Registry поставляют образы, которые запускают Docker Nodes, и артефакты, которые публикуют Build Workers. Gateway хранит учётные данные registry и решения о доступе отдельно от конфигурации рабочей нагрузки, использующей image. Благодаря этому оператор может ротировать доступ к registry, не раскрывая пароль в Container, Deployment или определении источника.
 
+## Определите image trust policy
+
+Ключевое решение — не только где хранится image, но и какие доказательства нужны до его запуска. Практичная policy определяет approved registries, обязательные immutable digests, право публикации, vulnerability threshold, владельцев credentials и срок хранения rollback artifacts.
+
+Команды приложений выбирают software artifact. Security owners задают admission и credential scope. Platform owners поддерживают availability registry и доступ целевых Nodes. Gateway записывает mappings, secrets, build provenance и policy results, но успешный pull сам по себе не делает неизвестный image доверенным.
+
+Успех означает, что deployed workload использует проверенный digest, каждый нужный Node может pull-нуть его через одобренный credential path, а предыдущий known-good artifact доступен в течение rollback window.
+
 ## Настройте доверенный доступ
 
 Храните учётные данные приватного registry в Gateway и ограничивайте их нужным путём сборки или runtime. Настраивайте отдельный доверенный origin token-service только если registry намеренно делегирует Bearer-аутентификацию этой службе. До production rollout проверьте endpoint registry, доступ к репозиторию и доверие к сертификату.
@@ -32,3 +40,15 @@ Registry поставляют образы, которые запускают Do
 ## Рекомендации при инцидентах и очистке
 
 При неудачной загрузке сначала подтвердите точный digest image, сопоставление registry, область учётных данных и сетевой путь Node. Для неожиданного image сравните его digest с одобренной записью сборки, а не доверяйте tag. Перед удалением конфигурации registry определите рабочие нагрузки и кандидатов для отката, которым она ещё нужна; сначала переведите их на одобренную альтернативу.
+
+## Жизненный цикл credentials
+
+Предпочитайте repository- и action-scoped credentials широким registry administration tokens. Назначьте owner и процесс rotation каждому credential и проверьте замену до отзыва старого значения, если от него зависит continuous delivery. Revocation должна отдельно учитывать Build Workers, Docker Nodes и external clients, поскольку они используют разные access paths.
+
+Если credential раскрыт, отзовите его в registry, замените в Gateway и определите builds или pulls за окно exposure. Rotation только копии Gateway не инвалидирует исходный secret у provider. Проверьте logs на неожиданные repositories или digests, не копируя secret-bearing headers в запись инцидента.
+
+## Операторские детали: pull failures и retention
+
+При authentication failure разделите DNS/TLS reachability, registry mapping, rejection credential, origin token-service, repository permission и missing manifest. Проверяйте точные repository и digest из затронутого execution path, а не с несвязанной administrator workstation.
+
+До prune внутреннего registry или отключения external access определите digests активных workloads, Deployment rollback slots, in-progress builds, pinned artifacts и недавние known-good releases. Если нужный artifact удалён, перепубликуйте или пересоберите его из проверенной source revision до изменения workload. Не заменяйте его непроверенным tag с тем же именем.

@@ -59,4 +59,18 @@ For every production Node, confirm:
 - update and recovery procedures are documented;
 - the Node belongs to the correct folder and permission scopes.
 
+## Ownership and trust boundary
+
+The Node record and daemon certificate are control-plane identities, not aliases for an IP address. Reinstalling a host under a newly created Node produces a new owner even if the hostname and address are unchanged. Resources, grants, operations, and cached inventory attached to the old identity do not transfer merely because the replacement has the same display name.
+
+Protect the host according to its role. A Docker or Databases Node can access application data, an Ingress Node holds private certificate material, a Build Worker processes potentially hostile repository input, and a Relay carries authenticated control and private streams. Avoid combining roles on one host when that would collapse a security or failure boundary. Gateway presents separate roles because their privileges and operational blast radii differ.
+
+The daemon initiates the managed session outward, so routine operation does not require exposing a general daemon administration port. Operators still own host patching, firewall policy, time synchronization, storage health, and the network path to Relay. Gateway can report these dependencies and fail mutations safely, but it cannot repair the underlying host or network.
+
+## Acceptance after enrollment
+
+Do not place production resources on a Node immediately after its status turns online. Wait for a fresh inventory and metrics snapshot, then verify the expected role capabilities and service addresses. Run one low-risk role-specific operation: validate nginx configuration on Ingress, inspect a test workload on Docker, run an admitted test build on Build Worker, or confirm database storage preflight on Databases.
+
+Record the recovery path before assignment: how to reach the host, where daemon and role-service logs live, which persistent identity or data must survive, and which dependent resources need verification after restart. This turns a Node from an installed daemon into an operable production boundary.
+
 Continue with [Node roles and installation](/en/nodes/roles-and-installation/) before enrollment and [Node updates and offline behavior](/en/nodes/updates-and-offline-behavior/) before production rollout.

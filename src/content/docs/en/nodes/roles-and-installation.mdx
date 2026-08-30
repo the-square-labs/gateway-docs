@@ -9,6 +9,12 @@ lastReviewed: 2026-08-30
 ---
 
 
+Node roles separate operational authority. The role chosen at enrollment determines which resources the host may control, which software profile is installed, and which failures can affect the business. Choose by responsibility rather than by what packages happen to be present on the machine.
+
+The platform lead should approve the role, host ownership, failure domain, data sensitivity, and recovery owner before enrollment. Success means one durable Node identity is installed on the intended host, reports only the expected capabilities, and passes a low-risk role-specific acceptance check before production resources are assigned.
+
+## Operator details: profile prerequisites
+
 Use the generated installer command from the Node creation flow. It contains bounded enrollment material and the pinned Gateway identity.
 
 - **nginx:** requires nginx, public ingress ports where applicable, configuration validation, and log access.
@@ -52,3 +58,17 @@ Database nodes require the installer's storage preflight. Build Workers require 
 ## Verification and cleanup
 
 Enrollment is complete only when the daemon reports the expected capabilities and the first inventory/metrics snapshot arrives. If installation fails before enrollment, inspect the local service and installer logs. Delete the pending record only when abandoning that identity; a token from a deleted Node must not be reused.
+
+## Installation failure modes
+
+If the command cannot download or start the daemon, verify outbound HTTPS, DNS, system time, package-manager state, architecture, and available disk space. If the daemon starts but enrollment does not complete, verify Relay reachability, the one-time token has not already been consumed, and the command was run for the pending Node shown in the dialog. Do not generate several pending records and try their commands interchangeably.
+
+A Node that enrolls without its expected capability is not ready for that role. Check the role service, socket or storage permissions, required kernel features, and the daemon's bounded startup logs. Correct the host prerequisite and allow capability reporting to refresh; changing the Node Type after installation is not a substitute for installing the correct profile.
+
+If the host was enrolled with the wrong role, decommission that identity deliberately and create a new Node with the correct role. Before deletion, ensure no resources or operations were assigned to the mistaken identity and uninstall its daemon material so it cannot reconnect unexpectedly.
+
+## Security after installation
+
+Treat the generated installer command as a short-lived credential. Run it only on the intended host, do not paste it into shared chat or persistent shell automation, and remove it from operational notes after enrollment. The installed daemon certificate becomes the durable identity and must not be copied to another machine or restored into two active hosts.
+
+Limit local access to daemon configuration, certificate material, registry credentials, database storage, and role-specific sockets. Enrollment establishes trust between Gateway and the host; it does not harden unrelated services on the operating system. Apply the organization's host baseline and keep the role's attack surface no broader than its documented prerequisites.

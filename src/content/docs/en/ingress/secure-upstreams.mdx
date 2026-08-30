@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+A secure upstream lets a public Route reach a private managed workload without publishing the workload's host port. A **Secure Link** is Gateway's authenticated private transport between the Ingress side and the workload side through Relay. The business outcome is a smaller public attack surface and a stable Route that follows the workload's managed identity across restart or recreation.
+
+Use this model when the application should be public only through Gateway ingress. The application owner still owns authentication and application health; the platform owner owns Route selection, Node and Relay connectivity, and recovery. Success means the workload has no unnecessary public port, the Link is ready, and a real request succeeds through the canonical hostname.
+
 Select a managed Docker target in the Route or Additional Route editor. Gateway validates workload ownership and the selected service or port, creates the Route-owned Secure Link, and reconciles connector state through the Relay.
 
 Route-owned bindings follow the Route lifecycle. They can be inspected but cannot be deleted independently. Additional user-managed bindings are intended for advanced nginx configuration and have their own lifecycle.
@@ -58,3 +62,17 @@ If the Route saves but traffic fails, check in this order:
 7. application logs and protocol behavior.
 
 Publish a host port only when public or direct access is itself a product requirement, not as an undocumented recovery mechanism.
+
+## Security and ownership implications
+
+A managed upstream avoids exposing the workload on an ordinary host port, but it does not make the application trusted automatically. The Route still defines the public request boundary, nginx still terminates or forwards the selected protocol, and the application must authenticate requests where its product contract requires it. Secure Link protects the private transport and target selection; it is not an application authorization layer.
+
+The generated connector and its credentials are Gateway-owned. Operators should not recreate, rename, attach to, or use that connector through ordinary Docker lifecycle APIs. Access to the workload resource does not grant ownership of the transport resource. This separation prevents a workload operator from substituting a connector image or reading transport material that belongs to the control plane.
+
+Grant users only the Route and workload scopes needed for their job. Someone who can mutate both the public Route and the target workload can redirect production traffic even without direct access to connector internals, so treat that combined permission as production deployment authority.
+
+## Change and recovery procedure
+
+Before recreating or promoting a target, record the Route, selected stable resource, application port, and current link health. Perform the workload operation through its owner, wait for the new runtime to become ready, and then confirm that Secure Link reconciled to the same stable identity. Verify an external request; a green workload badge alone does not prove the Route path works.
+
+If reconciliation remains failed after both Nodes and Relay are healthy, preserve the failed operation and connector logs, then retry the supported reconcile action. Recreating the Route is a last resort because it changes ownership and removes useful history. If customer traffic must remain unavailable during repair, use maintenance mode rather than publishing the private port.

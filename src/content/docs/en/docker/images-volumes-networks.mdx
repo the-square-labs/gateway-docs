@@ -11,6 +11,12 @@ lastReviewed: 2026-08-30
 
 Images, volumes, and networks are Docker-daemon resources that can be shared by several workloads. Gateway reports and manages eligible resources, but safe cleanup still depends on knowing who owns and references them. Treat an offline node's inventory as last-known information until synchronization has completed.
 
+## Set ownership before cleanup
+
+These resources look like inventory, but they carry different business risks. Images affect the ability to start or roll back software. Volumes can contain the only copy of application data. Networks can be part of service discovery or private connectivity. The platform owner should define retention and backup rules for each class instead of applying one generic “unused” policy.
+
+An **unused** label means the current synchronized Docker inventory has no active attachment; it does not prove that the resource is safe to delete. A stopped workload, retained Deployment slot, pending migration, recovery runbook, or external Compose workflow may still depend on it. Success for cleanup means storage was reclaimed without removing a required recovery artifact, data set, or connectivity boundary.
+
 ## Images
 
 Images are node-local inventory. Pull an image when a workload needs it, inspect its digest and provenance before production use, and prefer immutable digests for releases. Repository-built artifacts should be tracked by digest rather than by a mutable tag.
@@ -38,3 +44,11 @@ Compose-owned non-external networks stay under the external Compose workflow. Ex
 5. Verify expected workload health and storage/network attachment afterwards.
 
 If a deletion Task fails, do not retry with a daemon-level force removal. Read the failure, restore the missing prerequisite or detach the recorded dependency, then retry the intended Gateway action.
+
+## Operator details: prune and verification
+
+Run prune only against an online Node with a fresh inventory and review the candidate set before confirmation. Internal Gateway resources and owner-managed child resources are hidden or protected where the product can identify them, but operators must still review external and shared ownership. Do not schedule broad prune as the only retention mechanism for production nodes.
+
+After image cleanup, verify that active workloads remain healthy and that the required known-good rollback artifacts can still be pulled or are retained. After volume cleanup, compare reclaimed size and confirm that no expected mount disappeared. After network cleanup, verify service discovery, Compose health, Routes, and database bindings that cross workload boundaries.
+
+If cleanup removed an image needed later, restore it from the trusted registry by digest. A deleted volume requires restore from the application's backup; recreating the volume name does not restore data. A deleted shared network may require recreating its intended configuration and explicitly reattaching every owner, so preserve its settings before deletion.

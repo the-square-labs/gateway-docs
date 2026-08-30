@@ -11,6 +11,14 @@ lastReviewed: 2026-08-30
 
 A Container is the direct-management option for one Docker runtime. Gateway stores its configuration and access relationships, while the selected Docker daemon starts and supervises the actual process. Use a Container when blue/green release slots or multi-service project ownership are not required.
 
+## When a Container is the right owner
+
+Choose a Container for a single service whose restart, update, and recovery can be managed as one runtime. It works well for internal tools, agents, stateless services, and workloads with a simple persistent-volume relationship. The application owner remains responsible for deciding whether replacing the process is safe and whether its data requires a backup or maintenance window.
+
+Choose a Deployment instead when a release must be prepared and health-checked before traffic moves, with a retained rollback candidate. Choose Compose when several services, networks, variables, and volumes must change under one revision. A Container is deliberately direct; Gateway does not invent an application release strategy around it.
+
+Success means more than a `running` state. The expected health check must pass, the application must listen on the selected port, its Route or private connection must work, and persistent data must remain attached after a recreate. Define those checks before the first production update.
+
 ## Before you begin
 
 You need access to the target Docker node and permission to create or change the Container. Confirm that the image is available from a permitted registry, the node has capacity, and the requested runtime is supported. Review ports, Routes, database bindings, managed volumes, and secrets before choosing a name: those relationships can affect later rename, migration, or deletion work.
@@ -42,3 +50,13 @@ An image pull failure, unavailable registry credential, port conflict, invalid m
 Before deletion, inspect Routes, database bindings, grants, volumes, source settings, and exported data. Deleting the Container removes its resource grants, so a later Container with the same name does not inherit access. Volume deletion is a separate destructive action; retain or back up persistent data before removing either resource.
 
 ![Container Overview with runtime details and Secure Link telemetry](/screenshots/product-tour/container-secure-link.png)
+
+## Operator details: recreate and recovery
+
+A configuration change that affects image, command, environment, mounts, runtime, ports, limits, or restart behavior can require recreation. Recreation replaces the Docker runtime while preserving Gateway's stable Container identity and supported relationships. Existing in-process sessions are interrupted, so schedule the operation or use a Deployment when interruption is unacceptable.
+
+Before recreation, record the current image digest, health result, attached volumes, Route and binding state, and any application-specific drain requirement. After the Task completes, compare the new runtime with the saved desired state and test the real client path. If startup fails, restore the previous known-good configuration or image and recreate again; do not edit the failed Docker object outside Gateway.
+
+If the Docker Node disconnects during an operation, wait for a fresh inventory after reconnect before retrying. The host may have completed the runtime action without acknowledging it. If a Container is missing but its desired state still exists, use the supported reconcile or recreate path. Deleting and recreating the Gateway record changes ownership and grants and should not be the first recovery action.
+
+Console and file access are incident and inspection tools, not a substitute for reproducible configuration. Changes made only inside a running container can disappear on the next recreate and should be moved into the image, managed configuration, or persistent volume.

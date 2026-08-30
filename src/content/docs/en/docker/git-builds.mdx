@@ -11,6 +11,14 @@ lastReviewed: 2026-08-30
 
 Git source support connects an approved repository revision to an immutable build artifact. It can supply a Docker Container, Deployment, or Pages release, but the resulting workload still follows the lifecycle of its owning resource. A source connection is not permission to change a production route or traffic target by itself.
 
+## Decide what automation is allowed to do
+
+Separate three decisions: who may read source, what qualifies as an approved artifact, and whether that artifact may deploy automatically. Keeping them separate lets a team automate routine releases without giving a repository webhook unlimited production authority.
+
+The source owner controls repository access and the commit to build. The platform owner controls the Build Worker, build policy, registry, and deployment target. The service owner defines acceptance and rollback. Gateway connects these records and preserves provenance from commit to digest, but a successful build remains only an input to a release.
+
+Use automatic build when every selected source change should produce an artifact. Enable automatic deploy only after the owning resource has a tested health gate and recovery path, and only for branches whose change-control model permits it. For higher-risk services, keep artifact approval and deployment as separate human decisions.
+
 ## Prerequisites and ownership
 
 Use a supported, allowlisted source integration and authorize only the repository access needed for the build. Select an exact branch revision, then confirm the assigned dedicated Build Worker is online. The worker accepts one build at a time, uses isolated BuildKit and containerd state, applies fixed resource limits, denies insecure build entitlements, and clears cache between jobs.
@@ -36,3 +44,15 @@ When the worker or source automation is unavailable, existing history remains us
 ## Cleanup and rollback
 
 Removing a source connection prevents future source-driven work but does not delete an already deployed runtime or its artifact automatically. Before revoking the connection, decide which artifacts remain required for a rollback. Artifact retention is governed by the registry and the owning resource's active, rollback, in-progress, pinned, and recent-successful history.
+
+## Success criteria
+
+An acceptable build identifies the repository and exact commit, finishes on an approved worker, produces an immutable digest, passes the configured vulnerability policy, and exposes logs without secrets. Deployment acceptance is separate: the target resource must pull that digest, start successfully, pass health verification, and serve the expected client path.
+
+Retain enough build and artifact history to explain what is running and to restore the previous known-good release. A mutable tag, a successful console log, or a green build badge without the digest is insufficient production evidence.
+
+## Operator details: isolation and diagnosis
+
+Build Workers are dedicated execution boundaries because repository content and build definitions can execute code. Keep worker credentials narrow, do not co-locate unrelated sensitive workloads, and treat build output as untrusted until policy and provenance checks complete. Build Secrets should be mounted only for the build step that needs them and must not be copied into image layers.
+
+When a build is queued, distinguish lack of worker capacity from source or policy failure. When it runs and fails, identify the phase: source checkout, dependency resolution, Dockerfile or Compose build, vulnerability admission, registry publication, or final acknowledgement. Preserve the bounded log and commit before retrying. A retry should create a new auditable attempt rather than overwrite the failed record.

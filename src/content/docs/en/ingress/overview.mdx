@@ -49,4 +49,18 @@ Deleting one resource must not silently delete another reusable resource. Before
 - Use maintenance mode for deliberate customer-visible work and disable a Route only when traffic should stop entirely.
 - Migrate placement through the explicit workflow so Domains, Routes, certificates, health state, and DNS changes remain coordinated.
 
+## Gateway and operator responsibilities
+
+Gateway validates and distributes the nginx configuration, tracks the desired placement, manages supported certificate workflows, and records the operations that change public traffic. It does not control an external DNS provider unless a configured integration owns that zone, open an upstream firewall, or make an unhealthy application ready. Those dependencies remain operator responsibilities.
+
+This distinction matters during incidents. A healthy Ingress Node proves that the daemon and nginx are available; it does not prove that public DNS points to that node, that every Route has a reachable upstream, or that an external network permits traffic. Conversely, a failed application health check does not require rebuilding the nginx host. Diagnose the resource chain from the public hostname toward the application and change only the failed layer.
+
+For production ownership, record who may change DNS, certificates, Routes, Access Lists, and application releases. Keep emergency access to Gateway independent of the application hostname being operated. Review shared certificates and Access Lists before changing them because a single edit can affect several Routes.
+
+## Production acceptance
+
+Before declaring a hostname ready, verify it from a network outside the managed hosts. Confirm DNS answers, HTTP redirect behavior, the HTTPS certificate chain and hostname, the expected application response, and WebSocket behavior when used. Then compare that request with Gateway health history and nginx access logs.
+
+Keep the previous DNS placement or application revision available during a cutover when practical. If acceptance fails, restore the known-good upstream or placement rather than deleting the new resources. Deletion removes useful desired-state and operation history and is rarely the safest rollback.
+
 Continue with [Domains, Routes, and TLS](/en/ingress/domains-routes-tls/) for configuration, [Secure upstreams](/en/ingress/secure-upstreams/) for private Docker targets, and [Ingress troubleshooting](/en/ingress/troubleshooting/) for failure diagnosis.

@@ -11,6 +11,14 @@ lastReviewed: 2026-08-30
 
 Registries supply the images that Docker nodes run and the artifacts that Build Workers publish. Gateway keeps registry credentials and access decisions separate from the workload configuration that consumes an image. This separation lets an operator rotate registry access without exposing a password in a Container, Deployment, or source definition.
 
+## Define the image trust policy
+
+The key decision is not only where an image is stored, but what evidence is required before it may run. A practical policy identifies approved registries, required immutable digests, who may publish, the vulnerability threshold, credential owners, and how long rollback artifacts are retained.
+
+Application teams select the software artifact. Security owners define admission and credential scope. Platform owners maintain registry availability and target-node access. Gateway records mappings, secrets, build provenance, and policy results, but it does not make an unknown image trustworthy merely because a pull succeeded.
+
+Success means the deployed workload uses the reviewed digest, every required node can pull it through an approved credential path, and the previous known-good artifact remains available for the rollback window.
+
 ## Configure trusted access
 
 Store private registry credentials in Gateway and scope them to the intended build or runtime path. Configure a separate trusted token-service origin only when the registry intentionally delegates Bearer authentication to that service. Confirm the registry endpoint, repository access, and certificate trust before a production rollout.
@@ -32,3 +40,15 @@ Enable external access only when a real client workflow requires it. Validate TL
 ## Incident and cleanup guidance
 
 For a failed pull, first confirm the exact image digest, registry mapping, credential scope, and node network path. For an unexpected image, compare its digest with the approved build record rather than trusting a tag. Before removing a registry configuration, identify workloads and rollback candidates that still need it; change them to an approved alternative first.
+
+## Credential lifecycle
+
+Prefer repository- and action-scoped credentials over broad registry administration tokens. Record an owner and rotation process for each credential, and test the replacement before revoking the old value when continuous delivery depends on it. Revocation must account for Build Workers, Docker Nodes, and external clients separately because they can use different access paths.
+
+If a credential is exposed, revoke it at the registry, replace it in Gateway, and identify builds or pulls performed during the exposure window. Rotating only the Gateway copy does not invalidate the original secret at the provider. Review logs for unexpected repositories or digests without copying secret-bearing headers into the incident record.
+
+## Operator details: pull failures and retention
+
+For authentication failures, separate DNS/TLS reachability, registry mapping, credential rejection, token-service origin, repository permission, and missing manifest. Test the exact repository and digest from the affected execution path rather than from an unrelated administrator workstation.
+
+Before pruning the internal registry or removing external access, identify active workload digests, Deployment rollback slots, in-progress builds, pinned artifacts, and recent known-good releases. If a required artifact was removed, republish or rebuild it from the verified source revision before changing the workload. Do not replace it with an unverified tag that happens to have the same name.

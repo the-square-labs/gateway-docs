@@ -13,6 +13,14 @@ A Deployment owns one stable application identity and two runtime slots. Gateway
 
 Manage slots through the Deployment rather than as individual Containers. The Deployment owns traffic switching, release history, rollback eligibility, and the relationship between the two runtime children. Editing an active child directly creates state drift and weakens the guarantees that make rollback safe.
 
+## What the Deployment decision changes
+
+Choose a Deployment when release risk is dominated by application startup and health, and when two release slots can safely exist on the same Docker Node during cutover. The outcome is a stable service identity with a controlled promotion and an explicit rollback candidate. This is especially useful for public or shared services where replacing one Container directly would create avoidable downtime.
+
+The application team owns release readiness, health semantics, data migration compatibility, and the decision to promote or roll back. The platform team owns node capacity, image trust, Routes, secrets delivery, and the availability of the rollback path. Gateway coordinates the slots and records the operation; it cannot make an incompatible schema change reversible.
+
+Do not use blue/green as a substitute for a data strategy. Both slots may temporarily access the same external dependency or persistent data. Database migrations must be backward-compatible for the rollback window, or the release plan must explicitly accept that runtime rollback alone is insufficient.
+
 ## Prerequisites
 
 Use an immutable image digest or an approved build artifact. Before starting a release, confirm the target node is online, the image can be pulled, secrets and volumes are correct, resource limits fit the node, and the health route checks the application path that matters to users. Review dependent Routes and database bindings as part of the same change.
@@ -37,3 +45,15 @@ If a customer-visible regression appears after cutover, use the explicit rollbac
 ## Retirement consequences
 
 Removing a Deployment removes its managed slots and can remove access relationships that belong only to that resource. First detach or migrate Routes, database bindings, and persistent data that must survive. A Deployment rollback protects a prior runtime slot; it is not a substitute for backing up mutable volume data.
+
+## Success criteria and rollout policy
+
+Define a health check that represents a user-relevant dependency, not merely that the process accepts a TCP connection. Before promotion, verify startup logs, health stability for the agreed observation period, resource usage, and any private dependencies. After promotion, verify a real request through the Route and watch error rate and latency before retiring the previous slot.
+
+Set an explicit rollback window. During that window, keep the previous artifact and configuration available and avoid changes that make it impossible to serve. If a later problem is unrelated to the new release, record that evidence before rolling back; unnecessary slot switching can make diagnosis harder.
+
+## Operator details: capacity and failed releases
+
+The inactive slot needs enough CPU, memory, storage, ports, and image-pull access to start alongside the active slot. Capacity planning must include this temporary overlap. A release that cannot allocate its inactive slot should fail before traffic changes, leaving the active service untouched.
+
+When health never becomes ready, inspect the inactive slot's logs and exact health response. Correct the image or release configuration and create a new release attempt; do not mutate the managed child Container. If promotion completed but verification fails, use the recorded rollback action and then verify both the service path and the final active-slot identity.

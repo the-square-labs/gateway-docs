@@ -11,6 +11,12 @@ lastReviewed: 2026-08-30
 
 Migration moves an eligible workload between Docker nodes while preserving its Gateway identity and eligible resource grants. A GWCA archive packages an eligible workload for controlled export and import. Both workflows are operational changes, not backups: stateful volume data requires its own backup and restore plan.
 
+## Choose the correct outcome
+
+Use migration when the same managed workload must move to another Docker Node while retaining its Gateway ownership and relationships. Use a Gateway Container Archive (GWCA) when a workload configuration must be exported for controlled transfer or later import. Use an application backup when the goal is to protect or restore data. These outcomes overlap operationally but are not interchangeable.
+
+The workload owner decides the maintenance window and validates application behavior. The platform owner confirms target capacity, runtime compatibility, image access, network placement, and cleanup. The data owner confirms backup and restore. A successful migration preserves the managed identity and access path on the target; a successful archive proves that the supported configuration can be imported, not that external dependencies or volume data are available.
+
 ## Confirm eligibility first
 
 Cross-node migration performs capacity preflight, artifact and volume transfer, target verification, cutover, and cleanup recovery. The target must be online, have sufficient resources, support the selected runtime, and reach any required registry artifact.
@@ -36,3 +42,15 @@ Before export, decide whether including secrets is necessary and ensure the arch
 ## Rollback and cleanup consequences
 
 Migration rollback concerns the workload placement and runtime configuration; it does not reverse writes made by the application during a cutover. Keep the original volume backup and source evidence until the target is proven healthy. Deleting an archive does not delete a workload, and deleting the source after a migration should happen only through the completed migration lifecycle.
+
+## Verification and acceptance
+
+After migration, verify the target Node identity, runtime and health, attached volumes, Routes, database bindings, grants, logs, and one real client transaction. Confirm that the source is no longer serving or accepting writes before approving cleanup. Keep the source evidence and backups until the agreed observation window completes.
+
+After archive import, compare image digest, command, environment, secrets handling, volumes, networks, ports, runtime, and resource limits with the export intent. Do not route production traffic until application-specific dependencies and data restore are complete.
+
+## Operator details: failure recovery
+
+Migration is staged so a failure before cutover should leave the source as the serving workload. Preserve the operation record and use supported cancellation or cleanup recovery. If the target started but acceptance failed, determine whether Gateway still reports the source as authoritative before making manual changes. Never allow both copies to accept writes unless the application was designed for that state.
+
+GWCA files that include secrets or writable-layer changes are sensitive artifacts. Store them with access control, integrity protection, retention limits, and an owner. On import failure, correct target compatibility or mappings and retry with the same reviewed archive; do not edit the archive in an unaudited way to bypass policy.

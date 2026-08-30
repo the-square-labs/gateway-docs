@@ -11,6 +11,12 @@ lastReviewed: 2026-08-30
 
 Миграция перемещает подходящую рабочую нагрузку между Docker Nodes, сохраняя её идентичность Gateway и допустимые права ресурсов. Архив GWCA упаковывает подходящую рабочую нагрузку для контролируемого экспорта и импорта. Оба сценария изменяют эксплуатационное состояние, но не являются резервным копированием: данные stateful volumes требуют собственного плана копирования и восстановления.
 
+## Выберите правильный результат
+
+Используйте migration, когда тот же managed workload нужно переместить на другой Docker Node с сохранением ownership и relationships Gateway. Используйте Gateway Container Archive (GWCA), когда конфигурацию workload нужно экспортировать для контролируемого переноса или последующего import. Используйте application backup, когда цель — защитить или восстановить data. Эти результаты пересекаются, но не взаимозаменяемы.
+
+Владелец workload выбирает maintenance window и проверяет поведение приложения. Platform owner подтверждает target capacity, runtime compatibility, image access, network placement и cleanup. Data owner подтверждает backup и restore. Успешная migration сохраняет managed identity и access path на цели; успешный archive доказывает возможность импортировать поддерживаемую configuration, но не наличие external dependencies или volume data.
+
 ## Сначала подтвердите возможность миграции
 
 Миграция между Nodes выполняет предварительную проверку ёмкости, перенос артефакта и volume, проверку цели, переключение и восстановление очистки. Целевой Node должен быть в сети, иметь достаточно ресурсов, поддерживать выбранный runtime и достигать нужного артефакта registry.
@@ -36,3 +42,15 @@ lastReviewed: 2026-08-30
 ## Последствия отката и очистки
 
 Откат миграции касается размещения рабочей нагрузки и конфигурации runtime; он не отменяет записи, сделанные приложением во время переключения. Храните исходную копию volumes и свидетельства источника, пока цель не будет признана исправной. Удаление архива не удаляет рабочую нагрузку, а удаление источника после миграции должно выполняться только завершённым жизненным циклом миграции.
+
+## Проверка и acceptance
+
+После migration проверьте identity целевого Node, runtime и health, подключённые volumes, Routes, database bindings, grants, logs и одну реальную клиентскую транзакцию. До approval cleanup подтвердите, что source больше не обслуживает запросы и не принимает writes. Сохраняйте доказательства источника и backups до завершения согласованного окна наблюдения.
+
+После archive import сравните image digest, command, environment, обработку secrets, volumes, networks, ports, runtime и resource limits с намерением экспорта. Не направляйте production traffic до готовности application dependencies и data restore.
+
+## Операторские детали: восстановление после сбоя
+
+Migration выполняется по этапам, поэтому сбой до cutover должен оставить source обслуживающим workload. Сохраните operation record и используйте поддерживаемую cancellation или cleanup recovery. Если target запустился, но acceptance не прошла, до ручных действий определите, считает ли Gateway source авторитетным. Не позволяйте обеим копиям принимать writes, если приложение не рассчитано на такое состояние.
+
+GWCA-файлы с secrets или writable-layer changes являются чувствительными artifacts. Храните их с access control, integrity protection, retention limits и назначенным owner. При ошибке import исправьте compatibility или mappings цели и повторите действие с тем же проверенным archive; не редактируйте archive вне аудита для обхода policy.

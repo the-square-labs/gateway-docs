@@ -9,6 +9,12 @@ lastReviewed: 2026-08-30
 ---
 
 
+Node updates and outages are continuity events, not merely daemon restarts. Previously applied services may continue locally while Gateway loses the ability to change or observe them in real time. The operating goal is therefore to preserve the durable Node identity, restore the authenticated session, and prove that every dependent resource reconciled—not only that the status returned to green.
+
+The service owner decides the maintenance window and acceptable interruption. The platform owner confirms version compatibility, host access, recovery evidence, and post-update acceptance. Success means a fresh connection, inventory, metrics, capabilities, and representative workload paths, with no unexplained interrupted operation.
+
+## Operator details: update and reconnect
+
 Check compatibility before updating Gateway, Relay, and daemons. Apply signed daemon updates through the Node lifecycle and verify reconnect, version, inventory, logs, health, and managed bindings.
 
 When a node goes offline, workloads may continue locally but Gateway mutations are disabled. Diagnose host availability, daemon service, system time, certificate identity, DNS, and outbound Relay access. Avoid deleting the Node record while the old daemon may reconnect.
@@ -55,3 +61,21 @@ Database bindings can continue through a healthy Relay and database path during 
 7. Verify each dependent resource family owned by the Node.
 
 Do not delete an offline Node merely to clear a warning. Deletion changes durable ownership and can leave the still-running old daemon unable to reconcile safely.
+
+## Interrupted operations
+
+An offline transition can leave an operation whose intent was accepted but whose final host result was not acknowledged. After reconnect, Gateway reconciles supported interrupted state from the daemon and resource inventory. Review the operation before starting another action: repeating a create, update, migration, or deletion blindly can conflict with work that already completed on the host.
+
+Compare the operation record with the actual owner resource. A Container may be running even if the last UI progress was interrupted; a Compose Project may have applied a revision without returning its final acknowledgement; an update may have restarted the daemon before the control session returned. Use the refreshed snapshot and role-specific state as evidence, then retry only the supported continuation or recovery action.
+
+Force-cancelling a Task stops or abandons control-plane work where supported; it does not guarantee that every host-side subprocess or already-applied runtime change was reversed. Verify the resource after cancellation and perform explicit cleanup when the operation reports it is required.
+
+## Replacement versus recovery
+
+Recover the existing identity when the host and its persistent daemon material still exist. Replace the Node only when the host is intentionally rebuilt or its identity cannot be recovered. Before replacement, inventory Routes, workloads, database instances, build assignments, certificates, volumes, and Relay assignments owned by the old Node and move or retire them through their supported lifecycle.
+
+Never run the same daemon identity on an old and replacement host simultaneously. If the original host might return, disable or uninstall it before enrolling the replacement. A duplicate identity can produce conflicting inventory and operation acknowledgements even when the two hosts have different addresses.
+
+## Planned offline test
+
+Before relying on a Node in production, perform a bounded recovery exercise: restart the daemon, confirm local services behave as documented, wait for reconnect, and verify fresh inventory plus one representative dependent resource. For Relay and database paths, test new connections as well as existing ones. Record the observed recovery time and the manual access path needed if automatic reconnect fails.

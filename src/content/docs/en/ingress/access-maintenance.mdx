@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+Access Lists and maintenance mode answer two management questions: **who may reach the service**, and **whether the service should accept customer traffic during planned work**. Use them as explicit, auditable controls instead of temporary DNS changes, deleted Routes, or undocumented firewall exceptions.
+
+The service owner decides the intended audience and maintenance window. The security owner reviews reusable access policy and credential handling. The operator applies and verifies the change. Success means allowed clients retain access, denied clients are consistently blocked, and maintenance presents a deliberate `503` state without losing the hostname, TLS, or Route configuration.
+
 Access lists combine IP rules and optional HTTP basic authentication. Apply the narrowest list that meets the requirement and test both an allowed and denied client. Treat stored basic-auth secrets as credentials and rotate them when membership changes.
 
 Maintenance mode is available for enabled managed Routes that are not using raw configuration. It preserves the HTTP/HTTPS virtual host, returns HTTP 503, pauses managed health checks, and exposes maintenance state to alerts and status pages.
@@ -50,3 +54,17 @@ Gateway keeps the virtual host and TLS behavior in place while returning `503`. 
 6. Resolve the status-page incident only after the external check succeeds.
 
 If the Route remains unavailable, re-enable maintenance rather than repeatedly toggling unrelated settings. Use [Ingress troubleshooting](/en/ingress/troubleshooting/) to identify the failed layer.
+
+## Policy evaluation and change safety
+
+Document whether the list is intended to restrict an administrative surface, a private customer endpoint, or an entire public application. Mixed allow and deny rules are easy to misread during an incident, so keep the policy small and name it for the audience it protects. Test the effective client address seen by nginx, especially when requests arrive through a CDN or another trusted proxy; testing only the apparent browser address can validate the wrong rule.
+
+Basic authentication supplements network policy but does not replace TLS. Use it only on HTTPS Routes, store the generated credential through the supported secret path, and deliver it outside application logs or tickets. Removing a user from a shared credential requires rotating that credential for every remaining user; use separate lists when independent revocation is important.
+
+Before editing a shared Access List, record every attached Route and the current behavior for an allowed and denied request. Make the change once, wait for nginx acknowledgement, and repeat both tests. If validation or apply fails, retain the last acknowledged policy and correct the new revision rather than detaching access control from production Routes.
+
+## Emergency recovery
+
+An Access List can lock operators out of an application, but it should not block the Gateway administration path unless that path was deliberately placed behind the same policy. If all expected clients are denied, verify the source address observed in access logs and the trusted-proxy configuration before broadening the allow range.
+
+When immediate service restoration is required, restore the previous known-good list or attach a narrowly scoped emergency list with a short operational lifetime. Do not replace it with unrestricted public access unless the incident owner explicitly accepts that exposure. After recovery, remove temporary rules, rotate emergency credentials, and verify every Route that shared the original list.

@@ -9,6 +9,10 @@ lastReviewed: 2026-08-30
 ---
 
 
+The incident objective is to restore the public service without destroying the state that explains the failure. Ingress crosses several ownership boundaries—DNS, network, certificate, nginx configuration, Route policy, private transport, and application runtime—so changing several layers at once usually increases outage time.
+
+Assign one incident owner, record the last known-good change, and verify from the outside in. Success means external behavior is restored, Gateway desired and reported state agree, and the failed layer and recovery action are recorded well enough to prevent recurrence.
+
 Use this order to avoid changing the wrong layer:
 
 1. **DNS:** resolve the hostname from an external client and confirm it points to the assigned ingress node.
@@ -60,3 +64,22 @@ Do not delete and recreate the Domain, certificate, or Route as a first response
 ## Recovery verification
 
 Test from an external client, then confirm the canonical hostname, certificate chain, status code, body, redirects, WebSockets, health history, and nginx logs. Close the incident only when public behavior and Gateway state agree.
+
+## Rollback by failed layer
+
+Rollback should reverse the smallest change that introduced the outage. For DNS, restore the recorded address values and account for resolver caches. For TLS, restore the previous valid certificate assignment without disabling HTTPS. For nginx configuration, return to the last known-good managed settings and wait for acknowledgement. For an application regression, roll back the owning Deployment or Compose revision rather than rewriting the Route around a broken release.
+
+Secure Link failures require restoring Relay and Node connectivity or the target runtime; changing DNS or certificates cannot repair them. Access-policy failures require restoring the previous Access List or trusted-proxy interpretation, not opening the workload port. Maintenance mode is useful while repairing these layers because it keeps the hostname and TLS path explicit while preventing accidental traffic to a partially recovered application.
+
+## Escalation evidence
+
+When the first recovery attempt does not explain the failure, collect a bounded evidence bundle before escalating:
+
+- Domain and Route identifiers, assigned Ingress Node, and latest acknowledged config revision;
+- external DNS answers and TLS certificate details observed at the incident time;
+- Route health history and the exact failing path, method, status, and timestamp;
+- relevant nginx access/error entries and the owning workload or Secure Link operation;
+- Node and Relay versions, connectivity state, and the last failed Task message;
+- the last known-good application, Route, and DNS revision.
+
+Redact credentials, cookies, authorization headers, private keys, and sensitive query values. The goal is to preserve causality without turning an incident record into a secret store.

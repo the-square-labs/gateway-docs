@@ -11,6 +11,14 @@ lastReviewed: 2026-08-30
 
 Поддержка источников Git связывает одобренную ревизию репозитория с неизменяемым артефактом сборки. Такой источник может поставлять Container Docker, Deployment или релиз Pages, но итоговая рабочая нагрузка всё равно следует жизненному циклу владеющего ресурса. Подключение источника само по себе не даёт права менять production Route или цель трафика.
 
+## Решите, что разрешено автоматизации
+
+Разделите три решения: кто может читать source, что считается одобренным artifact и может ли этот artifact deploy-иться автоматически. Такое разделение позволяет автоматизировать обычные релизы, не выдавая repository webhook неограниченные production-полномочия.
+
+Владелец source контролирует доступ к repository и commit для сборки. Platform owner контролирует Build Worker, build policy, registry и deployment target. Service owner задаёт acceptance и rollback. Gateway связывает эти записи и сохраняет provenance от commit до digest, но успешная build остаётся только входом для релиза.
+
+Используйте automatic build, когда каждое выбранное изменение source должно создавать artifact. Включайте automatic deploy только после проверки health gate и recovery path владеющего ресурса и только для branches, модель change control которых это допускает. Для более рискованных сервисов сохраняйте approval artifact и deployment отдельными человеческими решениями.
+
 ## Предварительные условия и владение
 
 Используйте поддерживаемую разрешённую интеграцию источника и выдавайте только тот доступ к репозиторию, который нужен для сборки. Выберите точную ревизию ветки и убедитесь, что назначенный выделенный Build Worker находится в сети. Worker принимает одну сборку за раз, использует изолированное состояние BuildKit и containerd, применяет фиксированные ограничения ресурсов, запрещает небезопасные build entitlements и очищает кэш между заданиями.
@@ -36,3 +44,15 @@ Build Secrets ограничены источником и монтируютс�
 ## Очистка и откат
 
 Удаление подключения источника блокирует будущую работу из источника, но автоматически не удаляет уже развёрнутый runtime или его артефакт. Перед отзывом подключения решите, какие артефакты всё ещё нужны для отката. Хранение артефактов определяется registry и историей активных, rollback-, выполняющихся, закреплённых и недавно успешных состояний владеющего ресурса.
+
+## Критерии успеха
+
+Приемлемая build идентифицирует repository и точный commit, завершается на одобренном worker, создаёт immutable digest, проходит настроенную vulnerability policy и показывает logs без secrets. Deployment acceptance выполняется отдельно: целевой ресурс должен pull-нуть digest, успешно запуститься, пройти health verification и обслужить ожидаемый client path.
+
+Храните достаточно build- и artifact-history, чтобы объяснить, что запущено, и восстановить предыдущий known-good release. Mutable tag, успешный console log или зелёный build badge без digest недостаточны как production evidence.
+
+## Операторские детали: isolation и диагностика
+
+Build Workers — выделенные execution boundaries, потому что содержимое repository и build definitions могут исполнять код. Сужайте credentials worker, не размещайте рядом несвязанные чувствительные workloads и считайте build output недоверенным до завершения policy и provenance checks. Build Secrets должны монтироваться только в нужный шаг и не попадать в image layers.
+
+Если build находится в queue, отделите нехватку capacity worker от ошибки source или policy. Если она запустилась и упала, определите фазу: source checkout, dependency resolution, Dockerfile или Compose build, vulnerability admission, registry publication или final acknowledgement. Сохраните ограниченный log и commit до повторной попытки. Retry должен создавать новую auditable attempt, а не перезаписывать failed record.

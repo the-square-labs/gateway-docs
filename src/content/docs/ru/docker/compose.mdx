@@ -13,6 +13,14 @@ Gateway обнаруживает внешние Docker Compose-приложен�
 
 Внешнее обнаружение доступно на любом плане. Для создания или принятия во владение управляемого одновузлового проекта требуется Personal или выше. Сборки Compose из Git требуют Business или Enterprise и подключённого выделенного Build Worker.
 
+## Выбор между видимостью и владением
+
+Discovery даёт командам общий обзор существующего Compose-приложения, не меняя того, кто им управляет. Adoption меняет модель ownership: Gateway становится местом, где выполняются configuration revisions и lifecycle actions. Зафиксируйте эту передачу с владельцем приложения, потому что продолжение независимого `docker compose` workflow после adoption создаёт конкурирующие desired states.
+
+Выбирайте managed Compose, когда несколько сервисов должны проверяться, применяться, останавливаться, восстанавливаться и аудитироваться как одно приложение на одном Docker Node. Владелец проекта должен определить зависимости сервисов, ownership данных, источники secrets, допустимый downtime и условия rollback конфигурации. Gateway валидирует и применяет revisions, но не превращает single-node Compose application в multi-node high-availability platform.
+
+Успешный проект имеет одного понятного владельца конфигурации, воспроизводимую active revision, исправные обязательные сервисы, известные persistent volumes, работающие Routes и private bindings и отсутствие необъяснимого drift.
+
 ## Внешние и управляемые проекты
 
 **External**-проект обнаруживается по каноническим Docker labels. Gateway показывает инвентарь, состояние, состояние служб, мониторинг и агрегированные логи, но не читает Compose-файл хоста и не изменяет проект, пока оператор явно не примет его во владение.
@@ -62,3 +70,11 @@ Gateway сообщает о drift, когда наблюдаемое состо�
 ## Удалите проект
 
 Остановите управляемый проект и удалите зависимые Routes или bindings до его удаления. Удаление записи проекта Gateway удаляет историю управляемых ревизий, но runtime-volumes автоматически не удаляются. Отдельно создайте резервную копию или удалите постоянные данные в соответствии с требованиями хранения приложения.
+
+## Операторские детали: восстановление revision
+
+До применения revision сравните её services, images, variables, secrets, volumes, networks и exposed ports с active revision. Зафиксируйте специфичный для приложения порядок migration и startup, если сервисы нельзя безопасно перезапустить одновременно. **Pull & Apply** может заменить service runtimes и не гарантирует непрерывность существующих connections.
+
+Если операция прервана, дождитесь reconnect Docker Node и обновите observed project state до запуска следующего apply. По recent operations определите, где произошёл сбой: image pull, preparation конфигурации, создание service, health или final acknowledgement. Если active revision заведомо исправна, а новая непригодна, выберите прежнюю через **Change revision** и проверьте полный путь приложения.
+
+Rollback меняет Compose configuration и runtimes, но не отменяет записи во внешние системы или persistent volumes. Backward-incompatible database migrations требуют собственного recovery plan. Не удаляйте child containers или project networks для принудительной convergence: это удаляет доказательства и может помешать managed cleanup.

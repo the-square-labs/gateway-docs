@@ -11,6 +11,14 @@ lastReviewed: 2026-08-30
 
 Container — это вариант прямого управления одним Docker runtime. Gateway хранит его конфигурацию и связи доступа, а выбранный Docker daemon запускает и контролирует фактический процесс. Используйте Container, когда не нужны слоты сине-зелёного выпуска или владение многосервисным проектом.
 
+## Когда Container — правильный владелец
+
+Выбирайте Container для одного сервиса, restart, update и recovery которого можно управлять как единым runtime. Это подходит внутренним инструментам, агентам, stateless-сервисам и workloads с простой связью с persistent volume. Владелец приложения по-прежнему решает, безопасна ли замена процесса и требуют ли данные backup или maintenance window.
+
+Выбирайте Deployment, если релиз нужно подготовить и проверить до переключения трафика с сохранением кандидата для отката. Выбирайте Compose, когда несколько сервисов, networks, variables и volumes должны меняться одной revision. Container намеренно остаётся прямой моделью: Gateway не придумывает вокруг него release strategy приложения.
+
+Успех означает больше, чем состояние `running`. Ожидаемый health check должен проходить, приложение — слушать выбранный port, его Route или private connection — работать, а постоянные данные — оставаться подключёнными после recreate. Определите эти проверки до первого production update.
+
 ## Перед началом
 
 Вам нужен доступ к целевому Docker Node и право создавать или изменять Container. Убедитесь, что image доступен из разрешённого registry, на Node достаточно ресурсов, а запрошенный runtime поддерживается. До выбора имени проверьте порты, Routes, database bindings, управляемые volumes и secrets: эти связи могут повлиять на последующее переименование, миграцию или удаление.
@@ -42,3 +50,13 @@ Runtime **Default** доступен на поддерживаемых Docker No
 Перед удалением проверьте Routes, database bindings, гранты, volumes, настройки источника и экспортированные данные. Удаление Container снимает права ресурса, поэтому последующий Container с тем же именем не наследует доступ. Удаление volume — отдельное разрушительное действие; сохраните или скопируйте постоянные данные перед удалением любого из ресурсов.
 
 ![Обзор Container с данными runtime и телеметрией Secure Link](/screenshots/product-tour/container-secure-link.png)
+
+## Операторские детали: recreate и recovery
+
+Изменение image, command, environment, mounts, runtime, ports, limits или restart behavior может требовать recreation. Recreation заменяет Docker runtime, сохраняя стабильную identity Container в Gateway и поддерживаемые связи. Текущие in-process sessions прерываются, поэтому планируйте окно или используйте Deployment, если перерыв недопустим.
+
+Перед recreation запишите текущий image digest, health result, подключённые volumes, состояние Route и bindings и специфичное для приложения требование drain. После завершения Task сравните новый runtime с сохранённым desired state и проверьте реальный клиентский путь. Если startup не прошёл, верните прежнюю известную исправную конфигурацию или image и выполните recreate снова; не редактируйте неисправный Docker object вне Gateway.
+
+Если Docker Node отключился во время операции, дождитесь свежего inventory после reconnect до повторной попытки. Хост мог завершить runtime action, не подтвердив его. Если Container отсутствует, но его desired state сохранён, используйте поддерживаемый reconcile или recreate. Удаление и повторное создание записи Gateway меняет ownership и grants и не должно быть первым способом восстановления.
+
+Console и file access — инструменты инцидента и инспекции, а не замена воспроизводимой конфигурации. Изменения только внутри работающего container могут исчезнуть при следующем recreate; переносите их в image, managed configuration или persistent volume.

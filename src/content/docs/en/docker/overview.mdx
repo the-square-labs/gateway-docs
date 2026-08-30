@@ -18,6 +18,21 @@ Choose the highest-level lifecycle that matches the application:
 - **Compose Project:** a discovered external application or a Gateway-managed single-node application with validated configuration, immutable revisions, lifecycle operations, logs, Routes, and database bindings.
 - **Git source:** a delivery input for Containers, Deployments, and Pages. It is not a separate application entity.
 
+## Choose the operating model
+
+The decision is primarily about ownership and recovery, not the number of fields in a form.
+
+| Need | Recommended model | Main tradeoff |
+| --- | --- | --- |
+| One service with a simple lifecycle | Container | Direct and flexible, but releases and rollback are operator-managed |
+| Health-gated releases with a retained rollback candidate | Deployment | Stronger release safety, with two managed runtime slots |
+| Several services that must change as one application | Compose Project | One revision and operation boundary, limited to one Docker node |
+| Reproducible artifacts from source control | Git source plus an owning resource | Adds build provenance; deployment safety still comes from Container, Deployment, Compose, or Pages |
+
+Choose the highest-level owner that represents how the application should be changed during a normal release and recovered during an incident. Do not model a multi-service application as unrelated Containers merely to avoid Compose, and do not choose Deployment when the application has shared writable state that cannot safely exist across release slots.
+
+The platform lead should define who owns the application resource, its data, its public Routes, its registry access, and its rollback decision. Gateway records and enforces those boundaries, but it cannot decide whether an application-level data migration is reversible.
+
 ## Ownership boundaries
 
 Gateway owns the metadata and desired state for resources it creates or adopts. The target Docker daemon owns the runtime process, image cache, local storage implementation, and network attachment. A managed resource can therefore be unavailable while its desired state remains recorded; recovery starts by restoring daemon or node connectivity, then allowing Gateway to reconcile.
@@ -41,6 +56,12 @@ Before changing a workload, review its dependent Routes, database bindings, gran
 5. Keep a known-good image or prior Deployment slot until the recovery window has passed.
 
 If an operation fails, use its diagnostics to distinguish image, configuration, storage, port, permission, and node-connectivity failures. Correct the identified prerequisite and retry from Gateway. Do not remove Gateway-owned Docker objects as a generic recovery step.
+
+## Success criteria
+
+A workload is ready when its desired and observed state agree, the owning operation completed, health and logs are acceptable, and the real access path works. For public applications that means the Route; for private applications it may be a Secure Link or database dependency. A running process without verified access is not a successful deployment.
+
+For every production workload, retain a known-good artifact, document persistent data and recovery ownership, and define the rollback window. Test the recovery action before an incident. Operator-level resource details and cleanup rules are covered in the pages linked below.
 
 ## Next steps
 

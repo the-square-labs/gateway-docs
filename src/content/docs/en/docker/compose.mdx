@@ -13,6 +13,14 @@ Gateway discovers external Docker Compose applications and can manage single-nod
 
 External discovery is available on every plan. Creating or adopting a managed single-node project requires Personal or higher. Git-backed Compose builds require Business or Enterprise and an online dedicated Build Worker.
 
+## Decide between visibility and ownership
+
+Discovery gives teams a shared view of an existing Compose application without changing who operates it. Adoption changes the ownership model: Gateway becomes the place where configuration revisions and lifecycle actions are performed. Make that transfer explicit with the application owner, because continuing to run an independent `docker compose` workflow after adoption creates competing desired states.
+
+Choose managed Compose when several services must be reviewed, applied, stopped, recovered, and audited as one application on one Docker Node. The project owner should define service dependencies, data ownership, secret sources, acceptable downtime, and the rollback conditions for configuration changes. Gateway validates and applies revisions, but it does not turn a single-node Compose application into a multi-node high-availability platform.
+
+A successful project has one understood configuration owner, a reproducible active revision, healthy required services, known persistent volumes, working Routes and private bindings, and no unexplained drift.
+
 ## External and managed projects
 
 An **external** project is discovered from canonical Docker Compose labels. Gateway shows inventory, status, service health, monitoring, and aggregated logs, but does not read a host Compose file or mutate the project until an operator explicitly adopts it.
@@ -62,3 +70,11 @@ Do not repair a managed project by deleting its child containers, networks, or r
 ## Delete a project
 
 Bring a managed project down and remove dependent Routes or bindings before deletion. Deleting the Gateway project record removes its managed revision history, but runtime volumes are not deleted automatically. Back up or remove persistent data separately according to the application's retention requirements.
+
+## Operator details: revision recovery
+
+Before applying a revision, compare its services, images, variables, secrets, volumes, networks, and exposed ports with the active revision. Record application-specific migration and startup order when services cannot safely restart together. **Pull & Apply** can replace service runtimes; it does not guarantee uninterrupted connections.
+
+If an operation is interrupted, wait for the Docker Node to reconnect and refresh the observed project state before starting another apply. Use recent operations to determine whether image pull, configuration preparation, service creation, health, or final acknowledgement failed. When the active revision is known-good and the new revision is unsuitable, select the earlier revision through **Change revision** and verify the full application path.
+
+Rollback changes the Compose configuration and runtimes; it does not reverse writes made to external systems or persistent volumes. Backward-incompatible database migrations need their own recovery plan. Do not delete child containers or project networks to force convergence, because that removes evidence and may interfere with managed cleanup.
