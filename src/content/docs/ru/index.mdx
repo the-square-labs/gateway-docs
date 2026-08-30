@@ -43,22 +43,25 @@ Gateway работает как центральное приложение с P
 ```mermaid
 flowchart TB
     subgraph ingress["Путь публичного приложения"]
-        direction LR
+        direction TB
         domain["Domain"] --> certificate["TLS-сертификат"] --> route["Ingress Route"] --> upstream["Приложение"]
     end
 
     subgraph delivery["Путь доставки ПО"]
-        direction LR
+        direction TB
         repository["Git-репозиторий"] --> worker["Build Worker"] --> artifact["Неизменяемый артефакт"] --> workload["Docker workload"]
     end
+```
 
+```mermaid
+flowchart TB
     subgraph database["Путь приватной базы данных"]
-        direction LR
+        direction TB
         application["Рабочая нагрузка приложения"] --> binding["Managed database binding"] --> identity["Приватная идентичность базы"]
     end
 
     subgraph operations["Путь эксплуатационных сигналов"]
-        direction LR
+        direction TB
         events["События состояния и runtime"] --> notifications["Уведомления"] --> consumers["Status pages / SIEM"]
     end
 ```

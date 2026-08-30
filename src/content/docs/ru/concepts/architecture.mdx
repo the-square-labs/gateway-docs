@@ -14,9 +14,20 @@ Gateway отделяет централизованные намерения и 
 flowchart TB
     users["Пользователи и автоматизация"] -->|"HTTPS / WebSocket"| gateway["Приложение Gateway"]
     gateway <-->|"Долговечное состояние и координация"| state[("PostgreSQL / Redis")]
-    gateway <-->|"Внутренний аутентифицированный gRPC"| relay["Gateway Relay<br/>TCP 9443"]
-    daemons["Управляемые хосты<br/>nginx · Docker · Databases · Build Worker · Monitoring"] -->|"Исходящие аутентифицированные сессии"| relay
+    gateway <-->|"Аутентифицированный служебный канал"| relay["Gateway Relay<br/>TCP 9443"]
+
+    subgraph hosts["Управляемые хосты"]
+        direction LR
+        daemons["Ролевые daemons<br/>nginx · Docker · Databases · Build Worker · Monitoring"]
+        workloads["Приватные endpoints приложений и баз данных"]
+        daemons -.->|"Локальный lifecycle"| workloads
+    end
+
+    relay <-->|"Исходящие управляющие сессии"| daemons
+    relay <-->|"Приватные потоки данных"| workloads
 ```
+
+Приватный payload передаётся напрямую между Relay и локальными endpoints приложения или базы данных. Gateway авторизует и координирует эти пути, но само приложение Gateway не находится в потоке payload.
 
 ## Плоскость управления
 

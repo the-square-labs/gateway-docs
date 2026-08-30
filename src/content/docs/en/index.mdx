@@ -43,22 +43,25 @@ The most important resource chains are:
 ```mermaid
 flowchart TB
     subgraph ingress["Public application path"]
-        direction LR
+        direction TB
         domain["Domain"] --> certificate["TLS certificate"] --> route["Ingress Route"] --> upstream["Application upstream"]
     end
 
     subgraph delivery["Software delivery path"]
-        direction LR
+        direction TB
         repository["Git repository"] --> worker["Build Worker"] --> artifact["Immutable artifact"] --> workload["Docker workload"]
     end
+```
 
+```mermaid
+flowchart TB
     subgraph database["Private database path"]
-        direction LR
+        direction TB
         application["Application workload"] --> binding["Managed database binding"] --> identity["Private database identity"]
     end
 
     subgraph operations["Operational signal path"]
-        direction LR
+        direction TB
         events["Health and runtime events"] --> notifications["Notifications"] --> consumers["Status pages / SIEM"]
     end
 ```
