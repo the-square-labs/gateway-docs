@@ -8,41 +8,91 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
+Этот сценарий проводит approved application artifact до публичного HTTPS endpoint. Он пересекает границы runtime, networking, TLS, identity и operations, поэтому единственный человек, нажимающий **Create**, не должен быть единственным release control. До production назначьте application owner, platform owner, DNS/TLS owner и incident owner.
 
-Этот сценарий создаёт публичное HTTPS-приложение из образа для Container или источника Git.
+Целевой результат — сервис, который здоров с точки зрения пользователя, доступен через нужный domain, наблюдается в Gateway, защищён ожидаемой access policy и откатывается без rebuild плоскости управления.
 
-## 1. Подготовьте вычислительные ресурсы
+## Выберите workload model
 
-Зарегистрируйте Docker Node и Node nginx. Убедитесь, что оба находятся в сети и имеют необходимые порты, хранилище и возможности runtime.
+Используйте resource, соответствующий lifecycle ownership:
 
-## 2. Создайте рабочую нагрузку
+- **Container** подходит простой standalone-службе с явным recreate при замене.
+- **Deployment** нужен для health-checked blue/green rollout и сохранённого rollback slot.
+- **Compose Project** объединяет несколько services, networks и volumes в одно приложение с единым lifecycle immutable revisions.
 
-Для простого сервиса выберите автономный Container, для проверяемого по состоянию сине-зелёного rollout и отката — Deployment, а для многосервисного приложения — Compose Project. Настройте image, command, environment, secrets, порты, restart policy, ограничения и управляемые volumes.
+Не представляйте multi-service application как набор несвязанных standalone containers только ради прямого редактирования каждого child. Это теряет project ownership и усложняет rollback, drift и зависимые изменения.
 
-## 3. Настройте проверку состояния
+До начала утвердите точный image digest или Git commit, resource limits, источники secrets, volume backup policy, database dependencies, health endpoint, public hostname и rollback target.
 
-Выберите опубликованный HTTP Route для проверки состояния рабочей нагрузки. Настройте path, ожидаемый диапазон статусов, необязательное совпадение с телом ответа, timeout, interval и порог медленного ответа. Не публикуйте трафик, пока состояние не станет стабильным.
+## 1. Подготовьте capacity и ownership
 
-## 4. Зарегистрируйте домен и TLS
+Зарегистрируйте или выберите online Docker Node для workload и online Ingress Node для public traffic. Убедитесь, что у каждого правильная role, совместимая version, нужные capabilities и достаточный запас ресурсов. Зелёный статус Node не доказывает, что большой image поместится на диск или requested port свободен.
 
-Добавьте Domain, разместите его на Node nginx, настройте DNS и выпустите или загрузите сертификат.
+Назначьте scopes до release. Developer может нуждаться в source/build visibility, platform operator — в workload lifecycle, ingress operator — в Route access. Не выдавайте system administrator только потому, что workflow пересекает несколько resource types.
+
+Для stateful workloads подтвердите location persistent data и способ восстановления. Deployment rollback меняет application runtime, но не отменяет database writes и не чинит volume, изменённый новой версией.
+
+## 2. Создайте или подключите workload
+
+Создайте Container, Deployment или Compose Project. Настройте immutable image digest или approved Git source, command, environment, protected secrets, restart behavior, resource limits и managed volumes.
+
+Предпочитайте managed volumes или явно утверждённый external storage. Host bind mounts привязывают workload к одному host и не переносятся обычными archive или migration workflows. Не помещайте secrets в ordinary environment values, Compose source, build arguments или image labels.
+
+Если приложение использует database, создайте binding до финальной release validation, чтобы проверить ту же runtime configuration. Managed binding выдаёт workload отдельную database identity и может потребовать обычный recreate или rollout для применения environment и private network.
+
+## 3. Докажите health до public traffic
+
+Определяйте health через пользовательский результат. Наличие process или открытый TCP port слабее HTTP endpoint, подтверждающего готовность приложения и его критичных dependencies.
+
+Для Deployment настройте health path, ожидаемый status range, optional body match, timeout, interval и slow threshold. Сохраняйте предыдущий slot до прохождения health и external verification новой версией. Для Container или Compose service изучите реальный runtime state, logs и application response до создания public Route.
+
+Не направляйте production traffic на приложение, которое ещё выполняет data migration, если migration strategy явно этого не поддерживает. Long-running или destructive migrations требуют отдельного rollback и compatibility plan.
+
+## 4. Подготовьте Domain и TLS
+
+Создайте или выберите Domain, разместите его на нужном Ingress Node и убедитесь, что authoritative DNS указывает на public service address. Выпустите, импортируйте или выберите сертификат для точного hostname или подходящего wildcard.
+
+Разделение ownership полезно: изменение DNS не требует изменения workload, а rollback workload — замены сертификата. Определите владельца renewal uploaded certificates и получателя expiry notifications.
 
 ## 5. Создайте Route
 
-Выберите управляемую рабочую нагрузку как upstream. Используйте Secure Link, если не хотите обычный опубликованный путь управления. Включайте WebSockets или пользовательское поведение пересылки только когда это нужно приложению.
+Создайте Route для Domain и выберите managed workload как upstream. Для Docker Container, Compose service или Deployment Gateway может установить Secure Link, чтобы ingress достигал workload через Relay без host-published application port только ради этого пути.
+
+Выберите application port и upstream scheme, которые реально обслуживает workload. Включите public TLS и **Force HTTPS** по требованиям. WebSockets, prefix behavior, buffering changes, custom timeouts и custom templates включайте только когда это нужно application contract; каждое исключение расширяет поверхность тестирования.
 
 ![Здоровый Ingress Route, направляющий трафик к рабочей нагрузке Docker через Secure Link](/screenshots/product-tour/ingress-route.png)
 
-## 6. Проверьте результат
+Дождитесь успешной reconciliation Route и Ingress configuration. Не редактируйте generated nginx configuration вручную: Gateway является source of truth и восстановит managed state.
 
-- публичные DNS и TLS;
-- состояние приложения и логи;
-- access/error-логи nginx;
-- поведение при перезапуске и откате;
-- доступ пользователей с минимальными правами;
-- доставку уведомлений;
-- наличие резервных копий для stateful volumes и внешних зависимостей.
+## 6. Acceptance test
 
-## 7. Подготовьте откат
+### Пользовательский путь
 
-Для Deployments убедитесь, что предыдущий слот остаётся подходящей целью отката. Для контейнеров на основе image запишите неизменяемый digest. Для Git-сборок оставьте видимыми последний одобренный артефакт и развёрнутый commit.
+- DNS правильно разрешается из внешней сети.
+- TLS доверен и покрывает hostname.
+- Основная страница или API endpoint возвращает ожидаемый release.
+- Login, callbacks, uploads, streaming и WebSockets работают, если используются.
+- Maintenance и access-denied responses осознанны и выглядят ожидаемо.
+
+### Platform path
+
+- Workload сообщает approved digest или commit.
+- Runtime health, logs и resource usage стабильны.
+- Route health и Secure Link runtime healthy.
+- Ingress access/error logs показывают acceptance requests без повторяющихся upstream failures.
+- Restart workload не теряет persistent data или binding configuration.
+- Notifications достигают ожидаемого responder при controlled test event.
+
+### Governance path
+
+- Least-privilege users управляют только назначенными resources.
+- Release, изменение Route и связанные operations присутствуют в Tasks/recent activity и audit history.
+- Backup покрывает stateful volumes и external dependencies, а не только container definition.
+
+## 7. Rollback и граница incident
+
+До promotion запишите last known-good target. Для Deployment подтвердите здоровье предыдущего slot. Для Container сохраните предыдущий immutable image digest и configuration. Для Compose — предыдущую immutable revision. Для Git delivery сохраните approved build и exact source commit.
+
+Если release неисправен, а ingress healthy, откатывайте workload, а не удаляйте Domain, certificate или Route. Используйте Route maintenance, когда traffic нужно остановить с сохранением resource и configuration. Если migration уже изменила данные, одного application rollback может быть недостаточно; следуйте data recovery plan.
+
+После rollback повторите user-facing tests и проверьте logs на запросы, достигшие failed revision. Сохраняйте failed artifact и operation evidence до завершения incident review.

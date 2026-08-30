@@ -8,33 +8,80 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
+Этот сценарий предоставляет приложению private database access без публикации database port и без передачи database owner credential. Gateway создаёт durable **binding** — управляемую связь одной workload с одной database — и выпускает отдельную engine identity для этой связи.
 
-Этот сценарий оставляет базу данных неопубликованной и предоставляет приложению идентичность, выделенную для binding.
+Platform owner управляет connectivity, database owner — data lifecycle и backup, application owner получает только connection material нужной workload. Удаление application access и удаление database намеренно являются разными operations.
 
-## Основной сценарий
+## Решите, подходит ли managed database
 
-1. Зарегистрируйте выделенный database Node.
-2. Откройте **Databases** и создайте PostgreSQL, Redis или ClickHouse из поддерживаемого каталога.
-3. Оставьте **Publish TCP** отключённым, если прямой внешний доступ не является осознанным требованием.
-4. Дождитесь, пока подготовка и проверки состояния достигнут **Ready**.
-5. Откройте целевой Container, Deployment или Compose service и создайте managed database link.
-6. Выберите базу данных и параметры binding.
-7. Пересоздайте или заново разверните рабочую нагрузку, когда интерфейс укажет, что нужно применить материалы окружения или сети.
-8. Выполните запрос из приложения и проверьте эксплуатационные данные binding.
+Используйте Gateway-managed PostgreSQL, Redis или ClickHouse, если Gateway должен владеть provisioning, runtime lifecycle, capacity settings, credentials, monitoring и private workload bindings на database Node. Используйте external connection, если lifecycle database уже принадлежит другой платформе, а Gateway нужен только governed connection record и поддерживаемые operations.
+
+До создания data утвердите:
+
+- database engine и поддерживаемую version;
+- database Node и durable storage location;
+- CPU, memory, swap и storage limits;
+- ownership backup, retention, restore и deletion;
+- необходимость прямого TCP publication;
+- application resource, который получит binding;
+- ожидаемые connection limits и retry behavior приложения.
+
+Удаление managed database — destructive operation: вместе с instance удаляется его managed disk/image или mount. Удаление connection или binding — другое действие. Явно разделите их в operator permissions и runbooks.
+
+## 1. Подготовьте database Node
+
+Зарегистрируйте dedicated **Databases** Node и проверьте storage preflight. Database Nodes используют fixed-size managed storage с enforcement на host boundary. Installer проверяет local Docker Engine и полный lifecycle loop-device, mount, write, growth, resize, unmount и detach, который используют managed instances.
+
+VM или bare-metal host обычно предоставляет эти capabilities напрямую. LXC guest требует явных loop-device и mount permissions от outer host; при отсутствии нужной boundary Gateway не переходит на unbounded volume.
+
+Node должен быть online, иметь достаточно unallocated storage для requested database и документированный backup destination. Не размещайте application containers на database Node только потому, что внутри оба используют Docker.
+
+## 2. Создайте private database
+
+Откройте **Databases**, выберите поддерживаемые engine/version, database Node и resource/storage limits. Оставьте **Publish TCP** выключенным, если direct client access не является reviewed requirement. TCP publication и host port фиксируются при provisioning; изменение endpoint требует recreate managed instance.
+
+Дождитесь **Ready** после provisioning и health checks. Проверьте engine, Node, storage capacity, TLS state и monitoring. Не продолжайте из состояния merely created или starting.
+
+Owner credential, доступный через **Reveal credentials**, предназначен для контролируемого administration и recovery. Его не следует копировать во все applications.
+
+## 3. Создайте application binding
+
+Откройте target Container, Deployment или Compose service и создайте managed database link. Выберите database и поддерживаемые connection variables/options. Gateway создаёт отдельный PostgreSQL role, Redis ACL user или ClickHouse user для binding.
+
+Для standalone Container Gateway подключает private binding network и использует обычный recreate для применения connection environment. Для Deployment обновляется desired configuration и выполняется rollout slot, чтобы будущие blue и green instances получали тот же connector endpoint. Compose связывает binding с owning service, а не ephemeral child container name.
+
+Применяйте или пересоздавайте workload только когда UI сообщает, что изменённая runtime configuration этого требует. Desired state binding durable; normal workload recreation не должен создавать нового engine user каждый раз.
 
 ![Контейнер приложения со здоровым подключением к управляемой базе данных](/screenshots/product-tour/container-secure-link.png)
 
-## Ожидаемые гарантии
+## 4. Проверьте из приложения
 
-- Рабочая нагрузка не получает учётные данные владельца базы данных.
-- Каждый binding получает отдельную engine identity.
-- Пересоздание рабочей нагрузки сохраняет binding.
-- Удаление binding выводит его identity из эксплуатации, не удаляя базу данных.
-- Сбои базы данных или Relay блокируют новые подключения и восстанавливаются через реконсиляцию.
+Через приложение или контролируемую диагностику внутри workload откройте connection и выполните безопасную engine-specific operation. Проверьте:
 
-## Не делайте этого
+- hostname, port, TLS mode и database name приходят из binding, а не из скопированных owner credentials;
+- connection работает без публикации database host port;
+- engine видит binding-specific user;
+- connection/query behavior соответствует pool settings приложения;
+- binding runtime telemetry становится healthy и показывает ожидаемые streams/traffic;
+- workload logs не печатают secret values.
 
-- Не копируйте учётные данные из внутренних контейнеров.
-- Не изменяйте принадлежащие Gateway сети binding или метаданные слушателя через API жизненного цикла Docker.
-- Не публикуйте порт базы данных только для диагностики приватного binding.
-- Не удаляйте роли базы данных вручную, если только runbook удаления Gateway явно не требует восстановления.
+Затем пересоздайте workload через обычный Gateway lifecycle и повторите query. Во время acceptance test перезапустите Docker daemon или reconnect Node и подтвердите, что reconciliation восстанавливает listener и binding без создания дополнительной role. Gateway application restart не следует считать Relay maintenance: established data-plane behavior принадлежит long-lived Relay contract.
+
+## Гарантии и ограничения
+
+- Workload не получает database owner credential.
+- Каждый binding имеет отдельную engine identity с независимым revoke.
+- Workload recreation сохраняет desired binding ownership.
+- Binding deletion отзывает principal без удаления database.
+- New admissions fail closed, если необходимый database, daemon или Relay path недоступен.
+- Reconciliation восстанавливает daemon-owned listener и проверяет существующую engine identity вместо создания orphan users при transient failures.
+
+Private binding не является backup, replication или high-availability системой. Availability database всё ещё зависит от managed instance, Node, storage и recovery design. Relay updates — отдельное data-plane maintenance и может прерывать tunnel sessions; application/control-plane updates и Relay maintenance — разные события.
+
+## Сбой и безопасное восстановление
+
+Если binding unhealthy, сначала определите недоступный слой: application workload, Docker Node, daemon-owned listener, Relay, database Node, database instance, engine identity или TLS. Изучите bounded operation history и logs до изменения state.
+
+Предпочитайте reconciliation или targeted retry после исправления root cause. Не удаляйте вручную Gateway-owned networks, listeners или engine users: это превращает recoverable outage в ownership mismatch или orphaned cleanup problem. Не публикуйте database port только для обхода private-link incident.
+
+Если нужно убрать application access, удалите binding и подтвердите revoke его engine principal. Если требуется удалить саму database, проверьте backup/retention requirements и используйте managed database deletion flow, понимая, что managed storage будет удалён. Эти решения должны проходить отдельное change approval.

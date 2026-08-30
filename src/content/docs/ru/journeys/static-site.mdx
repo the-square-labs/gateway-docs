@@ -8,27 +8,81 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
+Gateway Pages публикует static site как immutable artifact с явным promotion pointer. **Deployment** — один фиксированный набор files; **Tag** — перемещаемое имя, например `production`; **Route** направляет public domain на этот Tag. Такое разделение позволяет проверить release и выполнить rollback перемещением pointer, не изменяя files на месте.
 
-## Путь загрузки артефакта
+Pages предназначен для static output: HTML, JavaScript, CSS, images, fonts и других files, обслуживаемых nginx. Он не предоставляет server-side application runtime. Framework может использоваться во время build, но результат должен быть static artifact в настроенном artifact directory.
 
-1. Включите Pages в настройках функций.
-2. Создайте Pages Project и выберите размещение nginx.
-3. Загрузите собранный статический артефакт через resumable deploy API или удалённый MCP upload workflow.
-4. Завершите неизменяемый Deployment.
-5. Переместите системный `latest` Tag или пользовательский Tag на Deployment.
-6. Создайте Pages Route для публичного домена и выбранного Tag.
-7. Проверьте кэширование, конфигурацию runtime и откат, переместив Tag.
+Landing Good Gateway и documentation portal Good Gateway — примеры сайтов, которые могут работать на Gateway Pages. Использование платформы для собственных public properties является полезным operational proof, но эти projects всё равно должны проходить те же access, review и rollback controls, что и сайты клиентов.
 
-## Путь сборки Git
+## Определите release contract
 
-На поддерживаемых планах подключите репозиторий, обнаружьте `package.json`, выберите package manager и команду сборки, настройте Build Secrets и опубликуйте одобренный артефакт в запрошенный Tag.
+До создания project решите:
+
+- какой Ingress Node или placement владеет static files;
+- кто может upload или build Deployments;
+- какой Tag представляет production и кто может его перемещать;
+- какие Domain, certificate и Route публикуют Tag;
+- запускают ли source changes automatic builds или automatic deployment;
+- какие client-visible runtime values разрешены;
+- retention requirements для previews и rollback Deployments.
+
+Project владеет deployment history, Tags, runtime configuration, Routes и retention behavior. Source repository, если используется, владеет source code, но не управляет public Route напрямую.
+
+## Подготовьте static artifact
+
+Соберите сайт в clean environment и убедитесь, что output directory содержит entry documents и все referenced assets. Проверьте client-side routing и base paths через static server, а не development server. Dev server может скрывать missing files, server-only rendering или неверные asset URLs.
+
+Не включайте source maps, test fixtures, environment files, private repository metadata, credentials, internal topology или build caches, если они не должны быть public. Любой file внутри Pages artifact следует считать downloadable public content, даже если UI не содержит на него ссылки.
+
+## Путь ручной загрузки
+
+1. Включите Pages в feature settings и подтвердите, что текущий plan разрешает Pages management.
+2. Создайте Pages Project и выберите eligible Ingress Node.
+3. Настройте project quotas, retention и access до upload production artifact.
+4. Загрузите artifact через resumable deployment API или authenticated remote MCP upload workflow.
+5. Finalize upload. Gateway проверит данные и создаст новый immutable Deployment вместо изменения старого.
+6. Откройте immutable preview и проверьте exact artifact.
+7. Переместите системный `latest` Tag или custom release Tag на Deployment только после approval.
+8. Создайте или обновите Pages Route для public Domain и selected Tag.
+
+Interrupted upload не является release. Возобновите или повторите upload через поддерживаемый workflow и finalize его один раз; не копируйте partial files вручную на Ingress Node.
+
+## Путь Git build
+
+На поддерживаемых планах подключите allowlisted GitLab, GitHub или generic Git repository к Pages Project. Выберите branch и application root, разрешите Gateway обнаружить `package.json` при необходимости и настройте package manager, Node version, build script и artifact directory.
+
+Build выполняется на isolated Build Worker. Добавляйте source-scoped Build Secrets только для build-time access; они не должны попасть в static output. До publication проверьте exact commit, logs, vulnerability/policy result при наличии, worker и produced artifact.
+
+Разделяйте automatic build и automatic deploy. Automatic build может готовить preview candidate для каждого утверждённого source event. Automatic deploy перемещает Tag и меняет содержимое Route; включайте его только когда branch protections и acceptance checks соответствуют этому риску.
 
 ![Pages Project с готовыми неизменяемыми Deployments и их preview URL](/screenshots/product-tour/pages-deployments.png)
 
-## Конфигурация runtime
+## Runtime configuration
 
-Pages может отдавать публичную конфигурацию runtime из `/_gateway/pages/config.js` как `window.runtime.config`. Она общедоступна, ограничена размером 64 KiB и отдаётся с `no-store`. Никогда не помещайте в неё секреты.
+Pages может отдавать client-visible runtime configuration из `/_gateway/pages/config.js` как `window.runtime.config`. Значение public, ограничено 64 KiB и обслуживается с `no-store`. Объект `Default` применяется обычно, а Tag-specific whole-object overrides могут заменять его для routed Tag. Immutable previews используют `Default`.
 
-## Откат
+Используйте runtime configuration для non-secret values, которые действительно различаются между средами: public API origins, presentation feature flags или analytics identifiers. Никогда не помещайте туда passwords, API keys, private endpoints, signing material, customer-only data или network topology.
 
-Переместите Tag Route обратно на заведомо исправный неизменяемый Deployment. Не изменяйте старый артефакт на месте.
+Изменение runtime configuration не создаёт новый Deployment и не меняет artifact hash. Сохраняйте configuration backward-compatible, пока Tag может перемещаться между старыми и новыми releases.
+
+## Опубликуйте Domain
+
+Создайте или выберите Domain и certificate, затем создайте Pages Route с target на выбранные Project и Tag. Routes указывают на Tags, а не raw Deployments. Поэтому promotion и rollback остаются явными и записанными operations.
+
+Проверьте DNS, TLS, entry document, nested assets, client-side navigation, cache behavior, `window.runtime.config` и error pages. Тестируйте из clean browser session и внешней сети. Immutable preview доказывает artifact; public Route дополнительно доказывает DNS, TLS, Tag selection и Ingress materialization.
+
+## Критерии успеха
+
+- Pages Deployment имеет статус **Ready** и immutable preview.
+- Нужный Tag указывает на reviewed Deployment.
+- Public Route обслуживает этот Tag через trusted TLS.
+- Static assets и client-side routes работают при прямом открытии URL.
+- Artifact и runtime configuration не содержат secrets или internal-only files.
+- При Git delivery видны deployment commit и build record.
+- Предыдущий known-good Deployment остаётся доступен для rollback.
+
+## Rollback и cleanup
+
+Для rollback переместите public Tag на предыдущий verified Deployment. Затем повторно проверьте Route, assets, runtime configuration и browser behavior. Не редактируйте и не заменяйте failed Deployment: его immutable record нужен для диагностики и доказывает, что было выпущено.
+
+Удаление Deployment может убрать rollback target. Сначала проверьте Tag references и retention requirements. Удаление Tag или Route меняет reachability, но не immutable artifact. Отключайте Pages globally только по явному product decision; скрытие navigation не заменяет decommissioning public Routes и сохранение required evidence.

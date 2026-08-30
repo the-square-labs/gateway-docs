@@ -8,47 +8,88 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
+Plan the control plane separately from the hosts that run customer workloads. Gateway coordinates identity, desired state, certificates, operations, and audit history; it does not remove the need to size, patch, back up, and monitor the underlying Linux hosts.
 
-Plan the control plane separately from managed workload hosts.
+## Decide the deployment shape
 
-## Gateway host
+A small evaluation can place the Gateway application and its internal services on one Linux host. Production environments should still treat that host as a control-plane dependency with explicit ownership, durable storage, a recovery procedure, and monitored capacity. Managed workload roles can be enrolled later and may live on separate physical hosts, virtual machines, or appropriately isolated system containers.
 
-Use a supported Linux host with Docker Engine and Docker Compose. Reserve persistent storage for PostgreSQL, uploaded artifacts, certificates, configuration, and optional structured logs. The exact capacity depends on retention, Pages artifacts, build volume, and activity history; production installations should monitor disk growth and back up both data and encryption keys.
+Before installation, record:
 
-The public installation requires:
+- the canonical HTTPS URL users and managed nodes will trust;
+- who owns DNS, certificates, authentication, backups, and upgrades;
+- which networks may reach the web application and Relay;
+- which node roles are needed immediately and which can be added later;
+- the required product plan and feature entitlements;
+- the recovery objective for Gateway data and encryption material.
 
-- a stable canonical URL;
-- inbound HTTP/HTTPS for the web application;
-- inbound `9443/tcp` to the Relay when managed nodes connect over the public network;
-- correct system time and working DNS;
-- outbound access to configured identity, ACME, source-control, registry, update, and AI providers.
+Avoid designing around temporary IP addresses or a hostname that will be renamed after onboarding. The canonical URL participates in browser security, redirects, generated commands, and integrations.
 
-## Node roles
+## Host and capacity decision
+
+Provide a supported Linux host with root access or working `sudo`. Docker is not a prerequisite for the public installer: when Docker Engine or the Compose v2 plugin is absent, the installer installs and configures them from Docker's official package repositories. Automatic Docker installation supports Debian, Ubuntu, Fedora, CentOS, and RHEL families. If Docker is already present, the installer validates that the engine is reachable and Compose v2 is available.
+
+Use these base sizing profiles for the control plane:
+
+| Profile | CPU | Memory | Free SSD capacity |
+| --- | ---: | ---: | ---: |
+| Minimum | 2 vCPU | 4 GB RAM | 32 GB |
+| Recommended | 4 vCPU | 8 GB RAM | 64 GB |
+
+The disk figures are free capacity after the operating system is installed. Gateway-managed local ClickHouse logging needs an additional 32 GB minimum or 128 GB recommended; actual usage depends on ingest volume and retention. External ClickHouse does not add local logging storage to the Gateway host.
+
+Reserve persistent storage for Gateway PostgreSQL data, Redis persistence where configured, uploaded artifacts, certificates, configuration, the internal registry, and optional structured logs. Git-source builds need additional registry capacity because successful, active, rollback, in-progress, and manually pinned artifacts are retained.
+
+At minimum, ensure that the host also has:
+
+- enough headroom for the application, PostgreSQL, Redis, and Relay without sustained swap pressure;
+- durable storage with free-space monitoring and a tested backup destination;
+- correct system time and reliable DNS resolution;
+- an operating system update process that does not silently replace persistent volumes;
+- access to the current signed Gateway release and license service.
+
+Do not store the only copy of the backup or encryption key on the Gateway host. A database backup without the corresponding secret-encryption material is not a complete recovery set.
+
+## Operator detail: network access
+
+The public installation normally needs inbound HTTP/HTTPS for the user interface and API. Managed nodes connect through Relay, which requires reachable `9443/tcp` when nodes are outside the local network. Restrict administrative access at the network edge when possible, but do not place a proxy or firewall in the Relay path unless it supports the required long-lived connections.
+
+Outbound access depends on enabled features. Typical destinations include identity providers, ACME and DNS providers, source-control systems, container registries, release and license services, email/webhook endpoints, SIEM receivers, and configured AI providers. Build Workers may need a different and more restrictive egress policy than the control plane.
+
+Review [Ports and network](../reference/ports-and-network.mdx) before changing firewalls. Validate paths from the actual host and network namespace that will initiate the connection; a successful request from an administrator laptop is not evidence that Gateway or a node can reach the same endpoint.
+
+## Node roles and trust boundaries
 
 Choose only the roles you need:
 
-- **nginx node:** ingress, TLS materialization, Pages, logs, and metrics;
-- **Docker node:** containers, Deployments, Compose, files, logs, and runtime health;
-- **database node:** managed PostgreSQL, Redis, or ClickHouse instances;
-- **Build Worker:** isolated BuildKit/containerd execution without a Docker Engine socket;
-- **monitoring node:** monitoring-specific collection;
-- **Relay Pool member:** optional data-plane resilience and capacity.
+- **nginx node:** ingress, TLS materialization, Pages, access/error logs, and traffic metrics;
+- **Docker node:** Containers, Deployments, Compose Projects, files, logs, and runtime health;
+- **database node:** managed PostgreSQL, Redis, or ClickHouse instances and their durable storage;
+- **Build Worker:** isolated BuildKit/containerd execution without exposing a Docker Engine socket;
+- **monitoring node:** monitoring-specific collection for supported targets;
+- **Relay Pool member:** additional Secure Link data-plane capacity and resilience.
 
-Do not place Build Workers on hosts containing unrelated workloads or reusable credentials. Treat their outer VM or unprivileged container as the security boundary.
+Role separation is an operational and security decision. A database node should have storage and backup policies appropriate for stateful services. A Build Worker processes repository-controlled build input and should not share a host with unrelated workloads or reusable infrastructure credentials. Treat the worker's outer VM or unprivileged system container as the security boundary; the inner build sandbox is defense in depth, not the only boundary.
 
 ## DNS and certificates
 
-Decide whether Gateway will manage DNS through Cloudflare or only validate externally managed records. HTTP-01 requires public port 80 on the assigned ingress node. DNS-01 requires a configured DNS provider integration.
+Decide whether Gateway will manage DNS through Cloudflare or whether records remain externally managed. HTTP-01 certificate issuance requires public port 80 on the assigned ingress node. DNS-01 requires a configured provider integration with the minimum permissions necessary to create challenge records. Uploaded certificates require an owner for renewal and expiry monitoring.
 
-## Production decisions to make first
+Use a hostname already covered by a trusted certificate for the initial Gateway URL. Browser warnings during bootstrap encourage unsafe workarounds and can obscure real proxy or hostname problems.
 
-1. Canonical public URL and TLS termination model.
-2. Authentication methods and first administrator ownership.
-3. Backup destination and recovery owner.
-4. Node role separation and firewall policy.
-5. Domain/DNS operating model.
-6. Required plan entitlements.
-7. Logging retention and SIEM requirements.
-8. Whether Git builds require dedicated Build Workers.
+## Readiness checklist
+
+Before running the installer, confirm all of the following:
+
+1. The canonical hostname resolves to the intended endpoint.
+2. TLS termination and forwarded-header ownership are documented.
+3. Persistent storage and an off-host backup destination exist.
+4. Firewall rules cover the web application, Relay, and required outbound services.
+5. The first administrator and a second recovery owner are identified.
+6. Node roles and host isolation are intentional.
+7. Retention, audit, notification, and SIEM expectations are documented.
+8. Required plan entitlements are available.
+
+If one of these decisions is unknown, stop before onboarding production workloads. It is much safer to change topology, DNS, or authentication before nodes and integrations depend on them.
 
 See [Ports and network](/en/reference/ports-and-network/) before changing firewalls.

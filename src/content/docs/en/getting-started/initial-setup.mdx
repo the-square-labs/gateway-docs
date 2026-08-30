@@ -8,34 +8,66 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
+The setup wizard establishes the first administrator and the initial security posture of the Gateway instance. Complete it from the canonical HTTPS URL after the control-plane services are healthy. Do not run the wizard through a temporary IP address and then switch to a different hostname: browser cookies, redirects, generated links, and identity-provider configuration depend on a consistent origin.
 
-The setup wizard establishes the first administrator and instance-wide security settings. Complete it from the canonical Gateway URL.
+The person completing setup temporarily owns the most privileged operation in the installation. Use a controlled administrator workstation, avoid screen sharing, and keep the installer-provided setup code private until it has been consumed.
 
-## Happy path
+## Before opening the wizard
 
-1. Enter the installer-provided setup code.
-2. Confirm the public URL and network settings.
+Confirm that:
+
+- the canonical URL loads without a certificate warning;
+- the Gateway application, PostgreSQL, Redis, and Relay are healthy;
+- the intended authentication provider is reachable from both the browser and Gateway;
+- outbound email works before selecting email one-time codes as a required login path;
+- the first administrator's address and identity are correct;
+- a second trusted person or documented break-glass procedure will provide recovery coverage.
+
+If OIDC will be the primary method, create the client in the identity provider using the exact redirect URI shown by Gateway. Scheme, hostname, path, and port must match. Do not guess the callback or normalize it through an extra proxy redirect.
+
+## Complete initial setup
+
+1. Open the canonical Gateway URL and enter the valid setup code.
+2. Review the detected public URL and network settings. Stop if the displayed external origin is not the address users will open.
 3. Configure at least one authentication method: OIDC, local password, or email one-time code.
-4. Create the first administrator.
-5. Configure MFA when required by policy.
-6. Review feature settings and complete setup.
-7. Sign in through the normal login page and store recovery material securely.
+4. Create the first administrator and verify the account identifier before submitting.
+5. Configure MFA where required by organizational policy.
+6. Review the feature and instance settings presented by the wizard. Enable only features for which their infrastructure and ownership are ready.
+7. Complete setup and sign in through the normal login page rather than continuing to rely on bootstrap state.
+8. Store recovery material in the approved secrets system and invalidate any temporary copy.
 
-## Authentication choices
+Successful completion consumes the bootstrap path. The setup code is not an ongoing administrative credential and should not be retained as a substitute for a recovery account.
 
-- **OIDC:** recommended when an organization already operates an identity provider. Redirect URIs must match exactly.
-- **Local password:** useful for self-contained installations and break-glass access. Apply strong password and MFA policy.
-- **Email one-time code:** requires working outbound email configuration before it can be relied on.
-- **Passkeys:** enrolled after the primary account exists and used as an MFA-capable authentication factor.
+## Choose authentication deliberately
 
-Gateway does not implement SCIM. Do not plan provisioning or deprovisioning around a nonexistent SCIM connector.
+**OIDC** is generally the primary choice when an organization already operates an identity provider. It centralizes identity lifecycle and policy, but Gateway still applies its own groups and scopes after authentication. Test sign-in and sign-out, claim mapping, account matching, and provider downtime behavior before making it the only administrative path.
 
-## After setup
+**Local password** is useful for self-contained installations and a controlled break-glass account. Apply a strong password and MFA policy, restrict who knows that the account exists, and test it periodically without using it for routine work.
 
-- Create a second administrative recovery path.
-- Verify **Profile > Authorizations** and revoke any bootstrap session no longer needed.
-- Configure backups and test that encrypted secrets can be restored with the preserved master key.
-- Create least-privilege groups before onboarding ordinary users.
-- Add the first managed node.
+**Email one-time code** depends on reliable outbound email and correct delivery configuration. A successful provider test is not enough: verify that an actual code reaches the intended mailbox and that delivery failure does not lock out every administrator.
 
-If setup fails, confirm the code is still valid, the canonical URL is correct, migrations completed, and the browser reaches the same origin used by Gateway cookies.
+**Passkeys** are enrolled after the primary account exists and can act as a strong MFA-capable factor. Register more than one suitable authenticator when policy permits and document account recovery if a device is lost.
+
+Gateway does not implement SCIM. Authentication through OIDC does not automatically mean that users or groups are provisioned and deprovisioned through SCIM. Plan user lifecycle around the supported Gateway administration and identity contracts.
+
+## Establish the administrative baseline
+
+Immediately after the first successful login:
+
+- create or verify a second administrative recovery path;
+- open **Profile > Authorizations**, review active sessions, and revoke bootstrap or test sessions no longer required;
+- configure least-privilege groups before inviting normal users;
+- verify license status and enabled feature settings;
+- configure notifications for control-plane and node failures;
+- create an encrypted backup and confirm that the secret-encryption key is included in the recovery procedure;
+- record the canonical URL, identity-provider ownership, and emergency access process in the operator runbook.
+
+Do not give ordinary operators the system administrator role merely to get started. Resource-scoped access can be introduced before the first production workload and is easier to reason about than removing broad access later.
+
+## Verify and recover safely
+
+Use a fresh private browser session to confirm the normal login path. Verify that the first administrator can sign in, complete MFA, reach **Profile**, and see only the expected authorizations. If OIDC is configured, also confirm logout and a second sign-in so a cached bootstrap session does not hide a redirect problem.
+
+If the wizard rejects the setup code, confirm that it has not expired or already been consumed and that the browser is reaching the same instance that generated it. If the wizard loops or loses the session, investigate canonical URL, forwarded host/scheme, cookie security, and time synchronization. If it fails after writing part of the configuration, inspect application and migration logs before retrying; do not delete the database or generate a new installation merely to clear the page.
+
+Once normal administration and recovery are verified, continue with [Add your first node](first-node.mdx).

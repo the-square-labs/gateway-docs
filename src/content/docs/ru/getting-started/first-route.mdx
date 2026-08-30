@@ -8,29 +8,80 @@ status: ready
 lastReviewed: 2026-08-30
 ---
 
+**Route** — это политика, которая соединяет один или несколько публичных hostnames с upstream-сервисом через Ingress Node. Публикация Route затрагивает несколько владельцев: application owner подтверждает upstream и health behavior, platform owner выбирает placement и traffic policy, а владелец DNS/TLS доказывает, что клиенты безопасно достигнут нужного endpoint.
 
-Этот быстрый старт предполагает, что Node nginx находится в сети, а приложение доступно с этого Node.
+Критерий успеха — HTTPS-запрос, который разрешается в назначенный Ingress Node, получает правильный сертификат, достигает нужного приложения, наблюдается и может быть безопасно откатан. Сохранённая форма ещё не означает успешную публикацию.
 
-## Основной сценарий
+## Какие ресурсы участвуют
+
+Gateway разделяет ответственность:
+
+- **Domain** хранит hostname и placement на Ingress.
+- **SSL Certificate** предоставляет TLS-материал и ownership renewal.
+- **Route** задаёт forwarding, access, maintenance и health behavior.
+- **Upstream** — приложение, получающее запрос. Это может быть адрес, введённый вручную, управляемый Docker resource через Secure Link или Pages Deployment, выбранный через Tag.
+
+Такое разделение позволяет менять revision приложения без пересоздания DNS или сертификата. Одновременно это означает, что до production должны согласоваться все четыре части.
+
+## До создания Route
+
+Убедитесь, что:
+
+- Ingress Node находится **Online**, владеет нужным public service address и может принимать порты 80/443 при необходимости;
+- приложение существует и отвечает по выбранным scheme и port;
+- hostname утверждён и владелец DNS доступен;
+- подходящий сертификат active или существует понятный путь issuance;
+- у оператора есть права создать Domain, выбрать сертификат и создать Route;
+- известны health path, ожидаемый status ответа, необходимость WebSocket, request limits и access policy.
+
+Если upstream приватный, решите, должен ли Route использовать Gateway-managed Secure Link. Secure Link переносит traffic через Relay data plane без публикации обычного host port только ради ingress. Он не исправляет unhealthy application и не обходит ownership workload.
+
+## Опубликуйте Route
 
 1. Откройте **Ingress > Domains** и добавьте hostname.
-2. Назначьте его Node nginx, который будет принимать публичный трафик.
-3. Настройте DNS через интеграцию Cloudflare или самостоятельно обновите внешние DNS-записи.
-4. Откройте **Ingress > SSL Certificates** и выпустите или загрузите сертификат.
-5. Откройте **Ingress > Routes** и создайте proxy Route для домена.
-6. Выберите ручной upstream или управляемую Gateway-цель типа Docker/Compose/Deployment.
-7. Включите TLS и выберите сертификат.
-8. Сохраните изменения, дождитесь реконсиляции nginx и проверьте публичный URL.
+2. Назначьте его Ingress Node, который будет принимать публичный traffic.
+3. Настройте DNS через Cloudflare integration или создайте нужную внешнюю DNS-record. Дождитесь, пока authoritative answer начнёт указывать на ожидаемый service address.
+4. Откройте **Ingress > SSL Certificates** и выпустите, импортируйте или выберите сертификат, покрывающий точный hostname или подходящий wildcard.
+5. Откройте **Ingress > Routes** и выберите **Add Route**.
+6. Выберите Domain и forwarding target. Для управляемой Docker-цели выберите resource и application port; lifecycle Secure Link принадлежит Gateway.
+7. Выберите HTTP или HTTPS для upstream согласно протоколу самого приложения. Эта настройка не зависит от public TLS termination.
+8. Включите public TLS и выберите сертификат. Включите **Force HTTPS**, если plain HTTP должен перенаправляться, а не отдавать содержимое.
+9. Включайте WebSocket support только если приложение использует upgrade connections. Применяйте Access List, rate policy или custom template только когда сервису это нужно и template заведомо совместим.
+10. Сохраните Route и дождитесь, пока Gateway отрендерит, проверит и применит nginx configuration.
 
 ![Диалог создания Route с Docker-целью, портом приложения и настройками TLS](/screenshots/product-tour/route-create.png)
 
 ## Проверьте результат
 
-- DNS разрешает имя в адрес назначенного Ingress Node.
-- Цепочка сертификата доверенна и покрывает hostname.
-- Route сообщает о работоспособности.
-- Трафик WebSocket работает, если он включён.
-- Правила Access List работают как задумано.
-- На странице сведений о Node nginx отображается применённая ревизия конфигурации.
+### Пользовательские проверки
 
-Для подключения приватной рабочей нагрузки продолжите с раздела [Secure upstreams](/ru/ingress/secure-upstreams/). Для полного пути через несколько ресурсов используйте [Публикацию приложения](/ru/journeys/publish-application/).
+- Public DNS разрешается в назначенный Ingress address из нескольких сетей.
+- HTTPS response предъявляет доверенный сертификат, покрывающий hostname.
+- Возвращается ожидаемая страница приложения или API response.
+- HTTP перенаправляется на HTTPS, если включён **Force HTTPS**.
+- Browser login, callbacks, streaming responses и WebSockets работают, если приложение их использует.
+
+### Проверки Gateway
+
+- Route включён, а его health state соответствует прямой проверке приложения.
+- Показанный target — именно выбранный resource и port, а не stale container или manual address.
+- Ingress Node сообщает о валидной применённой nginx configuration.
+- Access/error logs содержат тестовый запрос без повторяющихся upstream failures.
+- Secure Link runtime healthy, если он используется целью.
+- Access List и rate controls пропускают и отклоняют ожидаемых клиентов.
+
+Зелёный ответ приложения не доказывает корректность policy. При access controls проверьте один разрешённый и один запрещённый путь, а для WebSocket — реальное соединение, а не только начальный HTTP handshake.
+
+## Сбои и восстановление
+
+**DNS разрешается неверно:** исправьте authoritative record и дождитесь обычного cache expiry. Не меняйте Route target для компенсации DNS error.
+
+**Сертификат отклоняется:** проверьте hostname coverage, chain, validity period и deployment на выбранный Ingress Node. Не отключайте TLS verification в клиентах как workaround.
+
+**Gateway не применяет nginx configuration:** изучите validation error до retry. Custom template, несовместимая опция, duplicate hostname или недоступный managed target могут сделать desired configuration невалидной. Gateway сохраняет ownership последнего применённого состояния; исправляйте input, а не редактируйте generated nginx files вручную.
+
+**Secure Link target недоступен:** проверьте состояние workload и соответствующих Nodes, а также Relay health. Публикация container port как emergency workaround меняет security model и должна быть отдельным осознанным решением.
+
+**Опубликован плохой release:** при необходимости включите Route maintenance или верните upstream к последнему known-good Deployment, image digest, Compose revision или Pages Tag. Для application rollback обычно не нужно удалять Route и сертификат.
+
+Подробности приватных targets приведены в [Secure upstreams](/ru/ingress/secure-upstreams/). Полный путь от workload до public URL описан в [Публикации приложения](/ru/journeys/publish-application/).
