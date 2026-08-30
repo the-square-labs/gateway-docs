@@ -44,7 +44,9 @@ Confirm that the submitted YAML matches the running application's services, volu
 
 Editing configuration creates a new immutable revision. Use **Pull & Apply** to pull required images and apply the active revision, **Start** or **Stop** for project lifecycle, and **Change revision** to reapply an earlier valid revision. Inactive revisions can be removed when no operation uses them; the active revision cannot be deleted.
 
-{/* screenshot: id=compose-project-revision; viewport=1440x900; description=Managed Compose Project with revision validation, diagnostics, services, and Pull & Apply action; redact=project-name,repository-url,image-registry,environment-values,secret-names */}
+![Managed Compose Project overview with desired state, runtime state, drift, and recent operations](/screenshots/product-tour/compose-overview.png)
+
+![Compose service monitoring with resource metrics and the live process table](/screenshots/product-tour/compose-monitoring.png)
 
 Lifecycle work is represented by durable operations and Tasks. Reloading the page does not cancel an operation. If cancellation is available, refresh the project and daemon-reported state before starting a replacement action.
 

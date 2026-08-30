@@ -44,7 +44,9 @@ Gateway обнаруживает внешние Docker Compose-приложен�
 
 Редактирование конфигурации создаёт новую неизменяемую ревизию. Используйте **Pull & Apply**, чтобы загрузить нужные образы и применить активную ревизию, **Start** или **Stop** — для управления жизненным циклом проекта, а **Change revision** — чтобы повторно применить прежнюю корректную ревизию. Неактивные ревизии можно удалить, если ни одна операция их не использует; активную ревизию удалять нельзя.
 
-{/* screenshot: id=compose-project-revision; viewport=1440x900; description=Managed Compose Project with revision validation, diagnostics, services, and Pull & Apply action; redact=project-name,repository-url,image-registry,environment-values,secret-names */}
+![Обзор управляемого Compose Project с желаемым состоянием, runtime, drift и последними операциями](/screenshots/product-tour/compose-overview.png)
+
+![Мониторинг сервиса Compose с метриками ресурсов и таблицей текущих процессов](/screenshots/product-tour/compose-monitoring.png)
 
 Работа жизненного цикла представлена долговечными операциями и Tasks. Перезагрузка страницы не отменяет операцию. Если доступна отмена, обновите сведения о проекте и состояние, сообщённое daemon, до запуска заменяющего действия.
 
