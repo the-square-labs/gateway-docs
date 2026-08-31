@@ -6,9 +6,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
+    "dev": "node scripts/run-astro.mjs dev",
+    "start": "node scripts/run-astro.mjs dev",
+    "build": "node scripts/run-astro.mjs build",
     "check": "astro check && pnpm run check:content",
     "check:content": "node scripts/validate-content.mjs",
     "preview": "astro preview",

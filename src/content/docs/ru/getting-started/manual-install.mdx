@@ -1,0 +1,271 @@
+---
+title: Ручная установка
+description: Установите Gateway из проверенных файлов без запуска публичного установочного скрипта.
+section: Начало работы
+order: 6
+audience: [operator, power-user]
+status: ready
+lastReviewed: 2026-08-31
+---
+
+import LatestGatewayVersion from '../../../../components/LatestGatewayVersion.astro';
+
+Этот способ создаёт ту же основу Gateway, что и публичный установщик, но не скачивает и не запускает сценарий командной оболочки. Вы сами устанавливаете Docker, выбираете версию Gateway, читаете Compose-файл, создаёте секреты и запускаете службы. Для строгих правил выпуска остаётся необязательная проверка контрольных сумм.
+
+Ручная установка подходит компаниям, правила которых требуют отдельно проверить каждый скачанный файл и каждую команду. Она намеренно подробнее [рекомендуемой установки](/ru/getting-started/install/).
+
+:::caution
+Используйте руководство, соответствующее устанавливаемому выпуску Gateway. Состав и настройки служб могут меняться между выпусками. При ручном обновлении нужно изучить изменения основы; простой переход на другую версию не является поддерживаемой процедурой обновления.
+:::
+
+## Что будет установлено
+
+Compose-проект запускает пять служб на отдельном сервере Gateway:
+
+- **приложение Gateway** — веб-интерфейс, API, координация и постоянное состояние Gateway;
+- **Gateway Relay** — защищённый канал, через который подключаются управляемые Node;
+- **PostgreSQL** — основная база данных Gateway;
+- **Redis** — краткоживущее состояние координации и очередей;
+- **приватный реестр образов** — хранилище для поддерживаемых сценариев сборки Gateway.
+
+Gateway намеренно получает доступ к Docker-сокету сервера для подписанных обновлений, восстановления, обслуживания и локальных управляемых служб. Используйте отдельную доверенную виртуальную машину или сервер. Не размещайте там посторонние приложения и их учётные данные.
+
+## 1. Подготовьте сервер
+
+Начните с поддерживаемого Linux-сервера, который соответствует [требованиям по ресурсам и сети](/ru/getting-started/requirements/). Установите из доверенных репозиториев операционной системы:
+
+- `curl`;
+- `jq`;
+- `python3`;
+- OpenSSL;
+- Docker Engine и дополнение Docker Compose v2.
+
+Установите Docker из [официального репозитория Docker Engine для вашего дистрибутива](https://docs.docker.com/engine/install/). Для Linux с установкой из репозитория обычно нужны пакеты `docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin` и `docker-compose-plugin`.
+
+До продолжения убедитесь, что служба Docker и Compose работают:
+
+```bash
+sudo docker info
+sudo docker compose version
+```
+
+Создайте каталог установки и передайте его текущему оператору:
+
+```bash
+sudo install -d -m 0750 /opt/gateway
+sudo chown "$(id -u):$(id -g)" /opt/gateway
+cd /opt/gateway
+```
+
+Все следующие команды предполагают, что текущий каталог — `/opt/gateway`.
+
+## 2. Выберите версию Gateway
+
+Для обычной ручной установки нужно одно значение: `GATEWAY_VERSION`. Используйте стабильный тег Gateway, указанный в сгенерированном файле окружения, без суффикса компонента. Compose сам построит соответствующие теги Gateway, Relay и Secure Link connector.
+
+Если правила компании требуют криптографической проверки и фиксации точных образов, разверните необязательный раздел ниже. В остальных случаях переходите к Compose-файлу и укажите версию в `.env`.
+
+<details>
+<summary>Необязательно: проверить подписи и зафиксировать точные образы</summary>
+
+### Выберите текущий стабильный выпуск
+
+Служба выпусков возвращает как сам Gateway, так и отдельно версионируемые компоненты Node. Следующая команда выбирает самый новый стабильный тег, в котором указана только версия продукта:
+
+```bash
+GATEWAY_VERSION="$(
+  curl -fsSL https://updates.thesqlabs.com/gateway/releases |
+  jq -r '[.[] | select(.prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))] | sort_by(.published_at) | last | .tag_name'
+)"
+test -n "$GATEWAY_VERSION" && test "$GATEWAY_VERSION" != "null"
+RELAY_TAG="${GATEWAY_VERSION}-relay"
+printf 'Gateway: %s\nRelay: %s\n' "$GATEWAY_VERSION" "$RELAY_TAG"
+```
+
+Запишите выбранную версию в задачу на изменение. Если в компании одобрен конкретный выпуск, задайте `GATEWAY_VERSION` и `RELAY_TAG` явно.
+
+### Скачайте и проверьте подписанные сведения о выпуске
+
+Скачайте два небольших манифеста. В них находятся неизменяемые идентификаторы образов, но нет паролей от реестра или секретов приложения:
+
+```bash
+curl -fSLo gateway-image.update.json \
+  "https://updates.thesqlabs.com/gateway/gateway/${GATEWAY_VERSION}/gateway-image.update.json"
+curl -fSLo relay-image.update.json \
+  "https://updates.thesqlabs.com/gateway/relay/${RELAY_TAG}/relay-image.update.json"
+```
+
+Сохраните открытый ключ, которым подписываются выпуски Gateway:
+
+```bash
+cat > gateway-update-signing-key.pem <<'KEY'
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAxLXGD8vCYQCYboK301miZXyAaoOLc43zFVnMlH3FeWg=
+-----END PUBLIC KEY-----
+KEY
+```
+
+Следующая полностью видимая команда Python только преобразует поля Base64URL из манифеста в исходные файлы содержимого и подписи. Выполните её для каждого манифеста:
+
+```bash
+python3 - gateway-image.update.json gateway-release.json gateway-release.sig <<'PY'
+import base64, json, pathlib, sys
+
+document = json.loads(pathlib.Path(sys.argv[1]).read_text())
+for field, output in (("payload", sys.argv[2]), ("signature", sys.argv[3])):
+    value = document[field]
+    pathlib.Path(output).write_bytes(
+        base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    )
+PY
+
+python3 - relay-image.update.json relay-release.json relay-release.sig <<'PY'
+import base64, json, pathlib, sys
+
+document = json.loads(pathlib.Path(sys.argv[1]).read_text())
+for field, output in (("payload", sys.argv[2]), ("signature", sys.argv[3])):
+    value = document[field]
+    pathlib.Path(output).write_bytes(
+        base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    )
+PY
+```
+
+Проверьте обе подписи Ed25519. Не продолжайте, если любая команда сообщает `Signature Verification Failure`:
+
+```bash
+openssl pkeyutl -verify -rawin -pubin \
+  -inkey gateway-update-signing-key.pem \
+  -in gateway-release.json -sigfile gateway-release.sig
+
+openssl pkeyutl -verify -rawin -pubin \
+  -inkey gateway-update-signing-key.pem \
+  -in relay-release.json -sigfile relay-release.sig
+```
+
+Убедитесь, что подписанные данные относятся к выбранному продукту, версии и ожидаемым репозиториям образов:
+
+```bash
+jq -e --arg version "$GATEWAY_VERSION" '
+  .kind == "gateway-image" and
+  .version == $version and
+  .image == "ghcr.io/the-square-labs/gateway" and
+  .imageRef == (.image + "@" + .digest)
+' gateway-release.json
+
+jq -e --arg version "$GATEWAY_VERSION" --arg tag "$RELAY_TAG" '
+  .kind == "relay-image" and
+  .version == $version and
+  .tag == $tag and
+  .image == "ghcr.io/the-square-labs/gateway/relay" and
+  .imageRef == (.image + "@" + .digest) and
+  (.protocolMajor | type) == "number" and
+  (.secureLinkConnectorImage | startswith("ghcr.io/the-square-labs/gateway/secure-link-connector@sha256:"))
+' relay-release.json
+```
+
+Эти проверки не позволяют подставить изменяемый тег или неожиданный репозиторий. Чтобы Compose использовал проверенные артефакты, замените три вычисляемые ссылки на образы в `.env`: скопируйте `imageRef` из `gateway-release.json`, а также `imageRef` и `secureLinkConnectorImage` из `relay-release.json`.
+
+</details>
+
+## 3. Проверьте Compose-файл
+
+Скачайте декларативный Compose-файл, используемый этим руководством:
+
+```bash
+curl -fSLo docker-compose.yml \
+  https://docs.goodgateway.dev/install/docker-compose.manual.yml
+less docker-compose.yml
+```
+
+Перед скачиванием файл можно [открыть прямо в браузере](/install/docker-compose.manual.yml). Проверьте образы, порты, тома, проверки состояния и подключение Docker-сокета. Это конфигурация, а не исполняемый сценарий командной оболочки.
+
+## 4. Создайте локальные секреты и настройки
+
+Скачайте шаблон настроек как `.env` или [откройте его в браузере](/install/gateway.env.example) и скопируйте вручную:
+
+```bash
+curl -fSLo .env https://docs.goodgateway.dev/install/gateway.env.example
+chmod 600 .env
+```
+
+Откройте `.env` в редакторе и укажите устанавливаемый выпуск:
+
+<LatestGatewayVersion />
+
+Одно значение выбирает все три официальных образа выпуска. Остальные строки выпуска вычисляются автоматически и не требуют редактирования. Заменяйте три ссылки на образы только после проверки в аккордеоне, если хотите зафиксировать точные артефакты по контрольным суммам.
+
+Замените оставшиеся три значения `REPLACE_WITH_...` секретами, созданными локально:
+
+```bash
+openssl rand -hex 24  # DB_PASSWORD
+openssl rand -hex 32  # PKI_MASTER_KEY
+openssl rand -hex 32  # GATEWAY_REGISTRY_HTTP_SECRET
+```
+
+Перед продолжением следующая команда не должна ничего вывести:
+
+```bash
+grep -n 'REPLACE_WITH_' .env
+```
+
+Созданные секреты не покидают сервер, если вы сами не скопируете их в другую систему.
+
+Внутренний HTTPS — безопасный режим по умолчанию. Если доверенный обратный прокси будет завершать TLS, а внутреннее соединение намеренно оставлено незашифрованным, до первого запуска замените `WEB_TLS_BOOTSTRAP_MODE=https` на `WEB_TLS_BOOTSTRAP_MODE=http`.
+
+Файл `.env` и постоянные тома содержат чувствительное состояние установки. Резервируйте их согласно разделу [Обновления и резервные копии](/ru/operations/updates-backups/), но не вставляйте содержимое `.env` в чаты или задачи.
+
+## 5. Проверьте конфигурацию и запустите Gateway
+
+До загрузки образов попросите Compose собрать и проверить итоговую конфигурацию:
+
+```bash
+sudo docker compose config --quiet
+```
+
+После успешной проверки загрузите образы и запустите службы:
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker compose ps
+```
+
+Первый запуск может занять несколько минут: Docker загружает образы, а службы создают постоянное состояние. Если служба не переходит в рабочее состояние, прочитайте только ограниченный фрагмент журналов:
+
+```bash
+sudo docker compose logs --tail=200 app relay postgres redis registry
+```
+
+Не удаляйте тома и не создавайте новый `.env` для исправления ошибки запуска. Сначала определите проблемную службу и сохраните исходные сведения об ошибке.
+
+## 6. Проверьте состояние и получите код настройки
+
+Для внутреннего HTTPS, выбранного по умолчанию, проверьте локальный адрес:
+
+```bash
+curl -kfsS https://127.0.0.1:3000/health
+```
+
+Если вы намеренно выбрали HTTP, уберите `-k` и используйте `http://`.
+
+Создайте одноразовый код настройки внутри работающего контейнера приложения:
+
+```bash
+sudo docker compose exec -T app node dist/cli/setup-code.js
+```
+
+В выводе будут код, срок его действия и отпечаток System CA Gateway. Введите код только на странице настройки Gateway. Не сохраняйте его в задаче, чате, истории команд или снимке экрана.
+
+Продолжите с раздела [Первоначальная настройка](/ru/getting-started/initial-setup/). Gateway сохранит завершённое состояние и после успешной настройки больше не предложит начальный мастер.
+
+## Контрольный список ручной установки
+
+- Docker Engine и Compose v2 получены из одобренного репозитория.
+- `GATEWAY_VERSION` указывает на одобренный стабильный выпуск.
+- Если включена фиксация по контрольным суммам, обе подписи проверены, а три переопределения получены из проверенных данных.
+- `docker-compose.yml` прочитан до использования.
+- Для `.env` установлены права `600`, и файл не копировался в небезопасные системы.
+- Все пять служб запущены, обязательные проверки состояния проходят.
+- Код настройки вводился только в браузере Gateway.
+- Основной URL, DNS, способ входа и первый администратор проверены до подключения рабочих Node.

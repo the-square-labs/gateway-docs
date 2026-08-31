@@ -1,0 +1,109 @@
+---
+title: Why Gateway
+description: Understand what Good Gateway does, which business problems it solves, and where its responsibility ends.
+section: Start here
+order: 2
+audience: [evaluator, operator]
+status: ready
+lastReviewed: 2026-08-31
+---
+
+Good Gateway is one place to operate the infrastructure your company already owns. It connects applications, servers, domains, certificates, databases, delivery pipelines, access rules, and operational history without taking those resources away from you.
+
+You can think of it as an operations center. The applications and data still run on your servers. Gateway gives your team a consistent way to see them, change them, control access, and understand what happened.
+
+## The problem it solves
+
+Infrastructure usually grows one decision at a time. A team adds a cloud dashboard, a Docker host, a certificate service, a CI pipeline, a database tool, a monitoring product, and a collection of scripts. Each addition may be reasonable on its own, but the combined operating model becomes difficult to manage.
+
+The business consequences are familiar:
+
+- routine changes require several people and several tools;
+- production knowledge lives in private notes or in one experienced employee's memory;
+- permissions accumulate because precise access is too difficult to maintain;
+- an incident starts with finding the correct dashboard, owner, and procedure;
+- audit records are split across products and do not describe one complete action;
+- delivery and recovery depend on custom glue that only its author understands;
+- every new environment adds more integration work instead of reusing one operating model.
+
+Gateway brings those activities into one product model. A domain can point to a route, a route to an application, an application to a deployment, and a deployment to the Node that runs it. The same identities, permissions, operation history, and safety rules follow that chain.
+
+## What the business gets
+
+### Faster delivery with fewer handoffs
+
+A permitted user can publish an application, connect its domain and TLS certificate, bind a database, and verify the result without passing a ticket through several specialist queues. Gateway keeps the advanced controls available, but makes the normal path understandable and repeatable.
+
+### Safer access without permanent administrator rights
+
+Permissions can be limited to a role, action, and specific resource. A developer can restart one workload without receiving access to the entire host. An automation can deploy one project without becoming a system administrator.
+
+### A record that describes the real operation
+
+Gateway records who requested an action, which resource it affected, where it ran, and whether it succeeded. That is more useful than several unrelated logs that must be reconstructed after an incident.
+
+### Infrastructure that remains yours
+
+Applications and databases continue to run on your hosts. Managed Nodes initiate authenticated outbound connections through Gateway Relay, so you do not have to expose a new administrative port on every server. Gateway coordinates the work; it does not become the owner of your data plane.
+
+### One path for people and automation
+
+The web interface, REST API, OAuth clients, and MCP tools work with the same resources and permission model. A process that begins as a manual operation can later be automated without inventing a second control system.
+
+## Why not assemble several separate products?
+
+Specialized products are valuable, and Gateway works with many of them. The problem is not the number of logos in the stack; it is the operating gap between them.
+
+| Area | A bundle of separate tools | Good Gateway |
+| --- | --- | --- |
+| Identity and access | Different users, tokens, and permission models | One permission model tied to actual resources |
+| Resource context | Each product sees only its own objects | Domains, routes, workloads, databases, Nodes, and deliveries are related |
+| Operations | Changes jump between dashboards, scripts, and tickets | Common workflows with explicit status and history |
+| Audit | Events must be correlated after the fact | One operation keeps requester, target, progress, and result together |
+| Automation | Every integration needs its own credentials and error handling | UI, API, OAuth, and MCP use the same governed model |
+| Recovery | Procedures depend on product-specific glue | Desired state, operation history, and recovery context stay together |
+
+Gateway does not try to reimplement every specialist engine. Docker still runs containers. PostgreSQL still stores application data. Your DNS provider still owns the zone. Gateway gives the team a coherent way to operate those systems together.
+
+## A simple example
+
+Imagine that the company needs to publish a new customer portal.
+
+1. Gateway builds or receives the application artifact from the approved repository.
+2. A Docker Node runs the workload on the selected company server.
+3. Gateway binds the workload to its database without exposing database credentials to every operator.
+4. A route connects the public domain, TLS certificate, and application port.
+5. Health, deployment, and access events remain attached to the same resources.
+6. If something fails, the team can see the failed step and the last known working state instead of reconstructing the release from several systems.
+
+The individual technologies are not unusual. The advantage is that the whole journey has one owner, one permission model, and one operational history.
+
+## When Gateway is a good fit
+
+Gateway is especially useful when your organization:
+
+- runs applications or data services on infrastructure it controls;
+- has several servers, environments, teams, or infrastructure providers;
+- wants self-service operations without sharing broad host access;
+- needs a clearer audit trail and repeatable recovery procedures;
+- spends too much time maintaining scripts and integrations between tools;
+- wants people and AI-assisted automation to use the same bounded permissions.
+
+A very small team with one server and no delegation requirements may not need the complete platform yet. Gateway becomes more valuable as the number of resources, operators, environments, and compliance expectations grows.
+
+## What Gateway is not
+
+Clear boundaries are part of the product:
+
+- **It is not a cloud provider.** You choose and own the servers, networks, accounts, and data locations.
+- **It is not a Kubernetes replacement.** Gateway can provide a simpler operating model for many workloads, but it does not pretend to be a general-purpose cluster scheduler.
+- **It is not a replacement for Terraform or all infrastructure as code.** Keep provider-level provisioning in the tool that owns it; use Gateway for governed day-to-day operations and the resources it manages.
+- **It is not a universal monitoring or SIEM platform.** Gateway shows operational health and can forward structured events, while specialist observability and security analytics remain useful.
+- **It is not a firewall, EDR, or host-hardening product.** The underlying hosts and networks still need normal security controls.
+- **It is not your backup or disaster-recovery system.** Gateway supports safer operations and recovery context, but you must still back up data, encryption keys, and required infrastructure.
+- **It is not an AI-only product.** Core operations work without AI. AI Workspace and MCP add an optional interface over the same permission boundaries.
+- **It is not a managed service that takes ownership away from you.** Gateway coordinates infrastructure; your organization remains responsible for capacity, availability, data protection, and provider relationships.
+
+## Where to go next
+
+Open the [product tour](/en/getting-started/product-tour/) to see the main areas of the interface. If the operating model fits your needs, review the [host and network requirements](/en/getting-started/requirements/) and choose an [installation method](/en/getting-started/install/).

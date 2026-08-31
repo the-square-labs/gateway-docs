@@ -91,9 +91,11 @@ export default defineConfig({
 					translations: { ru: 'Начало работы' },
 					items: [
 						{ slug: 'index' },
+						{ slug: 'getting-started/why-gateway' },
 						{ slug: 'getting-started/product-tour' },
 						{ slug: 'getting-started/requirements' },
 						{ slug: 'getting-started/install' },
+						{ slug: 'getting-started/manual-install' },
 						{ slug: 'getting-started/initial-setup' },
 						{ slug: 'getting-started/first-node' },
 						{ slug: 'getting-started/first-route' },

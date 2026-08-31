@@ -153,6 +153,28 @@ starlight-theme-select label {
 	font-size: 0.925rem;
 }
 
+.gg-neutral-aside {
+	margin-block: 1.25rem 1.75rem;
+	padding: 1rem 1.15rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-inline-start: 0.25rem solid var(--sl-color-gray-4);
+	border-radius: 0.35rem;
+	background: var(--sl-color-gray-6);
+}
+
+.gg-neutral-aside > p {
+	margin: 0;
+}
+
+.gg-neutral-aside > p + p {
+	margin-top: 0.35rem;
+}
+
+.gg-neutral-aside__title {
+	color: var(--sl-color-gray-1);
+	font-weight: 650;
+}
+
 .gg-home-diagrams {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);

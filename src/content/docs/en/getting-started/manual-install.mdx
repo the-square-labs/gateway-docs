@@ -1,0 +1,271 @@
+---
+title: Manual installation
+description: Install Gateway from inspected files without executing the public installer script.
+section: Start here
+order: 6
+audience: [operator, power-user]
+status: ready
+lastReviewed: 2026-08-31
+---
+
+import LatestGatewayVersion from '../../../../components/LatestGatewayVersion.astro';
+
+This path installs the same Gateway foundation as the public installer, but does not download and execute a shell script. You install Docker, choose the Gateway version, inspect the Compose file, create secrets, and start the services yourself. Optional digest verification remains available for stricter release policies.
+
+Manual installation is useful when company policy requires every downloaded artifact and command to be reviewed separately. It is deliberately more detailed than the [recommended installer path](/en/getting-started/install/).
+
+:::caution
+Use the manual guide that belongs to the Gateway release you are installing. The service foundation can change between releases. Manual updates require you to review any foundation changes; changing the version alone is not a supported update procedure.
+:::
+
+## What you will install
+
+The Compose foundation starts five services on one dedicated Gateway host:
+
+- **Gateway application** — the web interface, API, coordination, and persistent Gateway state;
+- **Gateway Relay** — the authenticated connection path used by managed Nodes;
+- **PostgreSQL** — Gateway's durable application database;
+- **Redis** — short-lived coordination and queue state;
+- **private registry** — storage required by supported Gateway build workflows.
+
+Gateway intentionally receives access to the host Docker socket for signed updates, recovery, housekeeping, and managed local services. Use a dedicated trusted VM or host. Do not place unrelated workloads or credentials on it.
+
+## 1. Prepare the host
+
+Start with a supported Linux host that meets the [capacity and network requirements](/en/getting-started/requirements/). Install these tools from your operating-system repositories:
+
+- `curl`;
+- `jq`;
+- `python3`;
+- OpenSSL;
+- Docker Engine and the Docker Compose v2 plugin.
+
+Install Docker from the [official Docker Engine repository for your distribution](https://docs.docker.com/engine/install/). The required packages on repository-based Linux installations are normally `docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin`, and `docker-compose-plugin`.
+
+Confirm the daemon and Compose plugin work before continuing:
+
+```bash
+sudo docker info
+sudo docker compose version
+```
+
+Create the installation directory and make it writable by the current operator:
+
+```bash
+sudo install -d -m 0750 /opt/gateway
+sudo chown "$(id -u):$(id -g)" /opt/gateway
+cd /opt/gateway
+```
+
+All remaining commands assume `/opt/gateway` is the current directory.
+
+## 2. Choose the Gateway version
+
+The normal manual installation needs one release value: `GATEWAY_VERSION`. Use the stable Gateway release tag shown in the generated environment file, without a component suffix. Compose derives the matching Gateway, Relay, and Secure Link connector tags from it.
+
+If your policy requires cryptographic verification and digest pinning, expand the optional section below. Otherwise continue to the Compose file and set the version in `.env`.
+
+<details>
+<summary>Optional: verify signatures and pin exact image digests</summary>
+
+### Select the current stable release
+
+The release service returns both Gateway releases and independently versioned Node components. The command below selects the newest non-preview tag that contains only the product version:
+
+```bash
+GATEWAY_VERSION="$(
+  curl -fsSL https://updates.thesqlabs.com/gateway/releases |
+  jq -r '[.[] | select(.prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))] | sort_by(.published_at) | last | .tag_name'
+)"
+test -n "$GATEWAY_VERSION" && test "$GATEWAY_VERSION" != "null"
+RELAY_TAG="${GATEWAY_VERSION}-relay"
+printf 'Gateway: %s\nRelay: %s\n' "$GATEWAY_VERSION" "$RELAY_TAG"
+```
+
+Record the selected version in your change ticket. If you need a specific approved release instead, set `GATEWAY_VERSION` and `RELAY_TAG` explicitly.
+
+### Download and verify signed release metadata
+
+Download the two small manifests. They contain immutable image digests, not container credentials or application secrets:
+
+```bash
+curl -fSLo gateway-image.update.json \
+  "https://updates.thesqlabs.com/gateway/gateway/${GATEWAY_VERSION}/gateway-image.update.json"
+curl -fSLo relay-image.update.json \
+  "https://updates.thesqlabs.com/gateway/relay/${RELAY_TAG}/relay-image.update.json"
+```
+
+Save the Gateway release-signing public key:
+
+```bash
+cat > gateway-update-signing-key.pem <<'KEY'
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAxLXGD8vCYQCYboK301miZXyAaoOLc43zFVnMlH3FeWg=
+-----END PUBLIC KEY-----
+KEY
+```
+
+The following visible Python command only converts the manifest's Base64URL fields into the original payload and signature files. Run it once for each manifest:
+
+```bash
+python3 - gateway-image.update.json gateway-release.json gateway-release.sig <<'PY'
+import base64, json, pathlib, sys
+
+document = json.loads(pathlib.Path(sys.argv[1]).read_text())
+for field, output in (("payload", sys.argv[2]), ("signature", sys.argv[3])):
+    value = document[field]
+    pathlib.Path(output).write_bytes(
+        base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    )
+PY
+
+python3 - relay-image.update.json relay-release.json relay-release.sig <<'PY'
+import base64, json, pathlib, sys
+
+document = json.loads(pathlib.Path(sys.argv[1]).read_text())
+for field, output in (("payload", sys.argv[2]), ("signature", sys.argv[3])):
+    value = document[field]
+    pathlib.Path(output).write_bytes(
+        base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    )
+PY
+```
+
+Verify both Ed25519 signatures. Do not continue if either command reports `Signature Verification Failure`:
+
+```bash
+openssl pkeyutl -verify -rawin -pubin \
+  -inkey gateway-update-signing-key.pem \
+  -in gateway-release.json -sigfile gateway-release.sig
+
+openssl pkeyutl -verify -rawin -pubin \
+  -inkey gateway-update-signing-key.pem \
+  -in relay-release.json -sigfile relay-release.sig
+```
+
+Now confirm that the signed payloads describe the requested product, version, and expected image repositories:
+
+```bash
+jq -e --arg version "$GATEWAY_VERSION" '
+  .kind == "gateway-image" and
+  .version == $version and
+  .image == "ghcr.io/the-square-labs/gateway" and
+  .imageRef == (.image + "@" + .digest)
+' gateway-release.json
+
+jq -e --arg version "$GATEWAY_VERSION" --arg tag "$RELAY_TAG" '
+  .kind == "relay-image" and
+  .version == $version and
+  .tag == $tag and
+  .image == "ghcr.io/the-square-labs/gateway/relay" and
+  .imageRef == (.image + "@" + .digest) and
+  (.protocolMajor | type) == "number" and
+  (.secureLinkConnectorImage | startswith("ghcr.io/the-square-labs/gateway/secure-link-connector@sha256:"))
+' relay-release.json
+```
+
+These checks prevent a mutable tag or an unexpected repository from entering the installation. To make Compose use the verified artifacts, replace the three derived image values in `.env`: copy `imageRef` from `gateway-release.json`, plus `imageRef` and `secureLinkConnectorImage` from `relay-release.json`.
+
+</details>
+
+## 3. Inspect the Compose foundation
+
+Download the declarative Compose file used by this guide:
+
+```bash
+curl -fSLo docker-compose.yml \
+  https://docs.goodgateway.dev/install/docker-compose.manual.yml
+less docker-compose.yml
+```
+
+You can also [open the Compose file in the browser](/install/docker-compose.manual.yml) before downloading it. Review the images, ports, volumes, health checks, and Docker socket mount. The file is configuration; it is not executed by the shell.
+
+## 4. Create local secrets and settings
+
+Download the environment template as `.env`, or [open it in the browser](/install/gateway.env.example) and copy it manually:
+
+```bash
+curl -fSLo .env https://docs.goodgateway.dev/install/gateway.env.example
+chmod 600 .env
+```
+
+Open `.env` in your editor and set the release you want to install:
+
+<LatestGatewayVersion />
+
+That single value selects all three official release images. The remaining release lines are derived automatically and do not require editing. Replace the three image lines only if you completed the verification accordion and want exact digest pinning.
+
+Replace the remaining three `REPLACE_WITH_...` values with secrets generated locally:
+
+```bash
+openssl rand -hex 24  # DB_PASSWORD
+openssl rand -hex 32  # PKI_MASTER_KEY
+openssl rand -hex 32  # GATEWAY_REGISTRY_HTTP_SECRET
+```
+
+Before continuing, this command must print nothing:
+
+```bash
+grep -n 'REPLACE_WITH_' .env
+```
+
+The generated secrets never leave your host unless you copy them elsewhere.
+
+Internal HTTPS is the safe default. If a trusted reverse proxy will terminate TLS and the internal hop is intentionally plaintext, change `WEB_TLS_BOOTSTRAP_MODE=https` to `WEB_TLS_BOOTSTRAP_MODE=http` before the first start.
+
+Treat `.env` and the persistent volumes as sensitive installation state. Back them up according to [Updates and backups](/en/operations/updates-backups/), but never paste their contents into chat or tickets.
+
+## 5. Validate and start Gateway
+
+Ask Compose to render and validate the complete configuration before it pulls an image:
+
+```bash
+sudo docker compose config --quiet
+```
+
+Then pull the verified images and start the stack:
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker compose ps
+```
+
+The first start can take several minutes while images are downloaded and persistent state is initialized. Watch only bounded logs if a service does not become healthy:
+
+```bash
+sudo docker compose logs --tail=200 app relay postgres redis registry
+```
+
+Do not delete volumes or regenerate `.env` to fix a startup error. First identify the failed service and preserve the original evidence.
+
+## 6. Verify health and obtain the setup code
+
+For the default internal HTTPS mode, verify the local endpoint:
+
+```bash
+curl -kfsS https://127.0.0.1:3000/health
+```
+
+For an intentional HTTP installation, omit `-k` and use `http://`.
+
+Generate the one-time setup code from the running application container:
+
+```bash
+sudo docker compose exec -T app node dist/cli/setup-code.js
+```
+
+The output includes the code, its expiration time, and the Gateway System CA fingerprint. Enter the code only in the Gateway setup page. Do not store it in a ticket, chat, command history, or screenshot.
+
+Continue with [Initial setup](/en/getting-started/initial-setup/). Gateway records completion of the setup flow and will not offer the bootstrap wizard again after a successful configuration.
+
+## Manual installation checklist
+
+- Docker Engine and Compose v2 came from an approved repository.
+- `GATEWAY_VERSION` names an approved stable release.
+- If digest pinning was enabled, both signatures passed and all three overrides came from the verified payloads.
+- `docker-compose.yml` was reviewed before use.
+- `.env` is mode `600` and has not been copied into an unsafe system.
+- All five services are running and required health checks pass.
+- The setup code was entered only in the Gateway browser session.
+- The canonical URL, DNS, authentication, and first administrator were verified before adding production Nodes.

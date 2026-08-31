@@ -2,14 +2,23 @@
 title: Install Gateway
 description: Install the infrastructure control plane and reach the setup wizard safely.
 section: Start here
-order: 4
+order: 5
 audience: [operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-08-31
 ---
 
 
 The public installer prepares the host, installs Docker when necessary, starts the complete Gateway stack, and hands configuration over to the browser. A normal first installation does not require you to create a Compose file or install Docker manually.
+
+## Choose an installation method
+
+| Method | Best for | What you review and run |
+| --- | --- | --- |
+| **Public installer — recommended** | The shortest supported path and normal production updates | You can inspect or dry-run the installer; it installs Docker if needed, verifies signed release metadata, and creates the complete stack |
+| **Manual installation** | Security reviews that do not permit piping a downloaded script into a shell | You install Docker, choose the release version, inspect the Compose foundation, generate secrets, and start every service yourself; digest verification is optional |
+
+Both methods deploy the same Gateway foundation. Choose [manual installation without the installer script](/en/getting-started/manual-install/) if your policy requires every downloaded artifact and command to be reviewed separately.
 
 ## What you need before starting
 

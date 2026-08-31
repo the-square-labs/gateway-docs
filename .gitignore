@@ -1,5 +1,6 @@
 # build output
 dist/
+/public/install/gateway.env.example
 # generated types
 .astro/
 

@@ -1,0 +1,7 @@
+---
+import { Code } from '@astrojs/starlight/components';
+
+const version = import.meta.env.PUBLIC_GATEWAY_VERSION || 'vX.Y.Z';
+---
+
+<Code code={`GATEWAY_VERSION=${version}`} lang="dotenv" />
