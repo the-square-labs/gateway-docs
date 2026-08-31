@@ -1,0 +1,64 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import config from 'virtual:starlight/user-config';
+
+const socialLinks = config.social ?? [];
+---
+
+<nav class="gg-header-links" aria-label="Related links">
+	<a href="https://goodgateway.dev">Product</a>
+	<a href="/api/">API Reference</a>
+</nav>
+
+{
+	socialLinks.map(({ label, href, icon }) => (
+		<a href={href} rel="me" class="gg-social-link sl-flex">
+			<span class="sr-only">{label}</span>
+			<Icon name={icon} />
+		</a>
+	))
+}
+
+<style>
+	@layer starlight.core {
+		.gg-header-links {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			white-space: nowrap;
+		}
+
+		.gg-header-links a {
+			color: var(--sl-color-gray-2);
+			font-size: var(--sl-text-sm);
+			text-decoration: none;
+		}
+
+		.gg-header-links a:hover,
+		.gg-header-links a:focus-visible,
+		.gg-social-link:hover,
+		.gg-social-link:focus-visible {
+			color: var(--sl-color-white);
+		}
+
+		.gg-social-link {
+			margin: -0.5em;
+			padding: 0.5em;
+			color: var(--sl-color-text-accent);
+		}
+
+		@media (min-width: 50rem) and (max-width: 72rem) {
+			:global(.header) .gg-header-links {
+				display: none;
+			}
+		}
+
+		@media (max-width: 49.999rem) {
+			:global(.mobile-preferences) .gg-header-links {
+				order: -1;
+				width: 100%;
+				padding-block-start: 0.75rem;
+			}
+		}
+	}
+</style>

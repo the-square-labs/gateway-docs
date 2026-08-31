@@ -1,3 +1,5 @@
 allowBuilds:
   esbuild: true
   sharp: true
+patchedDependencies:
+  starlight-openapi@0.26.1: patches/starlight-openapi@0.26.1.patch

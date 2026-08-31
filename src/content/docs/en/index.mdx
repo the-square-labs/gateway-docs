@@ -42,25 +42,53 @@ The most important resource chains are:
 
 <div class="gg-home-diagrams">
 
+<section class="gg-home-diagram">
+<h3>Publish an application</h3>
+<p>A domain receives HTTPS traffic, and a Route sends each request to the right application.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     domain["Domain"] --> certificate["TLS"] --> route["Route"] --> upstream["Application"]
 ```
 
+</section>
+
+<section class="gg-home-diagram">
+<h3>Build and deploy from Git</h3>
+<p>Gateway turns source code into a versioned artifact and deploys it as a workload.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     repository["Git"] --> worker["Build Worker"] --> artifact["Artifact"] --> workload["Workload"]
 ```
 
+</section>
+
+<section class="gg-home-diagram">
+<h3>Connect an application to a database</h3>
+<p>A private binding gives the application its own database identity without exposing the database publicly.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     application["Application"] --> binding["Private binding"] --> identity["Database identity"]
 ```
 
+</section>
+
+<section class="gg-home-diagram">
+<h3>Turn health signals into alerts</h3>
+<p>Gateway turns service health and events into notifications for people, status pages, and SIEM systems.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     events["Health and events"] --> notifications["Notifications"] --> consumers["Status / SIEM"]
 ```
+
+</section>
 
 </div>
 

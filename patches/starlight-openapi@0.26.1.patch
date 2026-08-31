@@ -1,0 +1,172 @@
+diff --git a/components/overview/OverviewNavigationLinks.astro b/components/overview/OverviewNavigationLinks.astro
+index 76849b8d0cff1ae792ba2bd7b4134598a55f57e5..7e27f6933add8f45c4be2e73250cd7d9a95c3c87 100644
+--- a/components/overview/OverviewNavigationLinks.astro
++++ b/components/overview/OverviewNavigationLinks.astro
+@@ -1,36 +1,76 @@
+ ---
++import context from 'virtual:starlight-openapi/context'
++
++import { isMinimalOperationTag } from '../../libs/operation'
++import { getLinkTransformer, getSchemaBaseLink, slug } from '../../libs/path'
+ import type { SchemaNavigationGroup } from '../../libs/pathItem'
++import type { Schema } from '../../libs/schemas/schema'
+ import Heading from '../Heading.astro'
+ 
+ import OverviewNavigationLink from './OverviewNavigationLink.astro'
+ 
+ interface Props {
+   groups: SchemaNavigationGroup[]
++  schema?: Schema
++  summary?: boolean
+ }
+ 
+-const { groups } = Astro.props
++const { groups, schema, summary = false } = Astro.props
+ 
+ const visibleGroups = groups.filter((group) => group.links.length > 0)
++
++const groupSummaries = schema && summary
++  ? visibleGroups.flatMap((group) => {
++      const firstLink = group.links[0]
++      if (!firstLink) return []
++
++      const href =
++        group.type === 'operations' && !isMinimalOperationTag(group.operationTag)
++          ? getLinkTransformer(context)(
++              `${getSchemaBaseLink(schema.config)}operations/tags/${slug(group.operationTag.name)}`,
++            )
++          : firstLink.href
++
++      return [{
++        description: group.type === 'operations' ? group.operationTag.description : undefined,
++        href,
++        label: group.label,
++        operationCount: group.links.length,
++      }]
++    })
++  : []
+ ---
+ 
+ {
+   visibleGroups.length > 0 && (
+     <div class="sl-openapi-overview-navigation">
+-      <Heading level={2} id="operations">
+-        Operations
+-      </Heading>
+-      <div class="sl-openapi-overview-navigation-links not-content">
+-        {visibleGroups.map((group) =>
+-          group.links.map((link) => (
+-            <OverviewNavigationLink
+-              href={link.href}
+-              isWebhook={link.path === undefined}
+-              label={link.path ?? link.label}
+-              method={link.method}
+-            />
+-          )),
+-        )}
+-      </div>
++      <Heading level={2} id="operations">{summary ? 'API groups' : 'Operations'}</Heading>
++      {summary ? (
++        <div class="sl-openapi-overview-groups not-content">
++          {groupSummaries.map((group) => (
++            <a class="sl-openapi-overview-group" href={group.href}>
++              <span class="sl-openapi-overview-group-heading">
++                <strong>{group.label}</strong>
++                <span>{group.operationCount} operations</span>
++              </span>
++              {group.description && <span class="sl-openapi-overview-group-description">{group.description}</span>}
++            </a>
++          ))}
++        </div>
++      ) : (
++        <div class="sl-openapi-overview-navigation-links not-content">
++          {visibleGroups.map((group) =>
++            group.links.map((link) => (
++              <OverviewNavigationLink
++                href={link.href}
++                isWebhook={link.path === undefined}
++                label={link.path ?? link.label}
++                method={link.method}
++              />
++            )),
++          )}
++        </div>
++      )}
+     </div>
+   )
+ }
+@@ -47,4 +87,48 @@ const visibleGroups = groups.filter((group) => group.links.length > 0)
+     grid-template-columns: max-content minmax(0, 1fr) auto;
+     row-gap: 0.625rem;
+   }
++
++  .sl-openapi-overview-groups {
++    display: grid;
++    gap: 0.75rem;
++    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
++  }
++
++  .sl-openapi-overview-group {
++    border: 1px solid var(--sl-color-gray-5);
++    box-shadow: var(--sl-shadow-sm);
++    color: var(--sl-color-gray-2);
++    display: grid;
++    gap: 0.5rem;
++    padding: 1rem;
++    text-decoration: none;
++  }
++
++  .sl-openapi-overview-group:is(:hover, :focus-visible) {
++    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
++    border-color: var(--sl-color-gray-2);
++  }
++
++  .sl-openapi-overview-group-heading {
++    align-items: baseline;
++    display: flex;
++    gap: 0.75rem;
++    justify-content: space-between;
++  }
++
++  .sl-openapi-overview-group-heading strong {
++    color: var(--sl-color-white);
++    font-size: var(--sl-text-base);
++  }
++
++  .sl-openapi-overview-group-heading span {
++    color: var(--sl-color-gray-3);
++    font-size: var(--sl-text-xs);
++    white-space: nowrap;
++  }
++
++  .sl-openapi-overview-group-description {
++    font-size: var(--sl-text-sm);
++    line-height: 1.5;
++  }
+ </style>
+diff --git a/components/overview/OverviewSchema.astro b/components/overview/OverviewSchema.astro
+index 3bb5139eb45733aedec0a479e8cdfc681dd866a6..3147fa385d5d4264e3285e26fd6efe4bdcd53c92 100644
+--- a/components/overview/OverviewSchema.astro
++++ b/components/overview/OverviewSchema.astro
+@@ -76,7 +76,7 @@ const contacts = [
+   </Card>
+ </div>
+ 
+-<OverviewNavigationLinks groups={getSchemaNavigationGroups(schema, context)} />
++<OverviewNavigationLinks groups={getSchemaNavigationGroups(schema, context)} {schema} summary />
+ 
+ <SecurityDefinitions definitions={securityDefinitions} />
+ 
+diff --git a/libs/starlight.ts b/libs/starlight.ts
+index 4549a8372ebf8ad5b0fb2484a932adef4ccaff70..bdfaba4bbde7a0df9867a57623729b9918de0bf6 100644
+--- a/libs/starlight.ts
++++ b/libs/starlight.ts
+@@ -189,7 +189,7 @@ function getSchemaOverviewHeadings(schema: Schema): MarkdownHeading[] {
+   const securityDefinitions = getSecurityDefinitions(document)
+ 
+   if (hasSchemaNavigationItems(schema)) {
+-    items.push(makeHeading(2, 'Operations'))
++    items.push(makeHeading(2, 'API groups'))
+   }
+ 
+   if (securityDefinitions) {

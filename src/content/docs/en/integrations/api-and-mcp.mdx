@@ -30,6 +30,88 @@ Choose a session, API token, or OAuth client according to the caller. Remote MCP
 
 Start automation by reading the target resource and capability state. Resolve stable IDs rather than scraping names from the UI. Keep the base URL, token, and environment separate so a development script cannot accidentally target production.
 
+## Connect Codex or Claude Code through MCP
+
+Gateway exposes its authenticated remote MCP server at:
+
+```text
+https://gateway.example.com/api/mcp
+```
+
+Replace `gateway.example.com` with the canonical public hostname of your Gateway installation. Use the same HTTPS origin that operators use to open Gateway. Do not append another `/mcp`, and do not point the client at the REST API root.
+
+Once connected, the client can discover Gateway tools and perform only operations allowed to the signed-in user. MCP does not grant administrator access or bypass resource scopes, plan entitlements, confirmations, or audit logging.
+
+### Prepare Gateway
+
+An administrator completes these one-time steps:
+
+1. Open **Settings**, select **Features**, and find **OAuth and MCP access**.
+2. Enable **MCP server**.
+3. Keep **Extended MCP compatibility** enabled for normal clients. Disable it only when a client loads the entire tool catalog into its context and cannot handle its size.
+4. Leave **OAuth extended callback compatibility** disabled for Codex and Claude Code. Their local loopback callbacks work with the safer default policy.
+5. Grant the connecting user **Use MCP** (`mcp:use`) plus the ordinary scopes for the resources that client may read or change.
+
+The user must also be able to sign in to Gateway in a browser. If the connection works but a tool or resource is missing, review group membership and resource scopes instead of broadening the OAuth callback policy.
+
+### Connect Codex
+
+Add Gateway, complete OAuth login, and verify the connection:
+
+```bash
+codex mcp add good-gateway --url https://gateway.example.com/api/mcp
+codex mcp login good-gateway
+codex mcp list
+```
+
+The login command opens Gateway in your browser. Sign in as the intended Gateway user, review the requested access, and approve it. Codex stores the resulting OAuth credential; you do not create or paste an API token.
+
+In the Codex desktop app or IDE extension, you can instead add a **Streamable HTTP** MCP server with the same URL and select **Authenticate**. The desktop app, CLI, and IDE extension share the Codex MCP configuration.
+
+### Connect Claude Code
+
+Add Gateway as a remote HTTP server for your user account:
+
+```bash
+claude mcp add --transport http good-gateway --scope user https://gateway.example.com/api/mcp
+claude mcp login good-gateway
+claude mcp get good-gateway
+```
+
+You can also open an interactive Claude Code session, enter `/mcp`, select `good-gateway`, and complete authentication in the browser. Use `--scope project` instead of `--scope user` only when the repository should share the server definition through `.mcp.json`; each developer still signs in with their own Gateway account.
+
+### How the OAuth flow works
+
+You do not need to register an OAuth client manually for Codex or Claude Code:
+
+1. the client contacts `/api/mcp` and receives Gateway's OAuth discovery information;
+2. the client registers itself and starts Authorization Code with PKCE;
+3. Gateway opens a browser sign-in and consent screen;
+4. the user approves access bounded by their current Gateway scopes;
+5. Gateway issues an OAuth access token for the MCP resource;
+6. the client stores that credential and sends it to `/api/mcp` on later requests.
+
+Gateway accepts only OAuth access tokens issued for its MCP resource. Browser cookies, ordinary `gw_` API tokens, `gwl_` logging tokens, and `gwi_` Gateway Inference tokens are rejected. The server rechecks the user's current scopes and `mcp:use`, so removing access stops future MCP operations even if the client discovered the tools earlier.
+
+### Verify the connection
+
+Start with a read-only request:
+
+```text
+List the Gateway nodes I can access and summarize their current status. Do not change anything.
+```
+
+Confirm that the client reports `good-gateway` as connected, only expected resources are visible, a read succeeds, an action outside the user's scopes is denied, and Gateway attributes the call to the expected user in the audit log.
+
+### MCP connection troubleshooting
+
+- **The endpoint returns 404:** enable **Settings → Features → OAuth and MCP access → MCP server** and verify that the URL ends in `/api/mcp`.
+- **The client requires authentication:** run `codex mcp login good-gateway` or `claude mcp login good-gateway`. In an interactive client, use `/mcp`.
+- **Login succeeds but Gateway returns 403:** the account needs `mcp:use` and at least one effective resource scope.
+- **The client exhausts its context with too many tools:** disable **Extended MCP compatibility** to use the compact initial catalog and category discovery.
+- **Gateway rejects the OAuth callback:** update the client and retry first. Normal Codex and Claude Code loopback callbacks do not require **OAuth extended callback compatibility**.
+- **A saved connection stopped working:** check whether the OAuth authorization, `mcp:use`, resource scopes, or canonical Gateway URL changed. Re-authenticate instead of substituting a normal API token.
+
 ## Durable operations
 
 Many infrastructure mutations return an accepted task or operation instead of a completed result:

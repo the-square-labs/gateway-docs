@@ -42,25 +42,53 @@ Gateway работает как центральное приложение с P
 
 <div class="gg-home-diagrams">
 
+<section class="gg-home-diagram">
+<h3>Опубликовать приложение</h3>
+<p>Домен принимает HTTPS-трафик, а Route направляет каждый запрос в нужное приложение.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     domain["Домен"] --> certificate["TLS"] --> route["Route"] --> application["Приложение"]
 ```
 
+</section>
+
+<section class="gg-home-diagram">
+<h3>Собрать и развернуть код из Git</h3>
+<p>Gateway собирает исходный код в версионируемый артефакт и разворачивает его как рабочую нагрузку.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     git["Git"] --> worker["Build Worker"] --> artifact["Результат сборки"] --> workload["Приложение"]
 ```
 
+</section>
+
+<section class="gg-home-diagram">
+<h3>Подключить приложение к базе данных</h3>
+<p>Приватное подключение выдаёт приложению отдельную учётную запись, не открывая базу данных в публичную сеть.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     application["Приложение"] --> binding["Приватный доступ"] --> identity["Отдельная учётная запись базы"]
 ```
 
+</section>
+
+<section class="gg-home-diagram">
+<h3>Превратить события в оповещения</h3>
+<p>Gateway преобразует состояние сервисов и события в уведомления для команды, страницы состояния и SIEM.</p>
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
 flowchart LR
     events["Состояние и события"] --> notifications["Уведомления"] --> consumers["Страница состояния / SIEM"]
 ```
+
+</section>
 
 </div>
 

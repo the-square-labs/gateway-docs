@@ -3,11 +3,19 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import mermaid from 'astro-mermaid';
+import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 
 export default defineConfig({
 	site: 'https://docs.goodgateway.dev',
 	output: 'static',
 	trailingSlash: 'always',
+	vite: {
+		ssr: {
+			// Prevent Starlight's Satteri 0.9 native binding from being bundled in place of
+			// the 0.10 binding used by starlight-openapi's Markdown renderer.
+			external: ['satteri'],
+		},
+	},
 	integrations: [
 		mermaid({
 			autoTheme: true,
@@ -24,6 +32,18 @@ export default defineConfig({
 		}),
 		starlight({
 			title: 'Good Gateway',
+			plugins: [
+				starlightOpenAPI([
+					{
+						base: 'api',
+						schema: './public/api/openapi.json',
+						sidebar: {
+							collapsed: true,
+							label: 'API Reference',
+						},
+					},
+				]),
+			],
 			disable404Route: true,
 			titleDelimiter: '·',
 			description: 'Operate Good Gateway with production-ready guides, runbooks, and reference documentation.',
@@ -40,6 +60,9 @@ export default defineConfig({
 			lastUpdated: true,
 			pagefind: true,
 			customCss: ['./src/styles/custom.css'],
+			components: {
+				SocialIcons: './src/components/HeaderLinks.astro',
+			},
 			social: [
 				{
 					icon: 'github',
@@ -206,6 +229,7 @@ export default defineConfig({
 						{ slug: 'reference/glossary' },
 					],
 				},
+				...openAPISidebarGroups,
 			],
 		}),
 	],
