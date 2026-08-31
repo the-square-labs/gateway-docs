@@ -13,6 +13,10 @@ Gateway's security model helps an organization centralize infrastructure operati
 
 Gateway assumes managed hosts and administrators are consequential trust boundaries. It reduces reusable credentials and direct shell dependence through outbound daemon enrollment, PKI identities, resource scopes, audited operations, and bounded daemon roles.
 
+:::caution[Root-equivalent boundaries]
+The Gateway installation uses a writable Docker socket for supported host-level lifecycle work, and Docker Nodes control their local Docker Engine. Compromise of either boundary can become host-root compromise and can bypass product-level resource scopes. Run Gateway on a dedicated host or VM in a restricted management segment, isolate high-impact Node roles, and protect host administration independently of Gateway accounts.
+:::
+
 A secure deployment succeeds when authority is explicit, credentials are not reused across trust boundaries, mutations are verified by the owning runtime, and failures do not silently fall back to a less secure path. “Reachable” is not the same as “authorized,” and “visible in cached inventory” is not permission to mutate.
 
 Key principles:

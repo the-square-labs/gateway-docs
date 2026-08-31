@@ -72,3 +72,5 @@ Do not repair an ownership problem by editing implementation children directly. 
 Read views may use sanitized last-known snapshots while a Node is offline. Such data is diagnostic evidence, not current authorization. Mutations remain unavailable whenever Gateway cannot prove ownership, capability, entitlement, or current state.
 
 Desired state and operation records are durable so Gateway can reconcile after application, Relay, daemon, or Node restarts. Recovery should restore the failed owner first, wait for fresh inventory and capability reports, then verify each dependent resource family. Avoid deleting and recreating identities as an initial response: doing so can remove grants, break relationships, or leave the old daemon unable to reconnect safely.
+
+For a path-by-path outage matrix—including the difference between a healthy Relay, a local Relay lost with the Gateway host, and an independent external Relay—see [Availability, compatibility, and limits](/en/operations/availability-compatibility-limits/).

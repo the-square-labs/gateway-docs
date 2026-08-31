@@ -10,6 +10,10 @@ lastReviewed: 2026-08-30
 
 Plan the control plane separately from the hosts that run customer workloads. Gateway coordinates identity, desired state, certificates, operations, and audit history; it does not remove the need to size, patch, back up, and monitor the underlying Linux hosts.
 
+:::caution[Gateway is a privileged control plane]
+The Gateway host has access to encrypted infrastructure credentials and a writable Docker socket used for signed updates, recovery, housekeeping, and local managed services. Control of this host is effectively root-level control over the Gateway installation and can affect every connected resource within its authorized scope. Use a dedicated VM or host, place it in a restricted management network, and do not share it with unrelated workloads.
+:::
+
 ## Decide the deployment shape
 
 A small evaluation can place the Gateway application and its internal services on one Linux host. Production environments should still treat that host as a control-plane dependency with explicit ownership, durable storage, a recovery procedure, and monitored capacity. Managed workload roles can be enrolled later and may live on separate physical hosts, virtual machines, or appropriately isolated system containers.
@@ -70,6 +74,8 @@ Choose only the roles you need:
 - **Relay Pool member:** additional Secure Link data-plane capacity and resilience.
 
 Role separation is an operational and security decision. A database node should have storage and backup policies appropriate for stateful services. A Build Worker processes repository-controlled build input and should not share a host with unrelated workloads or reusable infrastructure credentials. Treat the worker's outer VM or unprivileged system container as the security boundary; the inner build sandbox is defense in depth, not the only boundary.
+
+A Docker Node normally needs control of the local Docker Engine. Anyone who controls that daemon path can create privileged containers, mount host paths, and affect other workloads on the same engine. Treat a Docker Node as root-equivalent within that host's Docker trust boundary; use a dedicated host or deliberately accepted workload boundary rather than assuming resource scopes isolate a compromised host administrator.
 
 ## DNS and certificates
 

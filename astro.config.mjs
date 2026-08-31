@@ -47,7 +47,7 @@ export default defineConfig({
 			disable404Route: true,
 			titleDelimiter: '·',
 			description: 'Operate Good Gateway with production-ready guides, runbooks, and reference documentation.',
-			favicon: '/favicon.png',
+			favicon: '/favicon.ico',
 			logo: {
 				src: './src/assets/good-gateway-logo.png',
 				alt: 'Good Gateway',
@@ -71,6 +71,8 @@ export default defineConfig({
 				},
 			],
 			head: [
+				{ tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' } },
+				{ tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' } },
 				{ tag: 'script', attrs: { type: 'module', src: '/scripts/image-zoom.js' } },
 				{ tag: 'meta', attrs: { property: 'og:site_name', content: 'Good Gateway Documentation' } },
 				{ tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
@@ -93,6 +95,7 @@ export default defineConfig({
 						{ slug: 'index' },
 						{ slug: 'getting-started/why-gateway' },
 						{ slug: 'getting-started/product-tour' },
+						{ slug: 'getting-started/adoption-pilot' },
 						{ slug: 'getting-started/requirements' },
 						{ slug: 'getting-started/install' },
 						{ slug: 'getting-started/manual-install' },
@@ -106,6 +109,7 @@ export default defineConfig({
 					translations: { ru: 'Концепции' },
 					items: [
 						{ slug: 'concepts/architecture' },
+						{ slug: 'concepts/iac-and-ownership' },
 						{ slug: 'concepts/resource-model' },
 						{ slug: 'concepts/permissions' },
 						{ slug: 'concepts/secure-links' },
@@ -214,6 +218,7 @@ export default defineConfig({
 					translations: { ru: 'Эксплуатация и безопасность' },
 					items: [
 						{ slug: 'operations/production-checklist' },
+						{ slug: 'operations/availability-compatibility-limits' },
 						{ slug: 'operations/updates-backups' },
 						{ slug: 'operations/incident-runbook' },
 						{ slug: 'security/security-model' },

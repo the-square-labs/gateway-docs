@@ -13,7 +13,7 @@ Gateway uses Community, Personal, Business, and Enterprise plans. Availability, 
 
 Choose a plan from the operating requirements, not from organization size. Start with the workflows that must be supported, the resource limits they need, the security controls required by policy, and the support or commercial terms required by the buyer. The installation owner is responsible for monitoring license health; resource owners should know which operations depend on paid entitlements.
 
-Ready paid features are enforced at the operation boundary as well as in the UI. Downgrade or expiry preserves resource data while blocking new premium operations and disabling switchable premium services according to their lifecycle rules. Grace periods and exact feature availability can change with product releases; review the current matrix before publication.
+Ready paid features are enforced at the operation boundary as well as in the UI. Ordinary key expiry preserves existing configured infrastructure and enabled runtime modules while blocking new premium resources, paid-feature expansion, and paid-only operations after grace. An explicit deactivation, activation replacement, revocation, invalid key, or policy violation is an authoritative loss and can disable protected entry points. Grace periods and exact feature availability can change with product releases; review the current matrix before publication.
 
 Community installations do not require a key. A Business or Enterprise key represents one active Gateway instance; resource quotas inside a Gateway instance must not be confused with separate Wiolett Cloud quotas.
 
@@ -36,9 +36,11 @@ Missing entitlement returns a permission-style failure without deleting existing
 
 ## Downgrade and expiry
 
-Gateway preserves existing premium resources and data. New premium resources and one-shot premium operations are blocked. Switchable services such as Internal PKI, SIEM export, and structured logging are disabled while retaining configuration and stored data; they are not automatically re-enabled after entitlement returns.
+After an ordinary key expiry, Gateway preserves existing premium resources, running services, data, published Pages deployments, and enabled runtime modules. It does not stop workloads, remove Routes, or switch off Internal PKI, SIEM, structured logging, or an already configured registry entry point merely because renewal was late. New premium resources, paid-feature expansion, and one-shot premium operations are blocked after the plan-specific grace period.
 
-Existing Git-delivered workloads, source settings, build history, and internal-registry artifacts remain readable. New source builds and automation stop until the required plan returns. Existing Secure Runtime workloads remain manageable, but selecting Secure Runtime for a new or previously default-runtime workload requires Business.
+Existing Git-delivered workloads, source settings, build history, and internal-registry artifacts remain in place. New source builds and other paid-only automation stop until the required plan returns. Renewing the key restores full operations without rebuilding existing resources.
+
+An authoritative loss is different from ordinary expiry. Explicit deactivation, transfer to another installation, revocation, an invalid key, or a policy violation may disable protected entry points and switchable modules while retaining stored configuration and resource data. This distinction prevents accidental renewal delays or a license-service outage from becoming a customer data-plane outage without weakening deliberate revocation.
 
 ## Operational checks
 
@@ -58,7 +60,7 @@ Before downgrade, expiry, or transfer to another installation:
 
 1. identify premium resources and automation that will stop accepting new work;
 2. preserve source settings, build artifacts, PKI, logging, and SIEM configuration;
-3. confirm which running resources remain operational and which services disable themselves;
+3. confirm which running resources remain operational and whether the state is ordinary expiry or authoritative loss;
 4. communicate the operational deadline and owner;
 5. restore entitlement and explicitly re-enable switchable services where required;
 6. verify customer paths rather than assuming the previous configuration resumed.
@@ -68,3 +70,9 @@ Do not delete preserved resources to “clean up” an entitlement warning. Thei
 ## Licensing boundaries
 
 The Gateway license covers the active Gateway installation according to its key and agreement. Credentials, quotas, or subscriptions for external providers—cloud DNS, source control, registries, email, AI, or other hosted services—remain separate. Likewise, usage shown by Gateway Inference is operational accounting and should be reconciled with the provider for commercial decisions.
+
+The current Square Labs-owned source is available under [PolyForm Perimeter 1.0.1](https://github.com/the-square-labs/gateway/blob/main/LICENSE.md). It permits use, modification, and redistribution for noncompeting purposes, including ordinary internal business use. The excluded purpose is providing others with a product marketed as a substitute for Gateway, whether as software, a hosted service, a port, or a free offering.
+
+A Personal, Business, or Enterprise key unlocks paid-plan features and limits; it is not required merely because an organization uses Community internally. An ordinary key does not grant OEM, white-label, resale, competing hosted-service, or other substitute-product rights. Those uses require a separate written agreement with Square Labs. After ordinary key expiry, the key's continuity terms preserve paid-plan resources configured before expiry while blocking new paid-only creation and expansion.
+
+Every official release also carries a [future MIT grant](https://github.com/the-square-labs/gateway/blob/main/FUTURE-MIT-GRANT.md). Its covered Square Labs-owned product source becomes MIT-licensed 24 months after that release's recorded release date, or earlier after 180 consecutive days of permanent product cessation as defined in the grant. Release automation verifies the exact date before publication. Each release keeps its own date; publishing a newer release does not postpone an older release's transition. Trademarks, commercial keys, separately licensed documentation and assets, and third-party code remain outside that grant.

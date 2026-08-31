@@ -65,6 +65,18 @@ Specialized products are valuable, and Gateway works with many of them. The prob
 
 Gateway does not try to reimplement every specialist engine. Docker still runs containers. PostgreSQL still stores application data. Your DNS provider still owns the zone. Gateway gives the team a coherent way to operate those systems together.
 
+### Where Gateway fits among common tool categories
+
+| Category | Primary job | What usually remains outside it | How Gateway differs or works alongside it |
+| --- | --- | --- | --- |
+| Application PaaS | Turn source code into a hosted application | Existing infrastructure, databases, broad resource ownership, and cross-tool permissions | Gateway operates both delivered applications and the surrounding infrastructure on hosts you control |
+| Container manager | Inspect and control container-engine objects | Domains, certificates, database identities, source delivery, and organization-wide audit context | Gateway relates container operations to ingress, delivery, data, permissions, and Tasks |
+| Infrastructure as code | Provision reproducible provider and host foundations | Interactive day-to-day operations, delegated self-service, live troubleshooting, and approval UX | Keep Terraform/OpenTofu or Ansible as owner of their layer; let Gateway own selected service operations |
+| Observability platform | Collect and analyze metrics, logs, traces, and alerts | Resource lifecycle, permissions, delivery, certificates, and desired-state mutations | Gateway provides operational health and context, then exports to specialist telemetry or SIEM systems where needed |
+| Good Gateway | Govern connected infrastructure operations through one resource and permission model | Cloud-provider foundation, host hardening, independent backups, specialist HA, and external evidence retention | It fills the operational gap between those systems without claiming to replace every one of them |
+
+The choice is not necessarily Gateway **or** every existing tool. A good design keeps each specialist where it is strongest and removes duplicated control of the same resource.
+
 ## A simple example
 
 Imagine that the company needs to publish a new customer portal.

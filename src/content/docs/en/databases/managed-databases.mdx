@@ -15,6 +15,21 @@ The product decision is whether your team wants Gateway to own a bounded single-
 
 Managed does not mean maintenance-free or automatically highly available. Gateway automates provisioning, configuration, monitoring, and lifecycle actions, while your organization remains accountable for data classification, backups, restore tests, engine upgrades, capacity planning, and business continuity.
 
+## Capability boundary
+
+| Capability | What Gateway provides today | What the operator still owns |
+| --- | --- | --- |
+| Provisioning | A bounded PostgreSQL, Redis, or ClickHouse instance on one Database Node | Node capacity, placement, storage durability, and approved engine version |
+| Configuration and lifecycle | Desired configuration, start, pause, restart, resize where supported, publication, monitoring, and retirement workflows | Change windows, application compatibility, independent verification, and rollback decision |
+| Application access | Managed private bindings and optional direct TLS publication | Client behavior, least-privilege use, certificate trust, and credential rotation policy |
+| Backups | Backup and restore automation is not currently a ready managed-database feature | Engine-native backups, off-host storage, retention, encryption, and restore tests |
+| Point-in-time recovery | Not provided automatically | WAL, AOF, or engine-specific continuous backup architecture and tested recovery procedure |
+| Replication and automatic failover | Not provided by the bounded single-node managed lifecycle | Replicated topology, quorum, failover, fencing, and application reconnect behavior |
+| Major-version upgrades | Not an unattended guarantee | Compatibility review, migration plan, backup, test restore, maintenance window, and rollback point |
+| Disaster recovery | Gateway retains resource intent but does not recreate lost application data | Independent recovery location, data copies, keys, DNS/network recovery, and declared RPO/RTO |
+
+If the service requires HA, PITR, cross-region recovery, or automatic failover, use an external database platform that provides those properties and register it in Gateway as an external connection. Do not infer database availability from the fact that its Gateway resource is healthy.
+
 ![Managed PostgreSQL overview with health and performance metrics](/screenshots/product-tour/managed-database.png)
 
 ## Before provisioning

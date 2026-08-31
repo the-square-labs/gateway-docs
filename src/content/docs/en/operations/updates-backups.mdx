@@ -34,6 +34,67 @@ Document the owner, location, retention, encryption method, and restore order fo
 
 PostgreSQL is the authoritative store for identities, desired state, relationships, operations, and audit metadata. Persistent volumes hold artifacts and service identity material that cannot be reconstructed from PostgreSQL alone. Engine-native managed database backups protect application data; a control-plane backup is not a substitute.
 
+### Manual Compose recovery set
+
+The manual installer uses services named `app`, `relay`, `registry`, `postgres`, and `redis`, plus these persistent volumes:
+
+| Volume | Recovery purpose |
+| --- | --- |
+| `postgres_data` | users, resources, desired state, Tasks, and audit metadata |
+| `gateway_data` | uploaded artifacts, generated configuration, TLS, and application state |
+| `gateway_relay_identity` | local Relay identity shared by `app` and `relay` |
+| `gateway_relay_state` | local Relay runtime state |
+| `gateway_registry_data` | private registry blobs and manifests |
+| `gateway_registry_auth` | registry token signing material |
+| `redis_data` | persisted Redis state; useful for a coordinated full recovery but not a substitute for PostgreSQL |
+
+Also preserve `.env` and the exact `docker-compose.manual.yml` used by the installation. The `.env` file contains recovery-sensitive secrets; encrypt its backup separately and never attach it to a support ticket.
+
+The following example creates a short offline consistency window. Run it from the directory containing the manual Compose file:
+
+```bash
+mkdir -p gateway-recovery/{gateway_data,gateway_relay_identity,gateway_relay_state,gateway_registry_data,gateway_registry_auth,redis_data}
+cp .env docker-compose.manual.yml gateway-recovery/
+chmod 700 gateway-recovery
+chmod 600 gateway-recovery/.env
+
+docker compose -f docker-compose.manual.yml stop app relay registry
+docker compose -f docker-compose.manual.yml exec -T postgres \
+  pg_dump -U gateway -d gateway -Fc > gateway-recovery/postgres.dump
+docker compose -f docker-compose.manual.yml stop redis
+docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway/. gateway-recovery/gateway_data/
+docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway-relay/. gateway-recovery/gateway_relay_identity/
+docker compose -f docker-compose.manual.yml cp --archive relay:/var/lib/gateway-relay/state/. gateway-recovery/gateway_relay_state/
+docker compose -f docker-compose.manual.yml cp --archive registry:/var/lib/registry/. gateway-recovery/gateway_registry_data/
+docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway-registry-auth/. gateway-recovery/gateway_registry_auth/
+docker compose -f docker-compose.manual.yml cp --archive redis:/data/. gateway-recovery/redis_data/
+docker compose -f docker-compose.manual.yml start redis registry app relay
+```
+
+Copy `gateway-recovery` to encrypted off-host storage and verify its checksum there. This example does not back up databases managed on Database Nodes; use each engine's native backup procedure for application data.
+
+To restore into a clean compatible host, first restore `.env` and the same Compose file, then create stopped containers, copy the persistent data, start PostgreSQL, and import the dump before starting the rest of the control plane:
+
+```bash
+docker compose -f docker-compose.manual.yml create
+
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_data/. app:/var/lib/gateway
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_relay_identity/. app:/var/lib/gateway-relay
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_relay_state/. relay:/var/lib/gateway-relay/state
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_registry_data/. registry:/var/lib/registry
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_registry_auth/. app:/var/lib/gateway-registry-auth
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/redis_data/. redis:/data
+
+docker compose -f docker-compose.manual.yml up -d postgres
+docker compose -f docker-compose.manual.yml cp gateway-recovery/postgres.dump postgres:/tmp/gateway.dump
+docker compose -f docker-compose.manual.yml exec -T postgres \
+  pg_restore -U gateway -d gateway --clean --if-exists /tmp/gateway.dump
+
+docker compose -f docker-compose.manual.yml up -d redis registry app relay
+```
+
+Use the same release first. Verify sign-in, secret decryption, Relay identity, and fresh Node reconnects before attempting an upgrade. File ownership can differ across hosts; if a service reports permission errors, compare ownership inside the original and restored containers rather than applying broad writable permissions.
+
 ## Gateway update procedure
 
 1. Read the release notes and required intermediate versions.

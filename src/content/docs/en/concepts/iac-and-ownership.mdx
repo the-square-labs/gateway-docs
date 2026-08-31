@@ -1,0 +1,74 @@
+---
+title: Infrastructure ownership and IaC
+description: Decide what Gateway, Terraform, Ansible, and host operators should each own.
+section: Concepts
+order: 2
+audience: [evaluator, operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-31
+---
+
+Gateway works best when every infrastructure object has one clear owner. It can operate alongside Terraform, OpenTofu, Ansible, cloud consoles, and existing CI without trying to replace all of them.
+
+The simple rule is: **one resource, one owner**. Two systems can observe the same resource, but they should not both continuously rewrite it.
+
+## A practical division of responsibility
+
+| Layer | Typical owner | Examples |
+| --- | --- | --- |
+| Provider foundation | Terraform, OpenTofu, or cloud platform | networks, virtual machines, firewalls, managed storage, DNS zones, backup destinations |
+| Host baseline | Ansible, image pipeline, or host team | operating system, users, kernel policy, Docker installation, disks, endpoint security |
+| Day-to-day service operations | Gateway | Nodes, routes, certificates, workloads, Compose projects, managed databases, bindings, permissions, operational history |
+| Application release intent | source control and Gateway | repository revision, build, artifact, deployment, rollback |
+| External evidence | monitoring, SIEM, backup systems | long-term telemetry, immutable audit retention, off-site recovery copies |
+
+This is a starting point, not a mandatory tool list. A small team may provision a host manually and let Gateway own the service layer. A larger organization may create every host through Terraform and enroll it into Gateway only after security checks pass.
+
+## Choose ownership before importing
+
+Before bringing an existing resource into Gateway, record:
+
+1. which system is allowed to change it;
+2. which system is only allowed to observe it;
+3. where its source of truth lives;
+4. who approves emergency changes;
+5. how an emergency change is reconciled afterwards.
+
+For example, if Terraform owns a DNS record, do not also configure Gateway to continually rewrite that same record. Either keep DNS in Terraform and point it at a Gateway-managed route, or deliberately transfer that record's lifecycle to Gateway and remove it from Terraform state.
+
+## Avoid split ownership
+
+Split ownership creates drift: one tool applies a valid change, another sees an unexpected value and changes it back. The result may look random even though both systems behave as configured.
+
+Common conflicts include:
+
+- Terraform and Gateway both managing one DNS record;
+- Ansible and Gateway both replacing the same nginx configuration;
+- a host script restarting or deleting containers owned by a Gateway Deployment or Compose Project;
+- an external database tool changing users created for a Gateway-managed binding;
+- a CI pipeline deploying the same workload that Gateway also builds and deploys.
+
+If two systems must touch one area, divide it by an explicit boundary. Terraform can own the VM and firewall while Gateway owns applications inside that VM. Ansible can own Docker installation while Gateway owns Docker resources. An external backup system can read a database while Gateway owns its service lifecycle.
+
+## Emergency manual changes
+
+During an incident, a direct host change may be the safest action. Treat it as a temporary exception:
+
+1. record the resource, command or setting, operator, time, and reason;
+2. pause the automation that could overwrite the change;
+3. restore customer service and preserve evidence;
+4. decide whether Gateway or the external source of truth should adopt the new state;
+5. reconcile deliberately and remove the temporary exception.
+
+Do not leave a successful emergency fix as undocumented permanent drift. The next routine deployment may otherwise undo it.
+
+## A low-risk operating model
+
+For most teams, a safe initial model is:
+
+- keep provider accounts, networks, hosts, and off-site backups in existing provisioning tools;
+- use Gateway for day-to-day application, ingress, database-access, and permission workflows;
+- keep long-term monitoring and compliance evidence in independently controlled systems;
+- adopt additional Gateway-managed resource families only after their restore and ownership paths are proven.
+
+Continue with the [adoption pilot](/en/getting-started/adoption-pilot/) to validate this boundary on a non-critical workload before expanding it.

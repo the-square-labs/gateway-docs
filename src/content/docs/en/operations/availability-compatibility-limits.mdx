@@ -1,0 +1,68 @@
+---
+title: Availability, compatibility, and limits
+description: Plan for Gateway and Relay failures, version compatibility, and capacity validation.
+section: Operations and security
+order: 2
+audience: [evaluator, operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-31
+---
+
+Gateway separates management availability from service availability. A control-plane outage removes the ability to make and authorize new changes, but it should not stop infrastructure already applied to managed hosts.
+
+This distinction is central to production planning: the customer-facing application path, the Gateway application, and Relay may have different failure domains.
+
+## What continues during an outage
+
+| Failure | What normally continues | What becomes unavailable or uncertain |
+| --- | --- | --- |
+| Gateway application unavailable; Relay healthy | nginx keeps serving applied configuration; containers and databases keep running; existing authorized private streams can continue where their session lifecycle permits | UI, API, new authorization decisions, desired-state changes, new managed operations, and new private-link admissions |
+| Gateway host unavailable; local Relay runs on the same host | public routes and workloads that do not depend on Relay continue on their own hosts | local Relay also fails; managed-node control, new Secure Links, and Relay-dependent sessions are unavailable or may break |
+| One external Relay member unavailable | workloads continue; assigned traffic can use other ready members only where placement and active assignments provide that path | sessions assigned only to the failed member may reconnect or fail; new capacity is reduced until recovery and rebalance |
+| No reachable Relay | ordinary host-local workloads and directly served public traffic may continue | managed-node control and new private links fail; existing Relay-dependent streams are not guaranteed |
+| One managed Node unavailable | resources on other Nodes continue | resources owned by that Node are unavailable or stale; Gateway must not mutate from stale inventory |
+| License key ordinarily expires | existing configured infrastructure and paid runtime modules continue | new paid-plan resources, paid-feature expansion, and paid-only operations are blocked after grace |
+
+“Continues” means the last successfully applied local state remains active. It does not guarantee that an application has enough replicas, that its database is healthy, or that an existing private stream survives every network failure.
+
+## The local Relay concern
+
+Every installation includes a local Relay. If Gateway and that Relay share one host, losing the host removes both management and the transport used by Secure Links and managed-node sessions.
+
+For environments that require private connections to survive loss of the Gateway host, add external Relay members in independent failure domains and verify that every relevant Node can reach them. Merely running a second Relay container on the same machine, firewall, power source, or network path does not improve fault tolerance.
+
+Test the exact application path. A public Route to a local upstream may continue without Relay, while a Route or application database binding that uses a Secure Link depends on reachable Relay transport.
+
+## Version compatibility
+
+Treat Gateway, Relay, managed daemons, and their protocol versions as one tested release set.
+
+- Use the versions published together by the release metadata and supported installer.
+- Update Relay Pool members one failure domain at a time.
+- Update representative Nodes first and verify fresh capabilities, inventory, and a real operation.
+- Do not assume arbitrary older or newer daemons are compatible because they can establish a TCP connection.
+- Keep the previous approved image references and matching backup until the observation window ends.
+- Do not downgrade across a database migration unless the release notes explicitly support it and a coordinated restore point exists.
+
+Gateway does not currently publish a universal long-term compatibility matrix for every historical component combination. If your policy requires an extended mixed-version window, validate that exact combination during the pilot and record it as an installation-specific constraint.
+
+## Capacity and tested limits
+
+There is no single meaningful maximum number of Nodes, Routes, workloads, builds, databases, or concurrent private streams. Capacity depends on host resources, operation rate, retention, payload shape, Relay placement, build workload, and external providers.
+
+Do not convert plan quotas into a performance guarantee. Before production, test a representative workload at expected peak plus agreed headroom and record:
+
+- Gateway API latency and background queue delay;
+- PostgreSQL connections, latency, storage growth, and backup time;
+- Redis memory and queue health;
+- Relay connections, memory, throughput, reconnect behavior, and assignment spread;
+- Node report volume and freshness;
+- build concurrency, artifact size, and disk pressure;
+- log, audit, metrics, and Pages retention growth;
+- recovery time after restarting each shared component.
+
+If a required limit or SLA is not published for your release, treat it as **not guaranteed**. Establish it through a pilot, keep the evidence with the named release and topology, and retest after material upgrades.
+
+## Production decision
+
+Before accepting a workload, document which outage paths it tolerates, which paths require external Relay, which data services have independent high availability, and who restores the control plane. Then run the [production checklist](/en/operations/production-checklist/) and [incident runbook](/en/operations/incident-runbook/) against that topology.

@@ -73,3 +73,5 @@ If a member update fails, keep it drained and restore the signed known-good supe
 If the pool control state is healthy but one network cannot connect, correct routing, DNS, firewall, or NAT for that advertised endpoint rather than replacing Relay identities. If the identity volume is lost, treat the member as a replacement enrollment and remove the old record only after its assignments are safe. For a local Relay incident, preserve the configured identity and data volume; recreating the container without them creates a different and unusable transport identity.
 
 After any recovery, test a new managed-node session and a real private path such as a Secure Link or database binding. Existing long-lived streams alone can hide a failure to admit new connections.
+
+For the customer-impact matrix when Gateway, the local Relay, or every Relay is unavailable, continue with [Availability, compatibility, and limits](/en/operations/availability-compatibility-limits/).

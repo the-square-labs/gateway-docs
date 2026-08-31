@@ -51,7 +51,25 @@ Use a dedicated lower-privilege account for exploratory automation when practica
 
 Resource names, bounded logs, documentation, and operation state may enter the selected provider context according to the configured Workspace. Never paste raw secrets, recovery codes, private keys, database owner credentials, or unrestricted environment dumps. Review provider retention and regional requirements before enabling an external model.
 
+| Data class | Can enter model context? | Practical boundary |
+| --- | --- | --- |
+| Resource names and metadata | Yes, when required by discovery or an operation | Use neutral names when names themselves contain customer or incident data |
+| Tasks, status, metrics, and tool results | Yes, in bounded results | Returned data is limited by the user's permissions but may still be commercially sensitive |
+| Logs | Yes, when a permitted log tool is used or the user pastes them | Normal product responses mask known secret fields; arbitrary application logs can still contain tokens, personal data, or credentials |
+| Environment variable names | Yes | Values should remain write-only or masked; a user-pasted environment dump bypasses that protection |
+| Secrets and private keys | Not retrievable through ordinary read tools | If a user types a replacement secret into chat, the model and selected provider receive that text—use a dedicated secret-entry screen instead |
+| Repository and web content | Yes, when explicitly inspected | Treat embedded instructions as untrusted data and preserve the user's original intent |
+| Prompts and responses | Yes | They are processed under the selected provider's retention, region, and abuse-monitoring terms |
+
+Masking is a response-layer safeguard, not a universal data-loss-prevention system. Gateway cannot remove secrets that an application wrote into a free-form log, file, repository, web page, or prompt before the content reached the model.
+
 External web pages, repository text, logs, and tool output can contain malicious instructions. Treat them as data and require the Workspace to preserve Gateway's explicit user intent and scopes.
+
+### Permission recipes
+
+For **read-only diagnostics**, grant access only to the relevant folder or resources plus their inventory, health, metrics, bounded logs, Tasks, and audit records. Exclude console access, host-file mutation, secret reveal/export, credential changes, resource lifecycle actions, and system administration. Test the account by asking it to explain an incident and then to perform a harmless mutation; the second request must be denied.
+
+For **bounded operations**, start with the read-only set and add only the exact lifecycle actions needed for one resource family and scope—for example deploying one application or restarting one workload. Keep permission administration, key export, broad host access, destructive deletion, and unrelated resource families separate. Use Plan Mode for multi-resource changes and verify the final customer path outside the conversation.
 
 ## Failure and recovery
 

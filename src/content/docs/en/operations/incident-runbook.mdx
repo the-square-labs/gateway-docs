@@ -47,9 +47,11 @@ Confirm recovery from an external client, clear maintenance intentionally, docum
 
 Check the Gateway container/process, PostgreSQL, Redis, persistent volumes, disk pressure, migrations, and application logs. Preserve the existing encryption keys and database before attempting a replacement instance. If customer workloads continue, avoid broad host changes while restoring the control plane.
 
+First determine whether Relay is still reachable. If Relay is healthy, already applied nginx configuration, containers, databases, and permitted existing private streams can continue while new management and authorization decisions wait. If the only Relay is local to the failed Gateway host, Secure Links and managed-node sessions lose their transport as well; ordinary host-local workloads may still run, but existing Relay-dependent streams are not guaranteed. Independent external Relay members reduce this shared failure only when Nodes can actually reach and use them.
+
 After Gateway returns, verify sign-in, decryption, Relay health, background jobs, update discovery, notifications, and fresh node snapshots. Do not assume daemons reconciled merely because the Dashboard loads.
 
-Use [Updates and backups](/en/operations/updates-backups/) before restoring a replacement instance or changing persistent state.
+Use [Availability, compatibility, and limits](/en/operations/availability-compatibility-limits/) to classify the affected paths and [Updates and backups](/en/operations/updates-backups/) before restoring a replacement instance or changing persistent state.
 
 ## Ingress outage
 

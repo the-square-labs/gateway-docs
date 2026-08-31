@@ -45,6 +45,10 @@ Audit records identify actor, action, resource, timestamp, outcome, and relevant
 
 Audit is not a debug log. Use operational logs and Tasks for implementation detail, and use audit for security and configuration accountability. Export to independently controlled SIEM storage when retention or correlation must survive a Gateway incident.
 
+“Immutable attribution” means account lifecycle changes do not rewrite the historical actor attached to an audit record. It does **not** mean the local audit database is WORM storage or cryptographically tamper-proof against a person who controls the Gateway host, PostgreSQL, backups, or encryption keys. Those administrators remain inside the trust boundary.
+
+If policy requires evidence that survives control-plane compromise, export audit records continuously to an independently administered SIEM or WORM-capable destination, restrict deletion there, synchronize time, and monitor export gaps. Keep the external retention policy and access review separate from Gateway administration.
+
 ## Investigation checklist
 
 1. Identify the resource and customer-visible effect.

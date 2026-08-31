@@ -34,6 +34,67 @@ lastReviewed: 2026-08-30
 
 PostgreSQL — авторитетное хранилище идентичностей, желаемого состояния, связей, операций и метаданных аудита. Постоянные тома содержат артефакты и материалы идентичности служб, которые нельзя восстановить только из PostgreSQL. Копии управляемых баз данных, созданные средствами движков, защищают данные приложений; резервная копия контура управления их не заменяет.
 
+### Комплект восстановления для ручной установки Compose
+
+В ручном установщике используются службы `app`, `relay`, `registry`, `postgres` и `redis`, а также следующие постоянные тома:
+
+| Том | Для чего он нужен при восстановлении |
+| --- | --- |
+| `postgres_data` | пользователи, ресурсы, желаемое состояние, Tasks и метаданные аудита |
+| `gateway_data` | загруженные артефакты, сгенерированная конфигурация, TLS и состояние приложения |
+| `gateway_relay_identity` | идентичность локального Relay, общая для `app` и `relay` |
+| `gateway_relay_state` | рабочее состояние локального Relay |
+| `gateway_registry_data` | слои и манифесты приватного реестра |
+| `gateway_registry_auth` | материалы подписи токенов реестра |
+| `redis_data` | постоянное состояние Redis; полезно для согласованного полного восстановления, но не заменяет PostgreSQL |
+
+Сохраните также `.env` и использованный файл `docker-compose.manual.yml`. В `.env` находятся критичные для восстановления секреты: шифруйте его резервную копию отдельно и не прикладывайте к обращениям в поддержку.
+
+Следующий пример создаёт короткое окно согласованной офлайн-копии. Выполняйте команды из каталога с ручным Compose-файлом:
+
+```bash
+mkdir -p gateway-recovery/{gateway_data,gateway_relay_identity,gateway_relay_state,gateway_registry_data,gateway_registry_auth,redis_data}
+cp .env docker-compose.manual.yml gateway-recovery/
+chmod 700 gateway-recovery
+chmod 600 gateway-recovery/.env
+
+docker compose -f docker-compose.manual.yml stop app relay registry
+docker compose -f docker-compose.manual.yml exec -T postgres \
+  pg_dump -U gateway -d gateway -Fc > gateway-recovery/postgres.dump
+docker compose -f docker-compose.manual.yml stop redis
+docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway/. gateway-recovery/gateway_data/
+docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway-relay/. gateway-recovery/gateway_relay_identity/
+docker compose -f docker-compose.manual.yml cp --archive relay:/var/lib/gateway-relay/state/. gateway-recovery/gateway_relay_state/
+docker compose -f docker-compose.manual.yml cp --archive registry:/var/lib/registry/. gateway-recovery/gateway_registry_data/
+docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway-registry-auth/. gateway-recovery/gateway_registry_auth/
+docker compose -f docker-compose.manual.yml cp --archive redis:/data/. gateway-recovery/redis_data/
+docker compose -f docker-compose.manual.yml start redis registry app relay
+```
+
+Перенесите `gateway-recovery` в зашифрованное хранилище вне хоста и проверьте там контрольную сумму. Этот пример не копирует базы данных на Database Nodes — для данных приложений используйте штатные средства соответствующего движка.
+
+Для восстановления на чистом совместимом хосте сначала верните `.env` и тот же Compose-файл, создайте остановленные Containers, скопируйте постоянные данные, запустите PostgreSQL и импортируйте дамп, а затем запускайте остальной контур управления:
+
+```bash
+docker compose -f docker-compose.manual.yml create
+
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_data/. app:/var/lib/gateway
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_relay_identity/. app:/var/lib/gateway-relay
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_relay_state/. relay:/var/lib/gateway-relay/state
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_registry_data/. registry:/var/lib/registry
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_registry_auth/. app:/var/lib/gateway-registry-auth
+docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/redis_data/. redis:/data
+
+docker compose -f docker-compose.manual.yml up -d postgres
+docker compose -f docker-compose.manual.yml cp gateway-recovery/postgres.dump postgres:/tmp/gateway.dump
+docker compose -f docker-compose.manual.yml exec -T postgres \
+  pg_restore -U gateway -d gateway --clean --if-exists /tmp/gateway.dump
+
+docker compose -f docker-compose.manual.yml up -d redis registry app relay
+```
+
+Сначала используйте ту же версию. Проверьте вход, расшифровку секретов, идентичность Relay и свежие подключения Nodes до обновления. Владельцы файлов могут различаться между хостами; при ошибке прав сравните владельцев внутри исходных и восстановленных Containers, не открывая запись всем пользователям.
+
 ## Процедура обновления Gateway
 
 1. Прочитайте примечания к выпуску и требования к промежуточным версиям.

@@ -1,0 +1,81 @@
+---
+title: Adoption pilot
+description: Evaluate Gateway in stages with clear evidence and stop conditions.
+section: Start here
+order: 4
+audience: [evaluator, operator, platform-engineer]
+status: ready
+lastReviewed: 2026-08-31
+---
+
+Do not begin by moving the most critical system. A useful Gateway evaluation starts with one representative, reversible workload and proves the operating model before the scope grows.
+
+The goal of a pilot is not to click every screen. It is to answer three business questions:
+
+1. Can the intended team complete a normal change safely?
+2. Can another person understand and recover that change without private knowledge?
+3. Does Gateway reduce operational handoffs without hiding ownership or risk?
+
+## Stage 1: evaluation environment
+
+Install Gateway in an isolated environment and connect a disposable or development host.
+
+Prove:
+
+- administrator recovery and MFA;
+- Node enrollment and reconnect after restart;
+- one Route with TLS to a test application;
+- one bounded permission group and a non-admin operator;
+- Tasks, logs, and audit attribution for a successful and failed operation;
+- backup of the control-plane recovery set and a restore into a clean environment.
+
+**Gate:** do not continue if the team cannot restore access, explain the network path, or identify who owns each resource.
+
+## Stage 2: representative staging workload
+
+Choose a service that resembles production but has a simple rollback. Include the dependencies you actually care about: source build or image delivery, Route, certificate, environment configuration, monitoring, and optionally a private database binding.
+
+Run the complete journey with the people who will use it. A platform engineer should not silently finish every difficult step on behalf of the application owner; the pilot must reveal whether the normal path is understandable.
+
+**Gate:** require a repeatable deployment, rollback, alert, access review, and restore record. Record every workaround and decide whether it is training, configuration, or a product gap.
+
+## Stage 3: internal production
+
+Move a low-criticality internal service with real users. Keep the previous deployment path available during a defined observation window.
+
+Test failures deliberately:
+
+- restart Gateway while the service is receiving traffic;
+- restart Relay separately;
+- disconnect and reconnect the managed Node;
+- let an unauthorized operator attempt a protected action;
+- deploy a broken revision and perform the documented rollback;
+- restore the Gateway control plane without recreating healthy workloads.
+
+**Gate:** the service must remain within its agreed availability target, and the team must recover management without replacing resource identities or relying on one person's shell history.
+
+## Stage 4: stateless customer-facing service
+
+Adopt a service whose data lives in an independently protected system. Validate external traffic, certificate renewal, deployment rollback, Node replacement, Relay placement, alert delivery, and operational ownership.
+
+**Gate:** approve expansion only when evidence shows that the service owner—not only the Gateway administrator—can diagnose the full path from domain to application.
+
+## Stage 5: stateful or critical systems
+
+Stateful and business-critical systems belong last. Before adoption, define recovery point and recovery time objectives, prove engine-native backups and restore, document schema migration rollback, and remove single failure domains that violate the service target.
+
+Gateway management does not turn a single-node database into a highly available database. If the workload requires automatic database failover, multi-region continuity, or a formal SLA, provide those capabilities in the data architecture and validate how Gateway interacts with them.
+
+## Evidence to keep
+
+For each stage, retain:
+
+- scope, owners, start and completion dates;
+- architecture and resource-ownership decision;
+- accepted risks and stop conditions;
+- deployment, rollback, outage, and restore results;
+- permission and audit evidence;
+- unresolved product, process, and training gaps;
+- a go, conditional-go, or no-go decision signed by the service owner.
+
+The result may be a limited adoption rather than an all-or-nothing decision. Gateway can own day-to-day operations for selected services while provider provisioning, specialist observability, and critical data protection remain in existing systems.
