@@ -5,7 +5,7 @@ section: Reference
 order: 2
 audience: [evaluator, administrator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-01
 ---
 
 
@@ -40,6 +40,8 @@ After an ordinary key expiry, Gateway preserves existing premium resources, runn
 
 Existing Git-delivered workloads, source settings, build history, and internal-registry artifacts remain in place. New source builds and other paid-only automation stop until the required plan returns. Renewing the key restores full operations without rebuilding existing resources.
 
+If the licensing service is unreachable, a previously valid paid installation uses its cached state for a 100-day technical offline-validation grace period measured from the last valid check. This connectivity grace does not extend a known subscription expiration deadline. After connectivity grace ends, new paid-only operations are blocked while existing configured infrastructure remains in place.
+
 An authoritative loss is different from ordinary expiry. Explicit deactivation, transfer to another installation, revocation, an invalid key, or a policy violation may disable protected entry points and switchable modules while retaining stored configuration and resource data. This distinction prevents accidental renewal delays or a license-service outage from becoming a customer data-plane outage without weakening deliberate revocation.
 
 ## Operational checks
@@ -71,8 +73,8 @@ Do not delete preserved resources to “clean up” an entitlement warning. Thei
 
 The Gateway license covers the active Gateway installation according to its key and agreement. Credentials, quotas, or subscriptions for external providers—cloud DNS, source control, registries, email, AI, or other hosted services—remain separate. Likewise, usage shown by Gateway Inference is operational accounting and should be reconciled with the provider for commercial decisions.
 
-The current Square Labs-owned source is available under [PolyForm Perimeter 1.0.1](https://github.com/the-square-labs/gateway/blob/main/LICENSE.md). It permits use, modification, and redistribution for noncompeting purposes, including ordinary internal business use. The excluded purpose is providing others with a product marketed as a substitute for Gateway, whether as software, a hosted service, a port, or a free offering.
+The current source owned by Alexandr Slavinschii, operating the project under the Square Labs name, is available under [PolyForm Perimeter 1.0.1](https://github.com/the-square-labs/gateway/blob/main/LICENSE.md). The Square Labs OÜ becomes the rights holder only after registration in Estonia and an effective written assignment. PolyForm Perimeter permits use, modification, and redistribution for noncompeting purposes, including ordinary internal business use. The excluded purpose is providing others with a product marketed as a substitute for Gateway, whether as software, a hosted service, a port, or a free offering.
 
-A Personal, Business, or Enterprise key unlocks paid-plan features and limits; it is not required merely because an organization uses Community internally. An ordinary key does not grant OEM, white-label, resale, competing hosted-service, or other substitute-product rights. Those uses require a separate written agreement with Square Labs. After ordinary key expiry, the key's continuity terms preserve paid-plan resources configured before expiry while blocking new paid-only creation and expansion.
+A Personal, Business, or Enterprise key unlocks paid-plan features and limits; it is not required merely because an organization uses Community internally. An ordinary key does not grant OEM, white-label, resale, competing hosted-service, or other substitute-product rights. Those uses require a separate written agreement with the current Licensor. After ordinary key expiry, the key's continuity terms preserve paid-plan resources configured before expiry while blocking new paid-only creation and expansion.
 
-Every official release also carries a [future MIT grant](https://github.com/the-square-labs/gateway/blob/main/FUTURE-MIT-GRANT.md). Its covered Square Labs-owned product source becomes MIT-licensed 24 months after that release's recorded release date, or earlier after 180 consecutive days of permanent product cessation as defined in the grant. Release automation verifies the exact date before publication. Each release keeps its own date; publishing a newer release does not postpone an older release's transition. Trademarks, commercial keys, separately licensed documentation and assets, and third-party code remain outside that grant.
+Every official release also carries the [Product Continuity MIT Grant](https://github.com/the-square-labs/gateway/blob/main/CONTINUITY-MIT-GRANT.md). It has no release-age or inactivity countdown. Product pauses, discontinued support or sales, public announcements, and website or licensing-service outages do not trigger MIT. Before registration of The Square Labs OÜ and an effective written assignment, no automatic transition applies. After assignment, the conditional MIT terms can start only 90 days after final legal dissolution without a successor or assignee, or through an express voluntary MIT election by the current rights holder. Trademarks, commercial keys, separately licensed documentation and assets, and third-party code remain outside that grant.
