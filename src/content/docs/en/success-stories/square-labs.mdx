@@ -1,0 +1,53 @@
+---
+title: Square Labs
+description: How Square Labs operates Good Gateway through its own product infrastructure and delivery paths.
+section: Customer stories
+order: 6
+audience: [operator, platform-engineer, engineering-lead, buyer]
+status: ready
+lastReviewed: 2026-09-01
+---
+
+<div class="gg-story-hero">
+  <img src="/partners/square-labs.png" alt="Square Labs logo" width="96" height="96" />
+  <div><span>Creator & operator</span><p><a href="https://thesquarelabs.com">thesquarelabs.com</a></p></div>
+</div>
+
+Square Labs creates and operates Good Gateway. This is not presented as independent customer proof. It is the product’s internal operating case: the team uses Gateway for infrastructure it owns, publishes public properties through Gateway, and expects the same deployment, identity, observability, and recovery paths to work under its own deadlines.
+
+## Why internal operation matters
+
+Infrastructure products can look coherent in demonstrations while remaining awkward in day-two operation. The gap appears during upgrades, certificate renewal, failed builds, stale Nodes, partial outages, permission changes, and recovery from an operator mistake. Square Labs wanted those paths to be exercised continuously rather than only when a customer reported them.
+
+The operating rule is straightforward: if a workflow is too fragile, opaque, or inconvenient for the team building Gateway, it is not ready to become the default for another operator.
+
+## What runs through Gateway
+
+The Good Gateway landing site and this documentation portal are built from Git and published as immutable Gateway Pages deployments. Their delivery path uses versioned build artifacts, preview, explicit promotion, custom domains, TLS routes, and retained rollback targets.
+
+The broader internal environment also exercises the platform’s other responsibilities:
+
+- managed Docker and ingress Nodes with certificate-pinned enrollment and mutual TLS identities;
+- source integrations and repeatable build paths;
+- routes, certificates, monitoring, logs, and public status communication;
+- scoped access for people and automation;
+- signed update channels and operational validation after release;
+- backup and recovery procedures for control-plane state and identity material.
+
+Not every capability is enabled in every internal environment. The value comes from using the same resource and operation model across product development, public delivery, and ongoing infrastructure work.
+
+## How dogfooding changes product decisions
+
+Internal use makes product tradeoffs concrete. A feature is not complete because its API returned success; it must expose enough state for an operator to understand the result. A deployment is not healthy because a container started; the route and external customer path must work. An update is not finished because a new image is running; existing identities, encrypted data, Nodes, and automation must reconcile.
+
+This feedback loop has shaped Gateway’s explicit Tasks, permission checks, signed artifacts, health verification, retained deployment state, and separation between control-plane availability and running workloads.
+
+It also keeps documentation honest. The public landing and docs sites use the Pages path described in this portal, so the team encounters the same preview, publication, routing, and rollback behavior readers are asked to adopt.
+
+## Outcome
+
+Square Labs operates Gateway as a product and as infrastructure. That does not remove the need for external integrator and customer evidence, but it ensures the product’s default paths are exposed to real operational pressure before being recommended to others.
+
+> “We built Gateway for systems we operate ourselves. If an operational path is too fragile or opaque for our own infrastructure, it is not ready to become the default for anyone else.”
+
+Continue with [Static site delivery](/en/journeys/static-site/) to see the public workflow exercised by this site and the documentation portal.

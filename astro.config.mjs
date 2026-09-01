@@ -105,6 +105,17 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Customer stories',
+					translations: { ru: 'Истории клиентов' },
+					items: [
+						{ slug: 'success-stories/wiolett-industries' },
+						{ slug: 'success-stories/remedy-trade' },
+						{ slug: 'success-stories/just-working' },
+						{ slug: 'success-stories/dfk-algotrade' },
+						{ slug: 'success-stories/square-labs' },
+					],
+				},
+				{
 					label: 'Concepts',
 					translations: { ru: 'Концепции' },
 					items: [

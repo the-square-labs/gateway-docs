@@ -1,0 +1,49 @@
+---
+title: Just Working
+description: How Just Working used Good Gateway to make complex enterprise infrastructure easier to operate and hand over.
+section: Customer stories
+order: 4
+audience: [operator, platform-engineer, engineering-lead, buyer]
+status: ready
+lastReviewed: 2026-09-01
+---
+
+<div class="gg-story-hero">
+  <img src="/partners/just-working.png" alt="Just Working logo" width="96" height="96" />
+  <div><span>Enterprise integration partner</span><p><a href="https://justworking.uk">justworking.uk</a></p></div>
+</div>
+
+Just Working builds enterprise platforms, internal tools, cloud integrations, and automation for organisations that need serious technology without permanent operational friction. Its product principle is simple: complexity may exist underneath, but the people using and owning the system should not have to reconstruct that complexity every day.
+
+## The starting environment
+
+Client platforms rarely begin with a blank infrastructure sheet. They arrive with existing cloud accounts, legacy services, containers, DNS providers, certificates, databases, monitoring tools, and access patterns accumulated over several delivery phases. A new application can be elegant while its operating environment remains a collection of separate consoles and team-specific knowledge.
+
+That fragmentation creates two problems. During delivery, engineers spend time translating the same intent across tools. After launch, the client receives a system that is technically documented but still difficult to operate without senior specialists. Routine questions—what owns this hostname, where a secret is used, which deployment is active, what changed before an alert—require several people or a fresh investigation.
+
+## Adoption as part of delivery
+
+Just Working introduced Gateway as a shared operational foundation during delivery, not as a cleanup project after launch.
+
+1. **Model ownership first.** Domains, routes, applications, Nodes, and databases received stable names and owners before automation was added.
+2. **Reuse existing infrastructure.** Gateway connected to the client’s current Docker hosts, DNS, source systems, and service topology instead of demanding a wholesale platform migration.
+3. **Create a readable change path.** Common work moved from informal instructions into plans, Tasks, health verification, and audit history.
+4. **Expose the same model to the client team.** Operators joined the workflow early with scoped access. Handover became a continuation of normal operation rather than a final documentation event.
+
+AI Workspace was useful for describing higher-level outcomes and assembling plans, but it was not treated as a privileged shortcut. The same permissions, confirmations, and operation records applied whether a change began in AI Workspace, the Operations Console, or an API integration.
+
+## What changed in daily operation
+
+The delivery team gained a consistent way to operate across projects without flattening every client into the same architecture. A container remained a container and a database remained owned by its actual engine and host, but their operational relationships became visible in one place.
+
+Client teams gained a clearer boundary between routine operations and exceptional recovery work. They could deploy, inspect health, follow logs, manage routes, and understand recent changes without receiving unrestricted access to every underlying system. Senior engineers still had the lower-level tools when required, but those tools stopped being the only usable interface.
+
+This also improved extension after launch. New services could follow an established naming, access, monitoring, and rollback pattern instead of introducing another isolated deployment process.
+
+## Outcome
+
+Just Working can hand over not only application code and infrastructure diagrams, but a functioning operational model. Complex systems remain sophisticated underneath while becoming calmer to inspect, change, and support.
+
+> “Good Gateway removes a lot of operational complexity from delivery. Our teams get one place to understand services, access, health, and change.”
+
+Continue with [Infrastructure ownership and IaC](/en/concepts/iac-and-ownership/) and [Permissions](/en/concepts/permissions/) for the principles behind this delivery model.

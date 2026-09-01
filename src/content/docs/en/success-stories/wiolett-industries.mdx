@@ -1,0 +1,49 @@
+---
+title: Wiolett Industries
+description: How Wiolett adopted Good Gateway as a repeatable, identity-bound operating layer for client infrastructure.
+section: Customer stories
+order: 2
+audience: [operator, platform-engineer, engineering-lead, buyer]
+status: ready
+lastReviewed: 2026-09-01
+---
+
+<div class="gg-story-hero">
+  <img src="/partners/wiolett.svg" alt="Wiolett Industries logo" width="96" height="96" />
+  <div><span>Product & infrastructure partner</span><p><a href="https://wiolett.net">wiolett.net</a></p></div>
+</div>
+
+Wiolett Industries designs product software and then stays close to the systems that must run it. The engagement does not end when an interface ships: teams still need deployment, private connectivity, certificates, monitoring, automation, and an operating model the client can understand without depending indefinitely on the original developers.
+
+## The starting environment
+
+Before Gateway, that operating layer varied from project to project. A typical environment combined Compose files, direct Docker access, reverse-proxy configuration, monitoring dashboards, shell automation, and a management product such as Portainer. Each tool solved a real part of the problem, but the complete system existed mostly in the implementation team’s heads and handover documents.
+
+The difficulty appeared after launch. A client operator could see containers in one place, certificates in another, and alerts somewhere else, but could not follow a single change from intent to affected resources, execution, health, and recovery. Security decisions also had to be repeated for every environment: how agents were claimed, whether a shared secret was required, how transport identity was hardened, and who owned credential rotation.
+
+Portainer supports an Agent ownership handshake, an optional shared secret, and mTLS for Edge Agent deployments. Wiolett’s concern was not the absence of security features. It was that reaching the desired trust model remained a deployment-specific hardening decision. The team wanted certificate-pinned bootstrap and identity-bound mutual TLS to be the normal lifecycle of every managed Node.
+
+## Adoption without replacing healthy workloads
+
+Wiolett introduced Gateway as an operating layer rather than a new application runtime. The first step was a dedicated control-plane host and a small set of non-critical Nodes. Existing containers, databases, and public services stayed where they were.
+
+The team then adopted Gateway in stages:
+
+1. **Establish identity.** Each Node was created for a stable role. The generated command carried a one-time enrollment token and the expected Gateway certificate fingerprint. The daemon verified the control plane before sending the token, then received its long-term certificate identity.
+2. **Connect the operational path.** Ingress, Docker inventory, certificates, health, and logs were brought into the same resource model. The aim was not to hide the underlying systems but to make their relationships legible.
+3. **Move routine change into governed workflows.** Operators used scoped permissions and Tasks instead of broad shell access for normal actions. Direct host access remained available for recovery and unsupported work, not as the everyday interface.
+4. **Prepare the handover early.** Client operators joined before the final migration. They learned the system through the same screens, runbooks, and audit trail they would use after delivery.
+
+## What changed in daily operation
+
+The main improvement was not a single feature. Wiolett gained a repeatable operating pattern across clients. A route change now connected the domain, certificate, upstream health, owning workload, and resulting operation. A Node had a durable identity rather than merely an address and an exposed management endpoint. Permissions could be limited to the resources and actions a person actually owned.
+
+This also changed support. Instead of reconstructing an incident from shell history and several dashboards, the team could begin with the affected resource, its latest state, recent Tasks, logs, and related dependencies. The client could participate in that diagnosis because the operating model was visible rather than implicit.
+
+## Outcome
+
+Wiolett now has a common infrastructure control layer it can deploy across product engagements without forcing every client into the same hosting provider or replacing the tools already working underneath. Clients keep the Gateway installation, infrastructure identities, operational data, and the ability to continue operating after the delivery team steps back.
+
+> “Good Gateway lets us deliver an operating environment, not a pile of handover notes. Clients keep a clear view of what runs and full control of it.”
+
+Continue with [Security model](/en/security/security-model/) and [Add your first Node](/en/getting-started/first-node/) to inspect the trust path used in this adoption.

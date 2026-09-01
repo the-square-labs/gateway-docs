@@ -1,0 +1,49 @@
+---
+title: Remedy Trade
+description: How Remedy connected infrastructure operations around systematic trading without putting the control plane into the execution path.
+section: Customer stories
+order: 3
+audience: [operator, platform-engineer, engineering-lead, buyer]
+status: ready
+lastReviewed: 2026-09-01
+---
+
+<div class="gg-story-hero">
+  <img src="/partners/remedy.svg" alt="Remedy Trade logo" width="96" height="96" />
+  <div><span>Systematic trading operator</span><p><a href="https://remedy.trade">remedy.trade</a></p></div>
+</div>
+
+Remedy Trade designs, tests, and operates systematic trading processes where research, execution, monitoring, and risk must remain connected. The infrastructure behind those processes includes ordinary software concerns—services, databases, certificates, logs, and deployments—but the cost of an unclear change is higher when systems are reacting to live markets.
+
+## The starting environment
+
+The team already had capable execution and research systems. The problem was the operational layer around them. Service deployment, host access, TLS, database connectivity, monitoring, and incident response lived across different tools and conventions. An engineer could answer each question, but answering the complete question—what changed, what it affected, whether customers or strategies were exposed, and how to recover—required manual correlation.
+
+Remedy also had a strict architectural constraint: the management application could not become a runtime dependency for already-running strategies. If a control-plane service was unavailable, market-facing workloads and established routes still needed to continue serving.
+
+## Adoption around the execution stack
+
+Gateway was introduced around the existing trading environment, not through it. The first managed resources were infrastructure-facing: ingress, supporting Docker hosts, monitoring signals, and selected service routes. Research code, execution logic, and market connectivity remained unchanged.
+
+The rollout followed four boundaries:
+
+1. **Keep management outbound.** Managed hosts initiated their control connections. The rollout did not require broad inbound management ports across the trading network.
+2. **Separate control availability from workload availability.** Routes and running services continued operating when Gateway itself was temporarily unavailable. The control plane coordinated change but did not proxy ordinary application traffic through its web process.
+3. **Connect state before automating change.** The team first used Gateway to establish inventory, identities, health, and relationships. Automation came after the visible state matched reality.
+4. **Apply scoped operation.** Routine actions moved to permission-aware workflows. High-consequence changes still required explicit operator review and verification.
+
+## What changed in daily operation
+
+Gateway gave Remedy one place to follow the infrastructure surrounding a trading service. Operators could move from a public route to its certificate, upstream workload, Node health, recent logs, and operation history without translating names between unrelated dashboards.
+
+During incidents, this reduced the temptation to make broad changes before understanding impact. The team could distinguish a control-plane issue from an execution issue, keep healthy workloads in place, and use maintenance or rollback only on the affected path. Observability became part of the operating workflow rather than a dashboard checked after deployment.
+
+The same model also improved access control. People working on applications did not need unrestricted host administration for routine deployment or diagnosis, while infrastructure owners retained the lower-level access required for recovery.
+
+## Outcome
+
+Remedy kept its specialized trading stack and gained a coherent control layer around it. Deployment, access, service health, TLS, logs, and recovery became easier to reason about together, while the execution path remained independent from Gateway availability.
+
+> “In trading infrastructure, deployment and observability cannot be separate concerns. Gateway keeps the operational layer coherent without getting in the way of execution.”
+
+Continue with [Production readiness](/en/operations/production-checklist/) and [Incident runbook](/en/operations/incident-runbook/) for the operational model used in this environment.

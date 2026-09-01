@@ -220,6 +220,51 @@ starlight-theme-select label {
 	height: auto;
 }
 
+.gg-story-hero {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	margin-block: 0.5rem 2rem;
+	padding-block: 1rem;
+	border-block: 1px solid var(--sl-color-gray-5);
+}
+
+.gg-story-hero > img {
+	width: 4.5rem !important;
+	height: 4.5rem !important;
+	margin: 0 !important;
+	object-fit: cover;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.35rem;
+	background: transparent;
+}
+
+.gg-story-hero > img[src$="/wiolett.svg"] {
+	filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
+}
+
+.gg-story-hero > div {
+	display: flex;
+	align-self: center;
+	flex-direction: column;
+	justify-content: center;
+	margin: 0 !important;
+	min-height: 4.5rem;
+	min-width: 0;
+}
+
+.gg-story-hero span {
+	color: var(--sl-color-gray-3);
+	font-size: 0.75rem;
+	font-weight: 650;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.gg-story-hero p {
+	margin: 0.25rem 0 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

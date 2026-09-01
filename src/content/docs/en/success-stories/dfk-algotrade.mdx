@@ -1,0 +1,49 @@
+---
+title: DFK Algotrade
+description: How DFK Algotrade replaced surprise control-plane changes with scheduled, verifiable infrastructure releases.
+section: Customer stories
+order: 5
+audience: [operator, platform-engineer, engineering-lead, buyer]
+status: ready
+lastReviewed: 2026-09-01
+---
+
+<div class="gg-story-hero">
+  <img src="/partners/dfk.png" alt="DFK Algotrade logo" width="96" height="96" />
+  <div><span>Fintech engineering & operations</span><p><a href="https://dfk-algotrade.com">dfk-algotrade.com</a></p></div>
+</div>
+
+DFK Algotrade builds financial software and operates systems connected to portfolio management, trading, data, and risk. In that environment, deployment speed matters, but predictable change matters more. A control-plane update can affect access, routing, application delivery, databases, and the team’s ability to diagnose everything else.
+
+## The incident that changed the requirement
+
+The team had previously operated an environment where a Coolify automatic update caused a production outage. Coolify also provides semi-automatic and manual upgrade paths; the lesson was not that automation itself is wrong. The lesson was that release availability, release approval, rollout timing, data compatibility, and recovery evidence are different decisions.
+
+The outage exposed a broader weakness in the operating model. The team could restore service, but the release process did not begin with a shared answer to several questions: What exact version is approved? What state must be backed up? What would trigger rollback? Which customer-facing paths prove the update succeeded? Which parts can be changed independently?
+
+DFK did not want another tool that merely exposed an update button. It wanted change governance around the complete infrastructure control layer.
+
+## Adoption around release discipline
+
+Gateway was introduced alongside a release procedure agreed by engineering and operations.
+
+1. **Separate discovery from approval.** The selected update channel could report an available version without changing the running installation. An operator chose the target and the maintenance window.
+2. **Record the recovery inputs.** Before change, the team recorded running versions and image digests, verified PostgreSQL and persistent-state backups, and preserved encryption and identity material.
+3. **Update by failure domain.** Gateway, Relay members, and managed Nodes were not treated as one simultaneous event. Components could be drained, updated, verified, and returned before continuing.
+4. **Verify the real system.** A running container was not considered success. Sign-in, decryption, Node reconnects, routes, database bindings, logs, automation, and external traffic formed the completion criteria.
+
+Signed release metadata and daemon artifacts reduced ambiguity about what was being installed, while explicit Tasks and audit records made the operational decision visible after the maintenance window ended.
+
+## What changed beyond updates
+
+The same discipline improved ordinary application delivery. DFK could keep a known-good deployment, use health-checked rollout paths where appropriate, and distinguish application rollback from data recovery. Operators became less likely to delete or recreate infrastructure simply because one deployment failed.
+
+Infrastructure relationships also became easier to inspect. Financial services, private database connections, routes, certificates, and host health were no longer separate fragments in the release conversation. The team could determine which layer had changed and avoid escalating a local failure into a platform-wide incident.
+
+## Outcome
+
+Updates became scheduled operational decisions with explicit ownership, recovery inputs, and verification. DFK retained control of release timing while gaining a clearer path to adopt new Gateway capabilities without letting the vendor’s release cadence dictate production change.
+
+> “After a Coolify update took a production environment down, we stopped treating automatic updates as convenience. Gateway gives us a release process we can review, schedule, and verify before moving on.”
+
+Continue with [Updates and backups](/en/operations/updates-backups/) and [Lifecycle and safety](/en/concepts/lifecycle-and-safety/) for the procedures behind this case.
