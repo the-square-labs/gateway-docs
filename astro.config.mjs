@@ -89,6 +89,17 @@ export default defineConfig({
 			],
 			sidebar: [
 				{
+					label: 'Customer stories',
+					translations: { ru: 'Истории клиентов' },
+					items: [
+						{ slug: 'success-stories/wiolett-industries' },
+						{ slug: 'success-stories/remedy-trade' },
+						{ slug: 'success-stories/just-working' },
+						{ slug: 'success-stories/dfk-algotrade' },
+						{ slug: 'success-stories/square-labs' },
+					],
+				},
+				{
 					label: 'Start here',
 					translations: { ru: 'Начало работы' },
 					items: [
@@ -102,17 +113,6 @@ export default defineConfig({
 						{ slug: 'getting-started/initial-setup' },
 						{ slug: 'getting-started/first-node' },
 						{ slug: 'getting-started/first-route' },
-					],
-				},
-				{
-					label: 'Customer stories',
-					translations: { ru: 'Истории клиентов' },
-					items: [
-						{ slug: 'success-stories/wiolett-industries' },
-						{ slug: 'success-stories/remedy-trade' },
-						{ slug: 'success-stories/just-working' },
-						{ slug: 'success-stories/dfk-algotrade' },
-						{ slug: 'success-stories/square-labs' },
 					],
 				},
 				{
