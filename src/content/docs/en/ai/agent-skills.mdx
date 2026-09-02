@@ -31,6 +31,28 @@ npx skills add the-square-labs/gateway-skills --skill using-gateway -g
 
 The skill is plain Markdown with focused references. You can inspect it before installation in the `the-square-labs/gateway-skills` repository and keep it under version control when installing at project scope.
 
+### Install as a native plugin
+
+Claude Code and Codex can also install the same canonical skill as a native plugin. Choose either the plugin route or `npx skills` for a given agent; installing both is unnecessary.
+
+For Claude Code:
+
+```bash
+claude plugin marketplace add the-square-labs/gateway-skills
+claude plugin install gateway@gateway-skills
+```
+
+For Codex:
+
+```bash
+codex plugin marketplace add the-square-labs/gateway-skills --ref main
+codex plugin add gateway@gateway-skills
+```
+
+Start a new session after installing or updating the plugin. The repository contains no always-on hooks: installation alone does not connect to Gateway or change infrastructure.
+
+The complete installation, update, and verification commands are maintained in the repository's [INSTALL.md](https://github.com/the-square-labs/gateway-skills/blob/main/INSTALL.md).
+
 ## Connect the agent to Gateway
 
 An administrator first enables **Settings → Features → OAuth and MCP access → MCP server** and grants the user **Use MCP** (`mcp:use`) together with the ordinary scopes for the resources the agent may access.
