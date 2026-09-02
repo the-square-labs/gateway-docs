@@ -91,6 +91,7 @@ export default defineConfig({
 				{
 					label: 'Customer stories',
 					translations: { ru: 'Истории клиентов' },
+					collapsed: true,
 					items: [
 						{ slug: 'success-stories/wiolett-industries' },
 						{ slug: 'success-stories/remedy-trade' },
@@ -135,6 +136,15 @@ export default defineConfig({
 						{ slug: 'journeys/git-to-production' },
 						{ slug: 'journeys/private-database' },
 						{ slug: 'journeys/static-site' },
+					],
+				},
+				{
+					label: 'AI and inference',
+					translations: { ru: 'AI и inference' },
+					items: [
+						{ slug: 'ai/agent-skills' },
+						{ slug: 'ai/workspace' },
+						{ slug: 'ai/inference' },
 					],
 				},
 				{
@@ -218,11 +228,6 @@ export default defineConfig({
 						{ slug: 'integrations/dns-email-webhooks' },
 						{ slug: 'integrations/api-and-mcp' },
 					],
-				},
-				{
-					label: 'AI and inference',
-					translations: { ru: 'AI и inference' },
-					items: [{ slug: 'ai/workspace' }, { slug: 'ai/inference' }],
 				},
 				{
 					label: 'Operations and security',

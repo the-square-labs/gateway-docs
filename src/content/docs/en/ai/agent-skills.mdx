@@ -1,0 +1,82 @@
+---
+title: AI agent skills
+description: Give Codex, Claude Code, Cursor, and other coding agents the operating context and authenticated access needed to work with Good Gateway.
+section: AI and inference
+order: 1
+audience: [developer, platform-engineer, operator]
+status: ready
+lastReviewed: 2026-09-02
+---
+
+Good Gateway can become an infrastructure control plane for coding agents without giving them direct SSH access or teaching each agent your deployment process from scratch. The public `using-gateway` skill explains how Gateway resources, permissions, Tasks, builds, delivery, diagnosis, verification, and rollback work. Gateway's remote MCP server then gives the agent authenticated access to the resources its user is allowed to see.
+
+The two layers have different jobs:
+
+- **Agent skill:** reusable operating knowledge installed into Codex, Claude Code, Cursor, and other compatible agents.
+- **Gateway MCP:** live tools from your Gateway installation, protected by OAuth, resource scopes, plan entitlements, confirmations, and audit logging.
+
+## Install the Good Gateway skill
+
+From a project where the agent should use Gateway, run:
+
+```bash
+npx skills add the-square-labs/gateway-skills --skill using-gateway
+```
+
+The installer lets you select the compatible agents configured on your machine. To make the skill available across projects, install it globally:
+
+```bash
+npx skills add the-square-labs/gateway-skills --skill using-gateway -g
+```
+
+The skill is plain Markdown with focused references. You can inspect it before installation in the `the-square-labs/gateway-skills` repository and keep it under version control when installing at project scope.
+
+## Connect the agent to Gateway
+
+An administrator first enables **Settings → Features → OAuth and MCP access → MCP server** and grants the user **Use MCP** (`mcp:use`) together with the ordinary scopes for the resources the agent may access.
+
+For Codex:
+
+```bash
+codex mcp add good-gateway --url https://gateway.example.com/api/mcp
+codex mcp login good-gateway
+codex mcp list
+```
+
+For Claude Code:
+
+```bash
+claude mcp add --transport http good-gateway --scope user https://gateway.example.com/api/mcp
+claude mcp login good-gateway
+claude mcp get good-gateway
+```
+
+Replace `gateway.example.com` with the canonical public hostname of your Gateway installation. Authentication completes through Gateway OAuth in a browser. Do not create or paste an API token for MCP.
+
+For callback policy, compact tool discovery, and connection errors, use the complete [REST API and MCP guide](/en/integrations/api-and-mcp/).
+
+## Start with a read-only task
+
+Verify the connection and permission boundary before asking the agent to make a change:
+
+```text
+Use $using-gateway. List the Gateway Nodes and workloads I can access,
+summarize warnings and active Tasks, and recommend the safest next action.
+Do not change anything.
+```
+
+Then try a scoped delivery request:
+
+```text
+Use $using-gateway to inspect how this application is currently
+published. Propose a Gateway-native update and rollback plan. Wait for my
+approval before changing infrastructure.
+```
+
+The skill tells the agent to read current state first, preserve resource ownership, avoid direct host changes, follow asynchronous Tasks, and verify the actual resource or HTTPS result instead of treating an accepted request as success.
+
+## Permissions and safety
+
+Create a dedicated Gateway user or group for agent access and grant only the necessary resources and actions. MCP does not bypass Gateway authorization: removing `mcp:use`, changing group membership, or narrowing resource scopes affects future calls made with the existing connection.
+
+Use separate identities and Gateway installations for development and production. A skill gives an agent instructions, not authority; the connected user's scopes and the user's explicit request determine what it can do.

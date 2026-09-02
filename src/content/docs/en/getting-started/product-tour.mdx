@@ -1,16 +1,16 @@
 ---
 title: Product tour
-description: Understand the main Gateway workspaces and how they fit together.
+description: See how Good Gateway connects application delivery, access, Docker, and data into one understandable workflow.
 section: Start here
 order: 3
 audience: [operator, evaluator]
 status: ready
-lastReviewed: 2026-08-31
+lastReviewed: 2026-09-02
 ---
 
-Good Gateway brings the work around an application into one understandable flow: build it from source, run it on the right server, connect private data, publish a secure domain, and give each teammate only the access they need. Instead of making users assemble these steps from unrelated server tools, Gateway keeps the resources, operations, and results connected.
+import CopyPromptButton from '../../../../components/CopyPromptButton.astro';
 
-You can begin in the web interface without learning every internal component. As your needs grow, the same resources remain available through the Operations Console, REST API, OAuth, MCP, and AI Workspace. The sections below show what each area helps you achieve and where to look when the result is not what you expected.
+Good Gateway brings everyday infrastructure work into one place: publish an application, connect it to a private database, verify its state, and manage access without manually assembling disconnected procedures on servers. Start with the result you need; Gateway keeps the details of each operation in resources, Tasks, and the audit log.
 
 ![Gateway Dashboard and primary product navigation](/screenshots/product-tour/dashboard-overview.png)
 
@@ -19,95 +19,93 @@ You can begin in the web interface without learning every internal component. As
   <p>If you are not yet sure where Gateway fits or which business problems it solves, start with <a href="/en/getting-started/why-gateway/">Why Gateway</a>.</p>
 </aside>
 
-## Start with the Dashboard
+<aside class="gg-neutral-aside">
+  <p class="gg-neutral-aside__title">Want a faster onboarding?</p>
+  <p><a href="/en/ai/agent-skills/">Install the Gateway skill</a>, then copy this prompt. Your coding agent can guide you from an empty server or continue from an existing installation, skipping the steps you have already completed.</p>
 
-The Dashboard summarizes resource counts, health, recent activity, pinned resources, and system-level warnings such as an unavailable Relay or a license issue. It answers “does anything need attention?” and gives a path to the affected resource.
+<div class="gg-onboarding-prompt">
 
-It is not a universal observability screen. Detailed metrics and logs live on the relevant Node, Route, workload, database, Pages Project, or logging environment. A yellow navigation indicator can represent a warning outside the small healthy subset visible on the Dashboard, so open the linked detail rather than assuming the summary is contradictory.
+```text
+Use $using-gateway to guide me from my current starting point to a working Good
+Gateway setup and a first successfully published application. If $using-gateway
+is not available, install it first with `npx skills add
+the-square-labs/gateway-skills --skill using-gateway`, then load the skill and
+continue. Determine what already exists: the Gateway control plane, browser
+onboarding, required Nodes, MCP connection, application resources, and public
+ingress. Explain the shortest safe path, skip completed stages, and ask only for
+choices or access that materially change the setup. Do not install Gateway or
+change infrastructure until I approve the proposed plan. After approval,
+complete each stage through Gateway-native workflows, verify it, and continue
+until the application is available or you can identify a precise blocker.
+```
 
-**Try it:** open one warning or recent operation and follow it to the affected resource, its latest Task, and the log or metric that explains the current state.
+<CopyPromptButton label="Copy prompt" copiedLabel="Copied!" errorLabel="Copy failed" />
 
-## Ingress: publish and protect traffic
+</div>
+</aside>
 
-The Ingress area separates three concerns:
+## Follow the application path
 
-- **Domains** record hostnames and decide which eligible Ingress Node owns them.
-- **SSL Certificates** centralize certificate lifecycle and deployment status.
-- **Routes** connect domains to upstream applications and apply forwarding, TLS, maintenance, access, and health policy.
+1. Prepare Gateway and [add your first Node](/en/getting-started/first-node/).
+2. Run the application in Docker or build it from Git.
+3. Create a Domain, TLS certificate, and Route to make the application available to users.
+4. If needed, create a managed database and a private binding.
+5. Grant the team access through groups and configure notifications.
 
-This separation makes changes safer. An application can roll back without changing DNS, and a renewed certificate can be distributed without rebuilding the workload. Managed Docker upstreams can use Secure Link so the application does not need a normal published host port solely for ingress.
-
-**Who owns what:** network and DNS owners approve reachability; security owners approve TLS and access rules; application owners define the expected upstream and health response.
-
-## Docker: operate application runtimes
-
-Docker covers standalone Containers, blue/green Deployments, Compose Projects, images, volumes, networks, registries, Git builds, and durable Tasks. Choose the resource model that matches ownership:
-
-- a **Container** is a directly managed single workload;
-- a **Deployment** adds health-checked rollout and rollback semantics;
-- a **Compose Project** owns a multi-service application, its immutable revisions, and its child services.
-
-Gateway protects these ownership boundaries. Compose-owned child containers are not exposed as ordinary standalone lifecycle targets, because stopping or recreating one outside the project would create drift and misleading state. Long-running operations appear as Tasks so cancellation, progress, failure, and audit history remain visible after a page refresh.
-
-**Evaluation goal:** deploy a harmless test workload, inspect its logs and metrics, perform a controlled update, and verify that the UI reports the actual runtime state rather than only the requested operation.
-
-## Databases: manage state without sharing owner credentials
-
-The Databases area can store external PostgreSQL, Redis, or ClickHouse connections and provision managed instances on database Nodes. Managed databases are private by default. An application receives a binding-specific identity instead of the database owner credential, limiting the blast radius of a workload compromise and allowing the binding to be retired independently.
-
-Database ownership remains different from application ownership. Deleting a binding removes application access; deleting a managed database is a destructive data operation that also removes its managed storage. Backup, retention, capacity, and recovery must be decided before production data is created.
-
-**Evaluation goal:** create a disposable database, bind a test workload, verify a query, recreate the workload, and confirm that the binding remains usable without revealing owner credentials.
-
-## Pages: publish immutable static artifacts
-
-Pages hosts static sites as immutable Deployments on Ingress Nodes. A **Tag** is a movable release pointer, while each Deployment remains unchanged. A Route sends a public domain to the selected Tag. This creates a simple rollback model: move the Tag back to a known-good Deployment rather than mutating files in place.
-
-Projects can receive uploaded artifacts. Where the plan permits Git-source delivery, Gateway can build a connected repository through an isolated Build Worker and publish the approved artifact. Runtime configuration is public by design and must never contain secrets.
-
-The Good Gateway landing site and this documentation portal are examples of sites that can be served through Gateway Pages; the product is operating the same delivery path it documents.
-
-## Nodes: add capabilities without merging trust domains
-
-Nodes are enrolled Linux hosts with explicit roles such as Ingress, Docker, Databases, Build Worker, Monitoring, or Relay. They initiate authenticated connections to Gateway and report their actual version, capabilities, and health. Enrollment uses a one-time token and certificate pinning; the long-term relationship uses mutual TLS.
-
-The Nodes list is therefore more than inventory. It shows where a capability lives and whether Gateway can currently rely on it. Role selection should follow host ownership and isolation, not convenience.
-
-**Evaluation goal:** enroll a disposable Node, restart its daemon, confirm reconnection, and verify that a user with resource-scoped access cannot operate unrelated Nodes.
-
-## Logging, monitoring, and operations
-
-Gateway does not present one generic “observability” application. Monitoring and logs appear in context on Nodes, workloads, Routes, databases, and Compose Projects. Structured Logging provides environments, schemas, tokens, retention, and optional SIEM delivery. Notifications, status pages, Tasks, recent activity, and audit history cover different audiences and should not be treated as interchangeable.
-
-Use metrics to understand current behavior, logs to diagnose events, Tasks to follow operations, notifications to reach responders, and audit records to answer who changed what. Production alerting should focus on customer impact and durable state transitions instead of every internal retry.
-
-## Access and administration
-
-Settings, users, groups, scopes, authentication methods, API tokens, OAuth clients, integrations, licensing, updates, and housekeeping are centrally administered. Gateway supports resource-scoped permissions, so a user can receive access to one Route, Node, workload, or database instead of an entire product area.
-
-The Profile area shows personal preferences, active authorizations, and—in enabled environments—Inference usage. Establish groups around job responsibilities before inviting a larger team, and preserve a separately controlled recovery path for system administration.
-
-![Group editor with inherited permissions and individually selected resource scopes](/screenshots/product-tour/group-scopes.png)
-
-## AI and programmatic operation
-
-AI Workspace provides an intent-driven interface for reading documentation, planning, and executing operations within the current user's permissions and approval mode. It does not create a separate authorization bypass. The Operations Console, REST API, OAuth clients, and MCP expose the same product resources for deterministic or automated workflows.
-
-Gateway Inference is a separate data plane with dedicated `gwi_` tokens, providers, accounting, and model access rules. Enabling AI Workspace does not automatically grant every user access to every model or infrastructure action.
-
-## A useful evaluation sequence
-
-1. Review the Dashboard and open a real resource warning or recent operation.
-2. [Enroll a disposable Node](/en/getting-started/first-node/) and verify restart recovery.
-3. [Deploy a test application](/en/journeys/publish-application/) and inspect logs and metrics.
-4. [Publish it through a Domain, certificate, and Route](/en/getting-started/first-route/).
-5. [Create a least-privilege group](/en/identity/auth-users-groups/) for an operator and confirm the boundary.
-6. Exercise rollback or maintenance without deleting the resource.
-7. [Review the resulting Tasks and audit history](/en/reference/tasks-and-audit/).
-
-This sequence demonstrates the core value of Gateway: one governed workflow across infrastructure domains, while keeping the underlying ownership and recovery responsibilities explicit.
+For a complete first launch, follow the [application publishing journey](/en/journeys/publish-application/). If the application already has a database, continue with the [private database journey](/en/journeys/private-database/).
 
 <aside class="gg-neutral-aside">
   <p class="gg-neutral-aside__title">Want to see how other teams use Gateway first?</p>
   <p>If you are not yet sure which adoption path fits your infrastructure, read the stories from <a href="/en/success-stories/wiolett-industries/">Wiolett Industries</a>, <a href="/en/success-stories/remedy-trade/">Remedy Trade</a>, <a href="/en/success-stories/just-working/">Just Working</a>, and <a href="/en/success-stories/dfk-algotrade/">DFK Algotrade</a>.</p>
 </aside>
+
+## Where work starts
+
+The Dashboard shows whether the infrastructure needs attention by collecting warnings, recent operations, and pinned resources. Open a warning to reach the relevant Node, Route, workload, database, or Task. Detailed metrics and logs stay next to the resource they describe.
+
+A successful operation is more than a confirmation message in the interface. For a publication, verify the real response through the domain; for Docker, inspect workload state and logs; for a database, test the application connection; for a long-running operation, check the final Task and the actual resource state.
+
+## Core Gateway areas
+
+### Ingress: publish applications securely
+
+Domains, TLS certificates, and Routes are intentionally separate. You can renew a certificate without rebuilding the application or roll back the application without changing DNS. A Route connects a domain to an application and defines access, maintenance, forwarding, and health policy. Start with [publishing through Domain, Route, and TLS](/en/ingress/domains-routes-tls/).
+
+### Docker: run and update applications
+
+Docker supports standalone Containers, health-checked Deployments, Compose Projects, images, volumes, networks, registries, and Git builds. Choose a Container for a simple single service, a Deployment for controlled version switching, or a Compose Project for a multi-service application. Operations are recorded as Tasks: if you lose the page, open the existing Task before starting a duplicate.
+
+### Databases: give an application exactly the access it needs
+
+Gateway connects PostgreSQL, Redis, and ClickHouse and provisions managed databases on Nodes with the appropriate role. A managed database is private by default. The application receives a binding-specific identity instead of the database owner credential. Removing the binding revokes the application's access; deleting the database itself removes data, so define backup and recovery first.
+
+### Pages: publish static sites with simple rollback
+
+Pages stores immutable static-site Deployments. A Tag determines which Deployment users see, so rollback means moving the Tag to a previously verified version rather than changing files on a server. The [Pages journey](/en/journeys/static-site/) takes you from an artifact to a public domain.
+
+### Nodes and observability: trust confirmed state
+
+Nodes are enrolled Linux hosts with roles such as Ingress, Docker, Databases, Build Worker, Monitoring, or Relay. They establish an authenticated connection to Gateway and report their actual version, capabilities, and health. Metrics and logs explain problems, notifications reach the right team, and the audit history shows who changed the configuration.
+
+### Access and administration
+
+Users, groups, resource scopes, authentication methods, API tokens, OAuth clients, integrations, licensing, and updates are centrally administered. Permissions can be limited to a specific Route, Node, workload, or database instead of granting access to an entire Gateway area.
+
+Create groups around job responsibilities before inviting a larger team, and preserve a separately controlled recovery path for system administration. The user profile includes personal preferences, active authorizations, and, when enabled, Gateway Inference usage.
+
+![Group editor with inherited permissions and individually selected resource scopes](/screenshots/product-tour/group-scopes.png)
+
+### AI and programmatic operation
+
+AI Workspace helps users read documentation, prepare plans, and execute operations within their existing permissions and approval mode. It does not create a separate authorization bypass. The Operations Console, REST API, OAuth clients, and remote MCP expose the same resources and apply the same permission, plan, and audit checks as the interface.
+
+Gateway Inference is a separate data plane with dedicated `gwi_` tokens, providers, usage accounting, and model access rules. Enabling AI Workspace or MCP does not automatically grant access to every model or infrastructure action.
+
+<aside class="gg-neutral-aside">
+  <p class="gg-neutral-aside__title">Want to connect Claude Code or Codex?</p>
+  <p>Install the Good Gateway skill, grant the agent limited access, and connect Claude Code or Codex through authenticated remote MCP with the <a href="/en/ai/agent-skills/">AI agent guide</a>.</p>
+</aside>
+
+## Responsibility boundaries and next step
+
+Gateway manages the resources assigned to it and makes changes observable. Networks, DNS zones, source repositories, external providers, and backup storage remain the responsibility of your organization. Before a production launch, complete the [production readiness checklist](/en/operations/production-checklist/) and keep the [incident runbook](/en/operations/incident-runbook/) available.

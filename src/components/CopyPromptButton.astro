@@ -1,0 +1,51 @@
+---
+interface Props {
+	label: string;
+	copiedLabel: string;
+	errorLabel: string;
+}
+
+const { label, copiedLabel, errorLabel } = Astro.props;
+---
+
+<button
+	type="button"
+	class="gg-copy-prompt-button"
+	data-gg-copy-prompt
+	data-label={label}
+	data-copied-label={copiedLabel}
+	data-error-label={errorLabel}
+>
+	{label}
+</button>
+
+<script>
+	function initializeCopyPromptButtons() {
+		for (const button of document.querySelectorAll<HTMLButtonElement>('[data-gg-copy-prompt]')) {
+			if (button.dataset.initialized === 'true') continue;
+			button.dataset.initialized = 'true';
+
+			button.addEventListener('click', async () => {
+				const container = button.closest('.gg-onboarding-prompt');
+				const nativeCopyButton = container?.querySelector<HTMLButtonElement>('.expressive-code .copy button');
+				const prompt = container?.querySelector('pre code')?.textContent?.trim();
+				if (!prompt && !nativeCopyButton) return;
+				const defaultLabel = button.dataset.label ?? button.textContent ?? 'Copy prompt';
+				try {
+					if (nativeCopyButton) nativeCopyButton.click();
+					else await navigator.clipboard.writeText(prompt ?? '');
+					button.textContent = button.dataset.copiedLabel ?? defaultLabel;
+				} catch {
+					button.textContent = button.dataset.errorLabel ?? defaultLabel;
+				}
+
+				window.setTimeout(() => {
+					button.textContent = defaultLabel;
+				}, 4000);
+			});
+		}
+	}
+
+	initializeCopyPromptButtons();
+	document.addEventListener('astro:page-load', initializeCopyPromptButtons);
+</script>
