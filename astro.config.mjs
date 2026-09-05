@@ -126,6 +126,7 @@ export default defineConfig({
 						{ slug: 'concepts/permissions' },
 						{ slug: 'concepts/secure-links' },
 						{ slug: 'concepts/lifecycle-and-safety' },
+						{ slug: 'concepts/plugin-system' },
 					],
 				},
 				{
@@ -175,6 +176,7 @@ export default defineConfig({
 						{ slug: 'docker/containers' },
 						{ slug: 'docker/deployments' },
 						{ slug: 'docker/compose' },
+						{ slug: 'docker/availability' },
 						{ slug: 'docker/git-builds' },
 						{ slug: 'docker/migrations-archives' },
 						{ slug: 'docker/images-volumes-networks' },

@@ -5,7 +5,7 @@ section: Справочник
 order: 1
 audience: [evaluator, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-05
 ---
 
 
@@ -25,6 +25,17 @@ lastReviewed: 2026-08-30
 | AI Workspace | [AI Workspace](/ru/ai/workspace/) |
 | Gateway Inference | [Gateway Inference](/ru/ai/inference/) |
 | Безопасность и эксплуатация | [Модель безопасности](/ru/security/security-model/) |
+
+## Доступность и ближайшие версии
+
+- **Workload Availability (HA) — доступна**, Business/Enterprise: репликация или переключение при отказе для Containers, Deployments и целых Compose Projects без монтирований. См. [руководство HA](/ru/docker/availability/).
+- **Хранилища — ожидаются в 2.11:** внешние подключения для всех планов; управляемые хранилища с Secure Links — с Personal.
+- **Резервное копирование и восстановление управляемых баз — ожидаются в 2.12**, с Personal.
+- **Экспорт конфигурации Gateway для переноса на другой экземпляр — ожидается в 2.12**, для всех планов.
+
+Версии будущих функций ориентировочные. Полная [матрица планов](/ru/reference/plans-and-entitlements/) отделяет доступные функции от дорожной карты.
+
+Общий Gateway CLI ожидается в **2.13** для всех планов, демон управления Bastion / SSH — в **2.14** для Business и Enterprise. [Система плагинов](/ru/concepts/plugin-system/) описана отдельно как будущая часть ядра: ещё не реализована, предварительный ориентир — не раньше **2.20**, срок не гарантирован.
 
 ## Статус возможности
 

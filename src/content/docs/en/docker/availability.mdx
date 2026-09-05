@@ -1,0 +1,73 @@
+---
+title: Workload Availability (HA)
+description: Place workloads across Docker nodes and recover them after node loss.
+section: Docker
+order: 5
+audience: [platform-engineer, developer]
+status: ready
+lastReviewed: 2026-09-05
+---
+
+Availability adds placements on independent Docker nodes to an existing Container, Deployment, or Compose Project. Gateway preserves the resource identity, configuration, and relationships while creating and replacing runtime instances according to its availability policy.
+
+The feature is available on Business and Enterprise. Manage instances through the owning resource rather than as individual Containers: the policy owns placement count, generations, routing membership, and cleanup.
+
+## Choose a mode
+
+| Mode | Behavior | When to use it |
+| --- | --- | --- |
+| Replicated | Maintains 2–32 serving placements, at most one per node | The application supports concurrent instances |
+| Failover | Maintains one serving placement and creates a replacement after node loss | One serving instance with recovery on another node is required |
+
+Without Availability, the resource retains its ordinary single-node lifecycle. Each Compose placement contains the whole project; Gateway does not distribute individual services of one instance across nodes.
+
+Replica count is manual. Metric autoscaling, multiple placements of the same workload on one node, and opportunistic rebalancing of healthy instances are outside this model.
+
+## Prerequisites
+
+Enabling Availability requires at least two online compatible Docker nodes. Provide enough capacity for the desired replica count and temporary placements during updates.
+
+The workload must have no configured or observed mounts, including named, external, read-only volumes, or host bind mounts. For Compose, the whole project is checked. Persistent data must live in separate services; Availability does not copy local data between nodes.
+
+Gateway pins images by repository and digest in its internal registry and pre-pulls them on eligible standby nodes. Verify registry access, Relay and Secure Link paths, and dependent managed databases.
+
+## Enable Availability
+
+1. Open the Container, Deployment, or Compose Project and its **Availability** section.
+2. Select **Check eligibility** and resolve incompatibilities.
+3. Turn on **Enable** and choose **Mode**. For Replicated, set **Serving placements**.
+4. Under **Eligible nodes**, choose **All compatible nodes** or **Selected nodes** with an explicit node list.
+5. Review replacement and rollout settings, then select **Save**. On first enablement, read the **Tech Preview** warning and confirm **Enable Tech Preview**.
+6. Follow the operation and **Placements** list until the requested serving count is reached.
+7. Verify a real request through the Route, database access, and application logs.
+
+Changing the switch alone does not apply the policy: **Save** is required. A successful save means desired state was accepted, not that instance creation has completed.
+
+## Replacement and rollout settings
+
+- **Replacement grace** — time to wait after losing the node control connection before creating a replacement. The default is 15 seconds; image preparation, startup, and health checks take additional time.
+- **Maximum unavailable** — how many placements a planned update may make unavailable simultaneously.
+- **Maximum surge** — how many temporary placements may exist above the desired count. These require additional capacity.
+- **Drain interval** — time between removing a placement from new routing and stopping it, allowing existing connections to finish.
+
+## Routes and database bindings
+
+Proxy Hosts, Additional Routes, and Advanced Secure Links can target the logical workload. Gateway projects healthy placement endpoints and balances new ingress connections using least connections. Existing connections do not move between replicas.
+
+Managed database bindings receive per-placement connections. Keep relationships attached to the logical resource rather than temporary Container names. To diagnose a particular instance, use the placement selector in logs, console, and monitoring where available.
+
+## Node loss and recovery
+
+After losing a node control connection, Gateway waits for **Replacement grace** and creates a replacement on an available eligible node. If the requested count is not restored, inspect the operation phase, node compatibility and capacity, image pull, application health, and private dependencies.
+
+An unreachable host may still run its old process. Gateway excludes stale generations from managed routing and reconciles them on reconnect. This is not physical node fencing or a single-writer guarantee for an external system.
+
+Replacement requires a functioning Gateway control plane. Availability does not provide HA for Gateway itself, nginx, database engines, registry storage, or shared volumes. Verify Relay-path resilience and each dependency separately.
+
+After recovery, verify serving count, real customer traffic, database access, and stale-placement cleanup. Do not manually delete child Containers to force the operation to complete.
+
+## Disable Availability
+
+Turn off **Enable** and save the change. In **Disable Availability**, choose **Surviving placement**, enter the workload name for confirmation, and select **Disable and keep one**.
+
+Wait for the operation and cleanup of other placements to finish. Verify the surviving instance, Routes, and database bindings: the resource should continue its ordinary single-node lifecycle.

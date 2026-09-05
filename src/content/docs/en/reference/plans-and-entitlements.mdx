@@ -5,7 +5,7 @@ section: Reference
 order: 2
 audience: [evaluator, administrator]
 status: ready
-lastReviewed: 2026-09-01
+lastReviewed: 2026-09-05
 ---
 
 
@@ -23,10 +23,77 @@ Community installations do not require a key. A Business or Enterprise key repre
 | --- | --- |
 | Community | Core ingress, Docker, external databases, monitoring, identity, automation, AI Workspace, Inference, and up to the documented Community resource limits |
 | Personal | Community plus managed databases, managed single-node Compose lifecycle, Pages, status pages, archive/migration operations, and unlimited documented core quotas |
-| Business | Personal plus Git push-to-deploy, isolated Build Workers, Secure Runtime, vulnerability admission, structured logging, audit export, and optional external registry access |
+| Business | Personal plus multi-node Workload Availability (HA), Git push-to-deploy, isolated Build Workers, Secure Runtime, vulnerability admission, structured logging, audit export, and optional external registry access |
 | Enterprise | Business plus Internal PKI, SIEM audit export, enterprise identity roadmap capabilities, and dedicated commercial benefits |
 
 The exact feature matrix is release-specific. Product pages identify prerequisites and this page explains lifecycle behavior; pricing and contract terms belong to the applicable commercial agreement.
+
+## Feature matrix
+
+| Feature | Status | Community | Personal | Business | Enterprise |
+|---|---|:---:|:---:|:---:|:---:|
+| Infrastructure Node Management | Ready | ✅ | ✅ | ✅ | ✅ |
+| Multi-Node Nginx Ingress Management | Ready | ✅ | ✅ | ✅ | ✅ |
+| Docker Container Management — Default Runtime (`runc`) | Ready | ✅ | ✅ | ✅ | ✅ |
+| External Compose Project Discovery, Monitoring, and Logs | Ready | ✅ | ✅ | ✅ | ✅ |
+| Docker ↔ Nginx Secure Links | Ready | ✅ | ✅ | ✅ | ✅ |
+| Private Gateway-Managed Internal Docker Registry | Ready | ✅ | ✅ | ✅ | ✅ |
+| SSL/TLS Certificate Management | Ready | ✅ | ✅ | ✅ | ✅ |
+| Domain and DNS Management | Ready | ✅ | ✅ | ✅ | ✅ |
+| External Database Connections and Explorers | Ready | ✅ | ✅ | ✅ | ✅ |
+| Infrastructure Monitoring | Ready | ✅ | ✅ | ✅ | ✅ |
+| Physical GPU Discovery, Attachment, and Monitoring | Ready | ✅ | ✅ | ✅ | ✅ |
+| Alerts and Webhook Notifications | Ready | ✅ | ✅ | ✅ | ✅ |
+| Authentication, OIDC, and MFA | Ready | ✅ | ✅ | ✅ | ✅ |
+| Folder- and Resource-Scoped Role-Based Access Control | Ready | ✅ | ✅ | ✅ | ✅ |
+| Audit Log | Ready | ✅ | ✅ | ✅ | ✅ |
+| REST API, OAuth, and MCP Automation | Ready | ✅ | ✅ | ✅ | ✅ |
+| General Gateway CLI | Expected in 2.13 | ✅ | ✅ | ✅ | ✅ |
+| GitLab Integration | Ready | ✅ | ✅ | ✅ | ✅ |
+| AI Workspace, Plan Mode, Scenarios, and AI Sandboxes | Ready, opt-in | ✅ | ✅ | ✅ | ✅ |
+| Gateway Inference | Ready, opt-in | ✅ | ✅ | ✅ | ✅ |
+| Automated Installation and Signed Updates | Ready | ✅ | ✅ | ✅ | ✅ |
+| Storage Connections: S3, R2, MinIO, FTP, FTPS, SFTP, and SMB | Expected in 2.11 | ✅ | ✅ | ✅ | ✅ |
+| Gateway Configuration Export for Transfer to Another Instance | Expected in 2.12 | ✅ | ✅ | ✅ | ✅ |
+| Managed Nodes | Plan limit | 100 | Unlimited | Unlimited | Unlimited |
+| Users | Plan limit | 10 | Unlimited | Unlimited | Unlimited |
+| Custom Permission Groups | Plan limit | 5 | Unlimited | Unlimited | Unlimited |
+| Support Level | Service level | Community | Standard | Priority | Priority + Dedicated |
+| Container Export and Import | Ready | — | ✅ | ✅ | ✅ |
+| Blue/Green Deployments | Ready | — | ✅ | ✅ | ✅ |
+| Cross-Node Container and Deployment Migration | Ready | — | ✅ | ✅ | ✅ |
+| Managed Single-node Compose Deployment and Lifecycle | Ready | — | ✅ | ✅ | ✅ |
+| Managed Databases with Secure Links | Ready | — | ✅ | ✅ | ✅ |
+| Public Status Pages | Ready, opt-in | — | ✅ | ✅ | ✅ |
+| Pages | Ready | — | ✅ | ✅ | ✅ |
+| Automatic GitLab Container Registry Discovery | Ready | — | ✅ | ✅ | ✅ |
+| Managed Database Backup and Restore | Expected in 2.12 | — | ✅ | ✅ | ✅ |
+| Managed Storages with Secure Links | Expected in 2.11 | — | ✅ | ✅ | ✅ |
+| Docker Secure Runtime (`runsc`/gVisor) | Ready | — | — | ✅ | ✅ |
+| Git Repository Push-To-Deploy for Containers, Deployments, Compose, and Pages; Isolated Build Workers | Ready | — | — | ✅ | ✅ |
+| External Docker-Client Access to the Internal Registry | Ready, opt-in | — | — | ✅ | ✅ |
+| Multi-node Workload Availability (Container, Deployment, Compose) | Ready | — | — | ✅ | ✅ |
+| Git Build Vulnerability Scanning and Admission Policy | Ready | — | — | ✅ | ✅ |
+| Structured Logging | Ready, opt-in | — | — | ✅ | ✅ |
+| Audit Log Export | Ready | — | — | ✅ | ✅ |
+| Bastion / SSH Management Daemon | Expected in 2.14 | — | — | ✅ | ✅ |
+| Broader Workload Vulnerability and Security Scanning | In development | — | — | ✅ | ✅ |
+| Metric Autoscaling | In development | — | — | ✅ | ✅ |
+| Multiple Instances of One Workload on One Machine | In development | — | — | ✅ | ✅ |
+| Guided Onboarding and Configuration Review | Plan benefit | — | — | ✅ | ✅ |
+| Internal PKI | Ready | — | — | — | ✅ |
+| SIEM Audit Export | Ready, opt-in | — | — | — | ✅ |
+| OIDC Group Mapping and SCIM Provisioning | In development | — | — | — | ✅ |
+| Dedicated Technical Contact | Plan benefit | — | — | — | ✅ |
+| Assisted Deployment and Migration | Plan benefit | — | — | — | ✅ |
+
+Workload Availability (HA) is available. Storage connections and managed storages are expected in 2.11; managed-database backup/restore and Gateway configuration export for transfer to another instance are expected in 2.12. External storage connections and configuration export are planned for all plans; managed storages and database backups follow managed databases on Personal and higher.
+
+The general Gateway CLI for terminals and CI/CD is expected in **2.13** on every plan; this is not the existing Gateway Inference CLI. The Bastion / SSH management daemon is expected in **2.14** on Business and Enterprise. The [plugin system](/en/concepts/plugin-system/) is unfinished Gateway core infrastructure, not a plan feature; its tentative timing is no earlier than 2.20, with no committed release date.
+
+**In development** and **Expected in 2.x** are future capabilities, not currently available operations. Checkmarks on future rows express intended plan inclusion; target versions are estimates. Metric autoscaling, same-node replicas, broader workload scanning, and OIDC group mapping/SCIM do not yet have target versions. Git build scanning is already available and is separate from broader workload scanning.
+
+See [Workload Availability](/en/docker/availability/) for HA prerequisites and boundaries, and [Updates and backups](/en/operations/updates-backups/) for current manual recovery procedures.
 
 ## Enforcement
 

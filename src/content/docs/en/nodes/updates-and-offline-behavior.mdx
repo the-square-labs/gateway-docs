@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 3
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-05
 ---
 
 
@@ -20,6 +20,12 @@ Check compatibility before updating Gateway, Relay, and daemons. Apply signed da
 When a node goes offline, workloads may continue locally but Gateway mutations are disabled. Diagnose host availability, daemon service, system time, certificate identity, DNS, and outbound Relay access. Avoid deleting the Node record while the old daemon may reconnect.
 
 After recovery, verify desired-state reconciliation for Routes, workloads, database bindings, certificate material, and monitoring. A green connection alone does not prove every dependent resource recovered.
+
+## Crash-safe update launcher
+
+In 2.10, Docker, nginx, monitoring, and the Relay supervisor gained a separate launcher. When launcher-managed, an update preserves the previous binary and an on-disk journal. The candidate must report local readiness and pass a 30-second stability window before commitment; failed candidates can roll back. The service manager supervises the launcher, which supervises the daemon process.
+
+Local readiness does not prove Relay connectivity or application health. Continue to verify version, reconnect, Node capabilities, and a real operation after updating. If launcher bootstrap is unavailable and the daemon runs directly, launcher rollback protection is unavailable.
 
 ## Before an update
 

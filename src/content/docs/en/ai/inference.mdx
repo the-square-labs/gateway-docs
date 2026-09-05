@@ -5,7 +5,7 @@ section: AI and inference
 order: 2
 audience: [ai-admin, developer, operator]
 status: ready
-lastReviewed: 2026-08-31
+lastReviewed: 2026-09-05
 ---
 
 Gateway Inference gives a team one governed endpoint for approved AI models. Administrators connect provider accounts, combine compatible sources behind stable public model IDs, decide who can use each model, and set per-user limits. Users and coding agents receive one Gateway token instead of credentials for every upstream provider.
@@ -106,6 +106,8 @@ For each request Gateway:
 Some protocols require source affinity for continuations. Gateway preserves that affinity while it remains valid and clears it when the lifecycle allows a safe retry. Clients must not assume that every failure can move to another provider: invalid input, denied access, an invalid continuation ID, and an exhausted user budget are not capacity failover events.
 
 Streaming and non-streaming requests must reach one terminal state. After a network interruption, inspect the recorded request before submitting a potentially expensive duplicate.
+
+During long silent SSE responses, including compaction, Gateway sends an initial keepalive comment and checks every 15 seconds whether another is needed. Comments are emitted only between complete events and when the consumer can accept data. They are neither model output nor completion events; the real terminal event still controls accounting. This protects the HTTP stream from intermediary idle timeouts.
 
 ## Credits and usage accounting
 

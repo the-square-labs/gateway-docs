@@ -1,11 +1,11 @@
 ---
 title: Compose Projects
-description: Discover, adopt, deploy, revise, and operate single-node Compose applications.
+description: Discover and operate Compose applications, with optional multi-node Availability.
 section: Docker
 order: 4
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-05
 ---
 
 
@@ -17,7 +17,7 @@ External discovery is available on every plan. Creating or adopting a managed si
 
 Discovery gives teams a shared view of an existing Compose application without changing who operates it. Adoption changes the ownership model: Gateway becomes the place where configuration revisions and lifecycle actions are performed. Make that transfer explicit with the application owner, because continuing to run an independent `docker compose` workflow after adoption creates competing desired states.
 
-Choose managed Compose when several services must be reviewed, applied, stopped, recovered, and audited as one application on one Docker Node. The project owner should define service dependencies, data ownership, secret sources, acceptable downtime, and the rollback conditions for configuration changes. Gateway validates and applies revisions, but it does not turn a single-node Compose application into a multi-node high-availability platform.
+Choose managed Compose when several services must be reviewed, applied, stopped, recovered, and audited as one application on one Docker Node. The project owner should define service dependencies, data ownership, secret sources, acceptable downtime, and the rollback conditions for configuration changes. For eligible mount-free projects, Business and Enterprise can enable [Workload Availability (HA)](/en/docker/availability/) to replicate the whole project or replace its serving placement after node loss. Services within each placement stay on one node; Gateway does not split a Compose project across a cluster.
 
 A successful project has one understood configuration owner, a reproducible active revision, healthy required services, known persistent volumes, working Routes and private bindings, and no unexplained drift.
 
@@ -25,7 +25,7 @@ A successful project has one understood configuration owner, a reproducible acti
 
 An **external** project is discovered from canonical Docker Compose labels. Gateway shows inventory, status, service health, monitoring, and aggregated logs, but does not read a host Compose file or mutate the project until an operator explicitly adopts it.
 
-A **managed** project stores its authored Compose YAML, variables, protected secret keys, and immutable revisions in Gateway. The Docker daemon applies the selected revision through Gateway's pinned Compose runtime. Managed lifecycle remains single-node; multi-node application clusters and same-node replica scaling are **In development**.
+A **managed** project stores its authored Compose YAML, variables, protected secret keys, and immutable revisions in Gateway. The Docker daemon applies the selected revision through Gateway's pinned Compose runtime. Single-node lifecycle is available on Personal and higher. Multi-node Workload Availability is available on Business and Enterprise; metric autoscaling and same-node replica scaling remain **In development**.
 
 Project-owned child containers, named volumes, and non-external networks are controlled through the Compose Project. They are hidden or protected from conflicting standalone lifecycle actions. Images and explicitly external or shared resources remain global Docker resources.
 

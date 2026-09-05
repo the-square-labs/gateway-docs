@@ -5,7 +5,7 @@ section: Docker
 order: 1
 audience: [operator, platform-engineer, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-05
 ---
 
 
@@ -18,6 +18,8 @@ Choose the highest-level lifecycle that matches the application:
 - **Compose Project:** a discovered external application or a Gateway-managed single-node application with validated configuration, immutable revisions, lifecycle operations, logs, Routes, and database bindings.
 - **Git source:** a delivery input for Containers, Deployments, and Pages. It is not a separate application entity.
 
+[Workload Availability (HA)](/en/docker/availability/) is available on Business and Enterprise for eligible mount-free Containers, Deployments, and whole Compose Projects. It adds fixed-count replication or single-serving failover across independent Docker nodes to the existing resource identity.
+
 ## Choose the operating model
 
 The decision is primarily about ownership and recovery, not the number of fields in a form.
@@ -26,7 +28,7 @@ The decision is primarily about ownership and recovery, not the number of fields
 | --- | --- | --- |
 | One service with a simple lifecycle | Container | Direct and flexible, but releases and rollback are operator-managed |
 | Health-gated releases with a retained rollback candidate | Deployment | Stronger release safety, with two managed runtime slots |
-| Several services that must change as one application | Compose Project | One revision and operation boundary, limited to one Docker node |
+| Several services that must change as one application | Compose Project | One revision and operation boundary, one node per placement; optional whole-project Availability on Business/Enterprise |
 | Reproducible artifacts from source control | Git source plus an owning resource | Adds build provenance; deployment safety still comes from Container, Deployment, Compose, or Pages |
 
 Choose the highest-level owner that represents how the application should be changed during a normal release and recovered during an incident. Do not model a multi-service application as unrelated Containers merely to avoid Compose, and do not choose Deployment when the application has shared writable state that cannot safely exist across release slots.

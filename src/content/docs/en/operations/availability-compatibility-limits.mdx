@@ -5,7 +5,7 @@ section: Operations and security
 order: 2
 audience: [evaluator, operator, platform-engineer]
 status: ready
-lastReviewed: 2026-08-31
+lastReviewed: 2026-09-05
 ---
 
 Gateway separates management availability from service availability. A control-plane outage removes the ability to make and authorize new changes, but it should not stop infrastructure already applied to managed hosts.
@@ -24,6 +24,10 @@ This distinction is central to production planning: the customer-facing applicat
 | License key ordinarily expires | existing configured infrastructure and paid runtime modules continue | new paid-plan resources, paid-feature expansion, and paid-only operations are blocked after grace |
 
 “Continues” means the last successfully applied local state remains active. It does not guarantee that an application has enough replicas, that its database is healthy, or that an existing private stream survives every network failure.
+
+## Workload Availability
+
+[Workload Availability (HA)](/en/docker/availability/) is available on Business and Enterprise. It supports 2–32 replicas or one serving placement with replacement for mount-free Containers, Deployments, and whole Compose Projects. After node loss, Gateway can restore the requested placements on available eligible nodes. This requires a healthy control plane, capacity, artifacts, and dependencies; it does not provide HA for Gateway itself, nginx, databases, or storage, or physically fence an unreachable old process.
 
 ## The local Relay concern
 

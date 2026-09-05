@@ -5,7 +5,7 @@ section: Reference
 order: 1
 audience: [evaluator, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-05
 ---
 
 
@@ -23,6 +23,17 @@ lastReviewed: 2026-08-30
 | AI Workspace | [AI Workspace](/en/ai/workspace/) |
 | Gateway Inference | [Gateway Inference](/en/ai/inference/) |
 | Security and operations | [Security model](/en/security/security-model/) |
+
+## Availability and target versions
+
+- **Workload Availability (HA) — available**, Business/Enterprise: replication or failover for mount-free Containers, Deployments, and whole Compose Projects. See the [HA guide](/en/docker/availability/).
+- **Storages — expected in 2.11:** external connections on every plan; managed storages with Secure Links on Personal and higher.
+- **Managed-database backup and restore — expected in 2.12**, Personal and higher.
+- **Gateway configuration export for transfer to another instance — expected in 2.12**, every plan.
+
+Future versions are estimates. The full [plan matrix](/en/reference/plans-and-entitlements/) separates ready capabilities from the roadmap.
+
+The general Gateway CLI is expected in **2.13** on every plan, and the Bastion / SSH management daemon in **2.14** on Business and Enterprise. The [plugin system](/en/concepts/plugin-system/) is documented separately as future core infrastructure: not yet implemented, tentatively no earlier than **2.20**, with no guaranteed release date.
 
 ## Capability status
 

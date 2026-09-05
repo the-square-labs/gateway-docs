@@ -5,7 +5,7 @@ section: Operations and security
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-05
 ---
 
 
@@ -27,6 +27,12 @@ Back up:
 - external DNS, identity-provider, email, registry, and SIEM configuration held outside Gateway.
 
 A restore test must prove sign-in, decryption, node reconnection, Relay authorization, Routes, certificates, managed database bindings, and audit continuity. A backup that has never been restored is not a recovery plan.
+
+## Planned built-in workflows
+
+External storage connections on every plan and managed storages with Secure Links on Personal and higher are expected in **2.11**. Built-in managed-database backup/restore on Personal and higher, and Gateway configuration export for transfer to another instance on every plan, are expected in **2.12**. These are roadmap estimates, not available operations today.
+
+Planned configuration export is distinct from existing container archive export. Until these features ship, use the manual recovery set below and engine-native database backups; configuration transfer alone does not replace application-data protection.
 
 ## Build the recovery set
 
