@@ -1,17 +1,17 @@
 ---
-title: Source-control integrations
-description: Connect GitLab, GitHub, generic Git, and External SSH safely.
-section: Integrations and automation
-order: 1
+title: Git hosting
+description: Connect GitLab, GitHub, and generic Git for repository access and managed builds.
+section: Integrations
+order: 3
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-10
 ---
 
 
 Source-control integration establishes which reviewed source may become a Gateway-managed artifact. The application owner owns repository and branch policy, the platform owner owns build and deployment settings, and the security owner approves provider permissions and secrets. Success means a specific commit can be traced through build evidence to an immutable artifact and a verified release.
 
-Configure source integrations under **Settings > Integrations**. Supported paths include GitLab, GitHub, generic Git, and External SSH according to the current connector and plan availability.
+Configure source integrations under **Settings > Integrations**. Supported providers are GitLab, GitHub, and generic Git according to connector and plan availability. For access to a remote operating system, use the separate [SSH connections](/en/integrations/ssh-connections/) guide.
 
 Use a dedicated machine or application identity with read-only repository access unless a workflow explicitly requires more. Restrict allowed repositories and hosts. Verify webhook authenticity, branch selection, commit resolution, and credential rotation.
 
@@ -22,15 +22,59 @@ Repository URLs must not contain embedded credentials. SSH host keys and HTTPS c
 - **GitLab:** project and group discovery, repository operations, webhooks, variables, CI-related workflows, and optional registry discovery according to entitlement.
 - **GitHub:** repository discovery and supported repository/Actions operations through the configured application or token path.
 - **Generic Git:** bounded authenticated repository access when a first-class provider is not required.
-- **External SSH:** administrator-configured host access with encrypted credentials, host-key verification, explicit scopes, and controlled command/file operations.
 
-External SSH is a connector to a named host; it is not a Gateway-managed Bastion node role.
+## GitLab
+
+1. Use a dedicated GitLab user that is a member of only the required groups/projects. In GitLab, open the avatar menu, **Edit profile > Access > Personal access tokens**. Create a token (the UI may call this a legacy personal access token).
+2. Set its name and expiry, then choose permissions from the table. Copy the secret immediately.
+3. In Gateway's GitLab integration, enter the instance origin, such as `https://gitlab.example.com`, without `/api/v4`, and the token. Select the allowed projects/groups rather than granting every discovered project.
+4. Test the token, discover an allowed project, and verify repository and branch access. A GitLab deploy token is not a substitute for this API identity.
+
+| Workflow | GitLab token scopes |
+| --- | --- |
+| Discover projects and read API metadata | `read_api` |
+| Read/clone repository source for builds | `read_repository` together with `read_api` for the first-class connector |
+| Discover/pull private registry images | Add `read_registry` and the necessary project membership |
+| Write files through the API, manage hooks/variables, or perform CI mutations | `api`; the user must also have the required project role |
+| Push through Git over HTTPS | `write_repository`; this does not grant general API write access |
+
+For read-only builds start with `read_api` + `read_repository`, not `api`. The broad `api` scope is appropriate only when enabling the write workflows that need it. Token scopes cannot override protected-branch rules or missing project membership. User-specific GitLab authorization for interactive tools remains separate from the saved system token.
+
+References: [Create a GitLab personal access token](https://docs.gitlab.com/user/profile/personal_access_tokens/), [GitLab access-token scopes](https://docs.gitlab.com/security/tokens/access_token_scopes/).
+
+## GitHub
+
+Use **Connect GitHub** if the OAuth connection path is configured, and review the organization and repository access on GitHub's consent screen. For the token path:
+
+1. Open GitHub **Settings > Developer settings > Personal access tokens > Tokens (classic) > Generate new token (classic)**.
+2. Set a dedicated name and expiration. Select `repo` for private repositories, or `public_repo` if only public repositories are needed. These are broad repository permissions, not read-only scopes: use an identity whose repository access is appropriately restricted.
+3. Add optional permissions only for the corresponding workflow below. Generate and copy the token. Authorize it for organization SSO where required.
+4. Add the token in Gateway's GitHub integration, select the allowed repositories/organizations, and test repository discovery and the intended revision.
+
+| Additional use | Classic token scope |
+| --- | --- |
+| Read organization/team membership | `read:org` |
+| Download packages from GitHub Packages | `read:packages` |
+| Modify workflow files | `workflow`, in addition to repository access |
+
+**Current compatibility limitation:** Gateway detects GitHub token capabilities from classic OAuth scopes. A fine-grained PAT can authenticate at GitHub but still be reported without repository capabilities by this connector. Do not use it as a drop-in replacement for the recipe above. If the organization forbids classic PATs, use an approved configured OAuth path or resolve connector compatibility before connecting; do not weaken organization policy. No `delete_repo` or organization-administration scope is required just to build a saved repository.
+
+References: [Manage GitHub personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), [Classic OAuth scope meanings](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps).
+
+## Generic Git
+
+1. At the Git server, create a dedicated credential that can clone the selected repositories. For example, a GitLab deploy token with `read_repository` can be used for Git-over-HTTPS access; it is not a first-class GitLab API token.
+2. In Gateway, choose generic Git. Enter **Git host URL**, such as `https://git.example.com`, and the explicit **Repositories**, such as `https://git.example.com/team/app.git`.
+3. Enter **Username** and **Access token** separately. For a deploy token, use the username issued with that token. Do not embed either value in repository URLs.
+4. Run **Test connection**, then save. The connection test uses the first repository: also verify access to every other repository you allow before relying on it for a build.
+
+This connector uses HTTPS credentials, not a private key imported from External SSH. It does not provide a universal Git-provider scope vocabulary or the full GitLab/GitHub API feature set. A successful clone does not imply permission to manage webhooks, variables, or CI through an API.
 
 ## Configure safely
 
 1. Create a dedicated provider or machine identity.
 2. Grant read-only repository access unless a documented workflow needs writes.
-3. Restrict organizations, groups, projects, repositories, and SSH hosts with allowlists.
+3. Restrict organizations, groups, projects, and repositories using the connector's supported selection mode.
 4. Add the integration under **Settings → Integrations**.
 5. Verify TLS or SSH host identity before saving credentials.
 6. Test repository discovery and access to one allowed revision.
@@ -39,9 +83,21 @@ External SSH is a connector to a named host; it is not a Gateway-managed Bastion
 
 ## Source binding lifecycle
 
+### Who can build and view results?
+
+Repository discovery and direct source operations use provider integration scopes. Attaching or changing a source binding must pass the applicable connector and repository checks. GitLab's interactive source tools may also require the user's own GitLab authorization unless system credentials are explicitly permitted.
+
+Starting a build from an already saved Docker source is a resource action: `docker:containers:manage` for containers/deployments or `docker:compose:manage` for Compose. It does not require giving the operator separate `integrations:gitlab:repo:read` access just to run that saved build. Gateway still checks the saved connector, allowed repository, and source credentials. Pages uses `pages:deploy` for deployment actions.
+
+Build history and logs require view access to the target: `docker:containers:view`, `docker:compose:view`, or `pages:view`. Resource and inherited folder restrictions apply; manage permission alone is not a substitute for view. Do not grant account-wide repository or node access to work around a missing target grant. See [Permissions](/en/concepts/permissions/).
+
+### Saved source bindings
+
 Docker workloads, Compose Projects, and Pages Projects create their own source bindings. A source binding records the integration, repository, revision selection, build configuration, automation policy, and source-scoped Build Secrets.
 
 Removing an integration does not make dependent resources safe to rebuild. Inventory dependencies first, disable automatic actions, migrate each source binding, and verify the replacement revision and credentials.
+
+Continue with [Docker Git builds](/en/docker/git-builds/), [Pages Git deployments](/en/pages/git-deployments/), and [Container registries](/en/docker/registries/). For other connector types, return to [Integrations](/en/integrations/overview/).
 
 ## Troubleshooting
 

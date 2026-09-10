@@ -5,8 +5,10 @@ section: Ingress
 order: 2
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-10
 ---
+
+For managed Cloudflare DNS, configure the [Cloudflare integration](/en/integrations/cloudflare/) before selecting zones and creating Domain records. A DNS connector does not replace the ingress node or its TLS configuration.
 
 
 This resource chain turns an application into a stable public endpoint. A **Domain** represents the hostname and where it is served, a **Route** defines what Gateway does with matching requests, and a TLS certificate proves the hostname to HTTPS clients. The intended outcome is one accountable owner for the hostname, encrypted traffic, an explicit upstream, and a verifiable rollback path.

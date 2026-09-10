@@ -1,0 +1,67 @@
+---
+title: SSH connections
+description: Configure trusted external SSH hosts, generated keys, and jump connections.
+section: Integrations
+order: 4
+audience: [platform-engineer, security-admin]
+status: ready
+lastReviewed: 2026-09-10
+---
+
+External SSH connects Gateway to a named remote host using an administrator-configured credential. It is not a Git repository connector, a managed Bastion node, or a replacement for daemon enrollment. Use [Git hosting](/en/integrations/source-control/) for repository access and [Nodes](/en/nodes/overview/) for ongoing daemon-managed operations.
+
+## Configure a connection
+
+1. Open the External SSH section under **Settings > Integrations**.
+2. Enter a display name, host, port, and remote username. Use an account with only the operating-system privileges needed for the intended operation.
+3. Choose password authentication or a Gateway-generated SSH key. New connections do not accept arbitrary private-key imports. Install the generated public key for the remote account; where offered, an existing eligible key can be reused.
+4. If needed, select an existing jump connection and verify access through that path.
+5. Discover the host-key fingerprint and verify it through an independent trusted channel before accepting it.
+6. Save the connection and test authentication. If the host key changes, investigate the change instead of bypassing verification.
+
+Credentials are stored encrypted. An SSH username called `root` and the Gateway system-admin role belong to different authorization systems: remote permissions do not follow the Gateway user's role.
+
+## Prepare the remote account and public key
+
+SSH has no provider API scopes. Its permission boundary is the remote Unix account, its file permissions, and any explicitly configured privilege escalation.
+
+1. Ensure the Gateway backend can reach the SSH host and port (normally `22`), directly or through the configured jump connection.
+2. In Gateway, generate a key and copy the **public** key. Do not generate a second unrelated key locally or paste a private key into `authorized_keys`.
+3. In a trusted console, log in as the intended remote account. Prepare its SSH directory:
+
+```sh
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+touch ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+4. Open `~/.ssh/authorized_keys` in an editor and **append** the public key as one line, preserving existing keys. Ensure the directory and file belong to this account. If editing as an administrator, use the target account's home directory, not the administrator's.
+5. Verify the server's host key through the provider console or another independently trusted channel. For an Ed25519 host key:
+
+```sh
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256
+```
+
+6. Compare that SHA-256 fingerprint with the **same host-key algorithm** offered by Gateway. A value obtained only over the untrusted connection is not independent verification. Save the verified fingerprint and test authentication.
+
+| Intended use | Remote-account requirement |
+| --- | --- |
+| Log in | Valid password or installed public key; SSH login permitted by server policy |
+| Read files/run ordinary commands | File and executable access for that account |
+| Install or repair a daemon | The installation workflow's administrative privileges; ordinary login alone is insufficient |
+| Use a jump host | Login to the jump host plus an allowed forwarding path to the target; target authentication remains separate |
+
+Do not grant unrestricted passwordless `sudo` merely to pass an SSH connection test. A password is the remote account's password, not a Gateway login password. For key authentication, disable neither host verification nor existing access while testing the new key.
+
+Reference: [OpenSSH authorized_keys and server authentication](https://man.openbsd.org/sshd.8).
+
+## Access and hosting installation
+
+`integrations:ssh:view`, `integrations:ssh:manage`, and `integrations:ssh:use` separate visibility, administration, and use. Connector administration is session-only. Gateway MCP does not delegate external SSH integration scopes; external agents need their own approved SSH tooling. See [API and MCP](/en/integrations/api-and-mcp/).
+
+For supported [hosting installation](/en/integrations/hosting-providers/), Gateway verifies that the SSH destination is an actual assigned address of the selected VM. A working connection to a different host is not an installation channel for that VM. Hosting may use a supported Guest Agent channel instead; do not add SSH solely because a provider account exists.
+
+## Diagnose connection failures
+
+Separate DNS or TCP reachability, jump-host access, fingerprint mismatch, authentication rejection, and permission to run the intended command. A successful host-key discovery is not successful authentication. A successful login is not proof of `sudo` or installer privileges. Inspect the specific error and correct the matching layer without exposing passwords or private keys.

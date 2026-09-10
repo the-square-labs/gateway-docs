@@ -1,0 +1,53 @@
+---
+title: Cloudflare
+description: Connect Cloudflare DNS zones for managed Domains and certificate validation.
+section: Integrations
+order: 5
+audience: [operator, platform-engineer, security-admin]
+status: ready
+lastReviewed: 2026-09-10
+---
+
+The Cloudflare connector discovers DNS zones available to its API token and supports Gateway's managed Domains and DNS-01 certificate workflows. It is not a hosting provider and does not replace Gateway Relay or a managed ingress node.
+
+## Create the Cloudflare token
+
+1. In the Cloudflare dashboard, open **My Profile > API Tokens > Create Token**. Choose the **Edit zone DNS** template or create a custom token.
+2. Set these two permissions and review the template rather than assuming it includes both:
+
+| Permission category | Resource | Access | Purpose |
+| --- | --- | --- | --- |
+| `Zone` | `Zone` | `Read` | Discover the zones available to the connector |
+| `Zone` | `DNS` | `Edit` | Create/update/delete managed DNS and certificate-challenge records |
+
+3. Under **Zone Resources**, select **Include > Specific zone** and each zone Gateway should manage. Do not select all zones unless that is intentional.
+4. If setting **Client IP Address Filtering**, allow the Gateway backend's outbound IP, not your browser's IP. Set an expiry that you can rotate before certificate renewal depends on it.
+5. Review the summary, create the token, and copy the secret. It is an API token, not a Global API Key, Origin CA key, or account ID.
+
+These workflows do not require Workers, Pages, Tunnel, or account-administration privileges. A zone token must belong to an identity that itself has access to the selected zones.
+
+Reference: [Cloudflare API-token creation](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/).
+
+## Connect DNS access
+
+1. Create a dedicated Cloudflare API token with access to the intended zones and the zone-read/DNS-edit permissions needed by your workflow. Restrict the zone resources at Cloudflare rather than supplying an account-wide credential.
+2. Open **Settings > Integrations > Cloudflare**, add a named connector, and supply the token through the credential field.
+3. Test access and inspect the discovered zones. The connector discovers all zones visible to that token; token restrictions determine that boundary.
+4. Review automatic synchronization and the default TTL and proxy settings.
+5. Continue with [Domains, Routes, and TLS](/en/ingress/domains-routes-tls/) to choose an eligible ingress node and create the actual managed Domain and Route.
+
+A connection test and zone discovery do not prove DNS write permission or public propagation. Verify the intended record and certificate workflow separately. Existing conflicting DNS records require an explicit overwrite decision; do not assume a connector gives Gateway ownership of unrelated records.
+
+## Certificates and transport
+
+DNS-01 validation needs the correct zone and permission to manage challenge records. Verify credential availability for renewal, not just the initial certificate issuance. See [SSL certificates](/en/certificates/ssl-certificates/).
+
+The web hostname's Cloudflare proxy setting is separate from daemon enrollment. Do not assume a proxied HTTPS hostname can carry Gateway's direct gRPC connection; use the generated address and requirements in [Add your first node](/en/getting-started/first-node/).
+
+## Permissions and recovery
+
+Connector visibility and administration use `integrations:cloudflare:view` and `integrations:cloudflare:manage`. Managed Domain operations use `domains:*`; certificate actions have their own permissions. Provider-token rights are an additional boundary, not a replacement for Gateway scopes.
+
+For errors, check the selected account and zone, token expiration and privileges, authoritative DNS response, TTL, proxy mode, and certificate challenge status. Rotate the token only after verifying the replacement. Before disabling or removing the connector, identify dependent Domains and certificate renewals.
+
+For other delivery integrations, see [Email and webhooks](/en/integrations/dns-email-webhooks/).

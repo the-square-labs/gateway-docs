@@ -5,8 +5,10 @@ section: Docker
 order: 5
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-10
 ---
+
+Configure the connector using [Git hosting](/en/integrations/source-control/). That guide also separates repository permissions from the target permissions needed to start saved builds and read their history. Registry credentials are covered under [Container registries](/en/docker/registries/).
 
 
 Git source support connects an approved repository revision to an immutable build artifact. It can supply a Docker Container, Deployment, or Pages release, but the resulting workload still follows the lifecycle of its owning resource. A source connection is not permission to change a production route or traffic target by itself.

@@ -1,0 +1,266 @@
+---
+title: Hosting providers
+description: Connect provider accounts, create hosted nodes, and manage VM operations safely.
+section: Integrations
+order: 2
+audience: [operator, platform-engineer, security-admin]
+status: ready
+lastReviewed: 2026-09-10
+---
+
+Connect a provider account under **Settings > Integrations > Hosting** to create and manage VMs in Gateway. Saving a connector does not create a VM; an order requires separate confirmation.
+
+## Provider setup
+
+Choose a provider and expand its setup instructions. Adding a connector requires Gateway permissions `integrations:hosting:view` and `integrations:hosting:manage`; provider-token permissions are configured separately.
+
+### Proxmox VE
+
+Create QEMU VMs and manage existing VMs/CTs on a selected host. Requires an API token, ACLs, and a storage/network profile for provisioning.
+
+<details>
+<summary>Set up Proxmox VE</summary>
+
+#### Create the credential
+
+1. In Proxmox, open **Datacenter > Permissions > Users > Add**. Create a dedicated user, for example `gateway@pve`, in the Proxmox VE authentication realm. Do not reuse `root@pam`.
+2. Under **Permissions > Roles > Create**, create roles containing the privileges from the table below. Keep VM, storage, and optional cluster-firewall privileges in separate roles so that each can be assigned at the correct path.
+3. Under **Permissions**, add **User Permission** entries for `gateway@pve` at the paths you intend to manage. Use propagation only where descendants should inherit the grant. For creation, include the future VMIDs from the configured allocation range, not only existing VMs.
+4. Open **Permissions > API Tokens > Add**, select `gateway@pve`, name the token `hosting`, and keep **Privilege Separation** enabled. Set an appropriate expiration. Copy the secret immediately; it is shown only once.
+5. Add matching **API Token Permission** entries for `gateway@pve!hosting`. With privilege separation, effective permissions are the intersection of the user's permissions and the token's permissions. An administrator user does not automatically make a separated token an administrator.
+
+#### Privileges and ACL paths
+
+Grant only the rows needed for the intended features. Replace the path placeholders with your actual Proxmox objects; a Gateway node ID is not a Proxmox host name or VMID.
+
+| Operation | Proxmox privileges | ACL target |
+| --- | --- | --- |
+| Discover hosts and storage | `Sys.Audit`, `Datastore.Audit` | Selected `/nodes/<host>` and `/storage/<storage>` respectively |
+| Read VM configuration and state | `VM.Audit` | `/vms/<vmid>` |
+| Create and configure a VM | `VM.Allocate`, `VM.Config.CPU`, `VM.Config.Memory`, `VM.Config.Disk`, `VM.Config.Network`, `VM.Config.HWType`, `VM.Config.Options`, `VM.Config.CDROM`, `VM.PowerMgmt` | Each permitted future `/vms/<vmid>` or the configured `/pool/<pool>` |
+| Allocate VM disks | `Datastore.AllocateSpace` | Selected disk `/storage/<storage>` with `images` content |
+| Download/import an OS image and upload bootstrap media | `Datastore.AllocateTemplate`, `Datastore.Allocate` | Selected image storage with `import` and bootstrap storage with `iso` |
+| Host-side image download | `Sys.AccessNetwork` | Selected `/nodes/<host>` |
+| Attach a bridge or VNet | `SDN.Use` | The bridge/VNet permission path in Proxmox |
+| Start, shutdown, reboot | `VM.PowerMgmt` | `/vms/<vmid>` |
+| Resize | `VM.Config.CPU`, `VM.Config.Memory`, `VM.Config.Disk`; disk growth also needs storage allocation | VM and disk-storage paths |
+| Delete a VM | `VM.Allocate` | `/vms/<vmid>` |
+| Read guest identity files | `VM.GuestAgent.FileRead` or the broader `VM.GuestAgent.Unrestricted`; older versions use `VM.Monitor` | `/vms/<vmid>` |
+| Install/recover through QEMU Guest Agent | `VM.GuestAgent.Unrestricted`; older versions use `VM.Monitor` | `/vms/<vmid>` |
+| Create/delete snapshots | `VM.Snapshot` | `/vms/<vmid>` |
+| Restore snapshots | `VM.Snapshot.Rollback`; restarting also needs `VM.PowerMgmt` | `/vms/<vmid>` |
+| Read/edit VM firewall and NIC participation | `VM.Audit`, `VM.Config.Network` | `/vms/<vmid>` |
+| Read cluster firewall state | `Sys.Audit` | `/` |
+| Manage Gateway-owned cluster firewall security groups | `Sys.Modify` | `/` — optional, broad cluster-level access |
+
+**Do not grant `Sys.Modify` at `/` just to make a connection test pass.** The current firewall integration needs it for cluster security groups; it is not VM-local permission. If that access is unacceptable, leave firewall management unavailable. Gateway does not enable the cluster firewall. Prefer dedicated image/bootstrap storage: `Datastore.Allocate` is broader than permission to upload one file. `VM.Backup` is not a substitute for snapshot privileges.
+
+Proxmox versions differ in Guest Agent privileges. Select the privileges present in your installed version and check the permission named by the failed API operation. Where Guest Agent information calls require it, add `VM.GuestAgent.Audit`; granting file-read alone does not permit installation commands.
+
+
+#### Connect in Gateway
+
+1. Open **Settings > Integrations** and click **Add connector** in **Hosting**.
+2. On **Connection**, choose **Provider → Proxmox VE**. Fill **Connector name** (for example, `Proxmox production`), **API origin** (`https://pve.example.com:8006`, without `/api2/json`), **Token ID** (`gateway@pve!hosting`), and **API token** (the secret only). Click **Continue**.
+3. On **Proxmox host**, choose **Certificate verification**: **System trust**, **Private CA certificate**, or **Verified certificate fingerprint**. For the latter two, supply the PEM **Trusted CA certificate** or independently verified **Certificate SHA-256 pin**.
+4. Click **Test Connection**, then choose **Physical host** from the discovered hosts. One connector binds to one physical host; VMIDs remain unique across the cluster.
+5. Leave **VM provisioning** enabled to create VMs. Turn it off for existing VM/CT inventory and adoption only; this skips **Infrastructure** and **Network**. Click **Continue**.
+6. On **Infrastructure**, fill the following fields and click **Continue**.
+
+| Field | Value |
+| --- | --- |
+| **Disk storage** | Existing storage on the selected host with `images` content for VM disks |
+| **Image storage** | Storage with `import` content for OS images |
+| **Seed storage** | Storage with `iso` content for bootstrap media |
+| **Allowed VMIDs** | IDs and ranges, such as `9000-9010,9020`; up to 1000 unique IDs. Occupied IDs are skipped |
+| **Maximum CPU budget (cores)** | Optional aggregate vCPU budget, including pending operations |
+| **Maximum memory budget (MiB)** | Optional aggregate RAM budget |
+| **Maximum disk budget (GiB)** | Optional aggregate disk budget |
+| **Resource pool** | An existing Proxmox pool name, or leave blank |
+
+7. On **Network**, choose **Bridge** and **Address assignment**. **DHCP** requires a working DHCP service on that network. For **Static IPv4 pool**, fill **IP pool**, **Subnet**, and **Gateway**. Provide at least as many addresses as allowed VMIDs and reserve them outside DHCP and manual allocation.
+8. Set **VLAN**, **DNS servers**, **Search domain**, and **MTU** only if needed. **Interface firewall** controls NIC participation; it does not enable the cluster firewall or create rules. Click **Review**.
+9. Check **Profile summary**. Under **Synchronization and scope**, configure **Automatic sync** and **Sync interval (seconds)**, from 60 to 86400. Enable **Automatic adoption** only if you want existing nodes linked when identity evidence is unambiguous; an IP/VMID match alone is insufficient.
+10. Click **Create connector**. With **VM provisioning** off, synchronization settings appear on the final **Settings** step without a provisioning summary. Saving the connector does not create a VM.
+11. Open the saved account from **Nodes > Providers** or the integrations list. Check synchronization and resource inventory. To create a node, click **Create VM**, select its role, name, OS, and resources, check **Review node**, and select **Confirm and create VM**. Wait for installation to finish and the node to come online.
+
+If **Test Connection** does not load hosts, check TLS trust and ACLs. If storage is missing, check its content type and availability on the selected host. **Create VM** requires a provisioning profile and Gateway permissions to create nodes and resources in the selected account.
+
+#### Check permissions
+
+If an API request is denied, inspect effective token permissions from an administrator's Proxmox shell, replacing the example paths:
+
+```sh
+pveum user token permissions gateway@pve hosting --path /vms/9000
+pveum user token permissions gateway@pve hosting --path /storage/gateway-images
+pveum user token permissions gateway@pve hosting --path /
+```
+
+These commands only read permissions. For a privilege-separated token, check both the user and token ACLs.
+
+[Proxmox documentation](https://pve.proxmox.com/pve-docs/chapter-pveum.html).
+
+</details>
+
+### DigitalOcean
+
+Create and manage Droplets, firewalls, and snapshots using a scoped personal access token.
+
+<details>
+<summary>Set up DigitalOcean</summary>
+
+#### Create an API token
+
+1. Switch to the intended team in the DigitalOcean control panel. Open **API > Tokens > Generate New Token**.
+2. Give the token a dedicated name and expiration. Select **Custom Scopes** and add the rows needed below, including their required dependency scopes. The creator's team role must permit those operations.
+3. Generate the token and copy its secret for the next step.
+
+| Capability | Token scopes |
+| --- | --- |
+| Account and VM inventory | `account:read`, `droplet:read` |
+| Locations, sizes, images | `regions:read`, `sizes:read`, `image:read` |
+| Create a Droplet | `droplet:create`, `droplet:read`, `tag:create`, `tag:read`, `regions:read`, `sizes:read`, `actions:read`, `image:read`, `snapshot:read`, `vpc:read` |
+| Power actions; create/restore a snapshot through Droplet actions | `droplet:update` plus `droplet:read`, `regions:read`, `sizes:read`, `actions:read`, `image:read`, `snapshot:read` |
+| Resize | The update scopes above plus `droplet:create` and its dependencies |
+| Delete a Droplet | `droplet:delete`, `droplet:read` |
+| List/delete snapshots | `snapshot:read`; add `snapshot:delete` for deletion |
+| Manage and clean up firewalls | `firewall:read`, `firewall:create`, `firewall:update`, `firewall:delete`, `droplet:read`, `tag:read` |
+| Balance and billing | `billing:read` |
+
+There is no separate `snapshot:create` scope in this API: creating a Droplet snapshot is a Droplet action. Do not request unrelated Kubernetes, Spaces, or database permissions. To change a token's scopes, create a replacement token, update Gateway, verify it, and only then revoke the old token.
+
+References: [Create a personal access token](https://docs.digitalocean.com/reference/api/create-personal-access-token/), [DigitalOcean scope reference](https://docs.digitalocean.com/reference/api/scopes/).
+
+#### Connect in Gateway
+
+1. Open **Settings > Integrations** and click **Add connector** in **Hosting**.
+2. On **Connection**, select **Provider → DigitalOcean** and enter a **Connector name**, such as `DigitalOcean production`. **API origin** is filled automatically with `https://api.digitalocean.com`; do not change it.
+3. Paste the token secret into **API token**. Click **Test Connection**. If you see **Connected with limited permissions**, check the missing rights against the requirements above; successful authentication does not enable every operation.
+4. Click **Continue**. On **Settings**, configure the following fields.
+
+| Field | Value |
+| --- | --- |
+| **Automatic sync** | Enable scheduled provider-inventory refresh |
+| **Sync interval (seconds)** | An interval from 60 to 86400 seconds |
+| **Automatic adoption** | Link existing nodes only when identity evidence is unambiguous |
+| **Node scope** | Optional comma-separated Gateway node UUIDs restricting automatic adoption, not provider VM IDs. Blank includes all nodes eligible for linking |
+| **Default location**, **Default size**, **Default image** | Optional provider-catalog IDs preselected in the VM wizard. Leave blank if unknown and choose values when creating the VM |
+
+5. Click **Create connector**. This saves the connection without ordering a VM.
+6. Open the saved account from the integrations list or **Nodes > Providers**. Check synchronization, the intended account/team's inventory, and available financial information. An unknown balance is not zero.
+7. To create a node, click **Create VM** and choose the role, name, location, OS, and size. Review the configuration and price under **Review node**, then select **Confirm and create VM** — this places a billable order. Wait for VM creation, daemon installation, and the node to come online.
+8. To change settings, open **Configure** in the account menu, complete the wizard, and click **Save**. Leave the replacement-credential field blank when editing to retain the saved secret.
+
+If **Add connector** is unavailable, check Gateway hosting-integration administration permissions. **Create VM** additionally requires node/resource creation permissions for the selected account and the provider's create capability.
+
+</details>
+
+### Hetzner Cloud
+
+Manage Cloud servers in one project using its API token. Hetzner Robot and dedicated servers are not supported.
+
+<details>
+<summary>Set up Hetzner Cloud</summary>
+
+#### Create an API token
+
+1. Open the **Hetzner Console**, select the intended Cloud project, then **Security > API Tokens > Generate API Token**.
+2. Name the token and choose **Read** for inventory only or **Read & Write** for VM creation, power, resizing, firewall, and snapshot operations. Hetzner does not expose separate per-operation scopes like DigitalOcean.
+3. Generate the token and copy its secret for the next step.
+
+Use a dedicated project to limit the token's reach. Gateway's current connector does not allow replacing a Hetzner project token in place: create a new connector for a replacement token and explicitly reconcile dependent resources before removing the old connector. There is no additional balance scope to enable; this integration does not expose an account-balance API.
+
+Reference: [Hetzner Cloud API setup](https://docs.hetzner.com/cloud/api/getting-started/using-api/).
+
+#### Connect in Gateway
+
+1. Open **Settings > Integrations** and click **Add connector** in **Hosting**.
+2. On **Connection**, select **Provider → Hetzner Cloud** and enter a **Connector name**, such as `Hetzner production`. **API origin** is filled automatically with `https://api.hetzner.cloud`; do not change it.
+3. Paste the token secret into **API token**. Click **Test Connection**. If you see **Connected with limited permissions**, check the missing rights against the requirements above; successful authentication does not enable every operation.
+4. Click **Continue**. On **Settings**, configure the following fields.
+
+| Field | Value |
+| --- | --- |
+| **Automatic sync** | Enable scheduled provider-inventory refresh |
+| **Sync interval (seconds)** | An interval from 60 to 86400 seconds |
+| **Automatic adoption** | Link existing nodes only when identity evidence is unambiguous |
+| **Node scope** | Optional comma-separated Gateway node UUIDs restricting automatic adoption, not provider VM IDs. Blank includes all nodes eligible for linking |
+| **Default location**, **Default size**, **Default image** | Optional provider-catalog IDs preselected in the VM wizard. Leave blank if unknown and choose values when creating the VM |
+
+5. Click **Create connector**. This saves the connection without ordering a VM.
+6. Open the saved account from the integrations list or **Nodes > Providers**. Check synchronization, the intended project's inventory, and available financial information. An unknown balance is not zero.
+7. To create a node, click **Create VM** and choose the role, name, location, OS, and size. Review the configuration and price under **Review node**, then select **Confirm and create VM** — this places a billable order. Wait for VM creation, daemon installation, and the node to come online.
+8. To change settings, open **Configure** in the account menu, complete the wizard, and click **Save**. Create a new connector to replace a Hetzner token; the existing connector's token field is disabled.
+
+If **Add connector** is unavailable, check Gateway hosting-integration administration permissions. **Create VM** additionally requires node/resource creation permissions for the selected account and the provider's create capability.
+
+</details>
+
+### HOSTKEY
+
+Order and manage VMs using an Invapi account API key. A server-specific key cannot be used to order new VMs.
+
+<details>
+<summary>Set up HOSTKEY</summary>
+
+#### Create an API key
+
+1. Sign in to **Invapi**, open **API keys**, and create a named customer/account key. A server-specific key is not the correct credential for ordering other VMs or reading account billing.
+2. Set the IP access list to the Gateway backend's outbound address, if using an IP restriction, and enable the key. This is not the address of the browser used to configure Gateway.
+3. Copy the original secret immediately. After creation the interface may show only its hash; that hash cannot authenticate Gateway. If key creation is unavailable for the account, resolve account eligibility with HOSTKEY first.
+
+HOSTKEY account keys do not use DigitalOcean-style scope strings. Limit access using the provider's key type and IP restrictions; account-level access can authorize billable orders. Keep the key unavailable to users who should only operate an existing Gateway node.
+
+Reference: [HOSTKEY API authentication and API keys](https://hostkey.com/documentation/apidocs/api_index/).
+
+#### Connect in Gateway
+
+1. Open **Settings > Integrations** and click **Add connector** in **Hosting**.
+2. On **Connection**, select **Provider → HOSTKEY** and enter a **Connector name**, such as `HOSTKEY production`. **API origin** is filled automatically with `https://invapi.hostkey.com`; do not change it.
+3. Paste the original Invapi API key, not its hash or a temporary session token into **API key**. Click **Test Connection**. If you see **Connected with limited permissions**, check the missing rights against the requirements above; successful authentication does not enable every operation.
+4. Click **Continue**. On **Settings**, configure the following fields.
+
+| Field | Value |
+| --- | --- |
+| **Automatic sync** | Enable scheduled provider-inventory refresh |
+| **Sync interval (seconds)** | An interval from 60 to 86400 seconds |
+| **Automatic adoption** | Link existing nodes only when identity evidence is unambiguous |
+| **Node scope** | Optional comma-separated Gateway node UUIDs restricting automatic adoption, not provider VM IDs. Blank includes all nodes eligible for linking |
+| **Default location**, **Default size**, **Default image** | Optional provider-catalog IDs preselected in the VM wizard. Leave blank if unknown and choose values when creating the VM |
+
+5. Click **Create connector**. This saves the connection without ordering a VM.
+6. Open the saved account from the integrations list or **Nodes > Providers**. Check synchronization, the intended account's inventory, and available financial information. An unknown balance is not zero.
+7. To create a node, click **Create VM** and choose the role, name, location, OS, and size. Review the configuration and price under **Review node**, then select **Confirm and create VM** — this places a billable order. Wait for VM creation, daemon installation, and the node to come online.
+8. To change settings, open **Configure** in the account menu, complete the wizard, and click **Save**. Leave the replacement-credential field blank when editing to retain the saved secret.
+
+If **Add connector** is unavailable, check Gateway hosting-integration administration permissions. **Create VM** additionally requires node/resource creation permissions for the selected account and the provider's create capability.
+
+</details>
+
+## Create and enroll a node
+
+1. Open **Nodes > Add Node** and choose hosted creation, or create a VM from the provider account.
+2. Select the role, name, account, location, compatible OS, and VM resources.
+3. Review the configuration and available price, then confirm the order once.
+4. Follow provider provisioning, installation, enrollment, and role-readiness status.
+
+A running VM is not necessarily an online Gateway node. Wait for the daemon and its role-specific capabilities. See [Add your first node](/en/getting-started/first-node/) and [Node roles](/en/nodes/roles-and-installation/).
+
+If installation fails after the VM was created, use **Retry installation** on that operation rather than placing another order. An uncertain provider response must be reconciled first. Installing on an existing VM needs a supported Guest Agent channel or a [trusted SSH connection](/en/integrations/ssh-connections/) to that VM. Matching a VMID or IP alone is not sufficient proof for automatic adoption.
+
+## Operate the VM
+
+- **Power and resize:** actions depend on provider state, permissions, and supported resources. Proxmox disks can grow, not shrink.
+- **Firewall:** the tab is available only for supported resources. On Proxmox, interface participation and VM firewall enablement are separate settings; the cluster firewall and token rights also matter. Gateway does not enable the cluster firewall for you.
+- **Snapshots:** supported Proxmox, DigitalOcean, and Hetzner resources expose creation, deletion, restore, and folders on the node. Creation does not require shutting down the VM. Proxmox can optionally capture RAM from a running VM and handles stopping/restarting during restore; other integrations currently require a stopped VM for restore. HOSTKEY is not advertised as a supported snapshot provider.
+- **Costs and consistency:** snapshot storage can incur charges. The table shows estimated storage cost when available; a dash means size or price is unavailable. VM snapshots are not application-consistent database backups and may exclude attached volumes.
+
+Snapshot creation, deletion, and restore are mutually exclusive with conflicting VM operations. Restore replaces data; confirm the selected snapshot before proceeding.
+
+## Permissions, alerts, and recovery
+
+Hosting permissions supplement access to the bound node; they do not make an otherwise hidden node accessible. Account inventory, VM actions, connector administration, and billing are separate permissions. Restrict creation to the intended accounts/providers and actions to the intended nodes/resources. Creating a hosted node also requires node-creation permission. High-risk hosting actions require an interactive session; see [Scopes and tokens](/en/identity/scopes-tokens-oauth/).
+
+Configure [notifications](/en/observability/notifications-status-pages/) for VM power changes, operation failures, synchronization, and balance thresholds where supported. Balance rules require billing access and an explicit currency. Do not treat stale provider data as a successful operation or a zero balance.
+
+Removing a Gateway node is not the same as destroying its VM. Review dependencies and the selected provider action before deletion. For failures, preserve the operation record and inspect provider errors, token permissions, image compatibility, capacity, and enrollment connectivity before retrying.

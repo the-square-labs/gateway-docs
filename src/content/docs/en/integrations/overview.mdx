@@ -1,0 +1,36 @@
+---
+title: Integrations
+description: Choose a hosting, Git, SSH, or DNS connection and understand its access boundary.
+section: Integrations
+order: 1
+audience: [operator, platform-engineer, security-admin]
+status: ready
+lastReviewed: 2026-09-10
+---
+
+Integrations connect Gateway to accounts and hosts you already control. Start in **Settings > Integrations**. The available actions depend on your Gateway permissions, plan, and the credentials accepted by the external system.
+
+## Choose the connection
+
+| Goal | Integration | Continue with |
+| --- | --- | --- |
+| Create and operate provider VMs | [Hosting providers](/en/integrations/hosting-providers/): Proxmox VE, DigitalOcean, Hetzner Cloud, HOSTKEY | [Add a node](/en/getting-started/first-node/) |
+| Select repositories for builds or source operations | [Git hosting](/en/integrations/source-control/): GitLab, GitHub, generic Git | [Docker builds](/en/docker/git-builds/), [Pages Git deployments](/en/pages/git-deployments/) |
+| Reach a named external host over SSH | [SSH connections](/en/integrations/ssh-connections/) | Trusted host access and eligible hosting installation |
+| Discover DNS zones and manage DNS for Domains and certificates | [Cloudflare](/en/integrations/cloudflare/) | [Domains, Routes, and TLS](/en/ingress/domains-routes-tls/) |
+
+[Container registries](/en/docker/registries/) are configured in the Docker area; Git integrations can also discover eligible registries. [Email and webhooks](/en/integrations/dns-email-webhooks/) have their own delivery settings. [API and MCP](/en/integrations/api-and-mcp/) connect tools to Gateway, rather than connecting Gateway to a hosting or Git account.
+
+## Three independent access checks
+
+1. **Gateway permissions:** who may view or administer the connector and act on the selected resource.
+2. **Connector selection:** which accounts, repositories, zones, hosts, or allocation pools that connection covers.
+3. **External credentials:** what the provider token or remote operating-system account actually permits.
+
+Being a Gateway system administrator does not give a Proxmox API token or SSH account more privileges. Conversely, an administrator token at the provider does not grant a Gateway user permission to every resource. See [Permissions](/en/concepts/permissions/).
+
+## Connect, verify, and maintain
+
+Use a dedicated credential, verify TLS or SSH host identity, and restrict access before enabling automation. A successful connection test establishes connectivity and the capabilities that were checked; it does not prove that a VM was provisioned, a build deployed, or a DNS change reached clients.
+
+Before rotating, disabling, or deleting a connection, identify dependent nodes, source bindings, registries, Domains, and certificates. Verify the replacement with the corresponding workflow. Do not paste provider tokens or private keys into chat, URLs, screenshots, or logs.

@@ -163,6 +163,13 @@ for (const locale of locales) {
 
 		if (locale === 'ru') {
 			const prose = proseOnly(source);
+			// Keep literal UI labels and Node.js; translate the infrastructure term in prose and metadata.
+			const localizedNodeText = `${metadata}\n${prose}`
+				.replace(/\*\*(?:Nodes|Add Node|Add relay node|Node Type|Node scope|Nodes > Providers|Nodes > Add Node)\*\*/g, '')
+				.replace(/\bNode\.js\b/g, '');
+			if (/\bNodes?\b/.test(localizedNodeText)) {
+				errors.push(`${locale}/${file}: translate Node/Nodes in prose; keep literal UI labels in bold`);
+			}
 			for (const term of untranslatedRussianProseTerms) {
 				const matches = prose.match(new RegExp(`\\b${term}\\b`, 'g'));
 				if (matches) {

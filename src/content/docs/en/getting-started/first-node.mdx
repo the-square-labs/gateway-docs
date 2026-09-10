@@ -5,12 +5,19 @@ section: Start here
 order: 8
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-10
 ---
 
 A **Node** is a Linux host enrolled into Gateway for a specific operational role. The host runs a Gateway-managed daemon that reports its identity and capabilities and receives only the commands allowed for that role. Adding a Node does not move an existing workload automatically; it creates trusted capacity that you can select later.
 
-The desired outcome is simple: the Node appears **Online**, reports the expected role and capabilities, and can reconnect after a service or host restart. The platform owner decides the role and security boundary; the host operator runs the one-time installation command and verifies local prerequisites.
+## Choose how to connect
+
+You can add a node in either of these ways:
+
+- **On your own server or VM:** run Gateway's generated installer command using the instructions below.
+- **Create a VM through Gateway:** if you want to order a VM directly from the interface, connect a [hosting provider](/en/integrations/hosting-providers/) and choose hosted creation in **Add Node**. Gateway creates the VM and installs the daemon. Wait for node readiness, not just provider power-on.
+
+Successful enrollment means the node is **Online** with the intended role and capabilities.
 
 ## Choose the role before enrollment
 
@@ -39,7 +46,7 @@ Also confirm role-specific ownership:
 - Build Workers need a dedicated host or outer unprivileged container and an approved egress profile.
 - Relay Nodes need an address and port reachable from participating Gateway, Docker, Ingress, and database hosts. Gateway does not open the firewall or traverse NAT for you.
 
-## Enroll the Node
+## Enroll the node on your own host
 
 1. Open **Nodes** and select **Add Node**.
 2. Choose the intended role. For Relay, enter the address that other participants will use to reach the Relay worker.

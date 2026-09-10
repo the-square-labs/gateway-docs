@@ -60,8 +60,10 @@ export default defineConfig({
 			lastUpdated: true,
 			pagefind: true,
 			customCss: ['./src/styles/custom.css'],
+			routeMiddleware: './src/routeData.ts',
 			components: {
 				SocialIcons: './src/components/HeaderLinks.astro',
+				LanguageSelect: './src/components/LanguageSelect.astro',
 			},
 			social: [
 				{
@@ -223,11 +225,21 @@ export default defineConfig({
 					],
 				},
 				{
-					label: 'Integrations and automation',
-					translations: { ru: 'Интеграции и автоматизация' },
+					label: 'Integrations',
+					translations: { ru: 'Интеграции' },
 					items: [
+						{ slug: 'integrations/overview' },
+						{ slug: 'integrations/hosting-providers' },
 						{ slug: 'integrations/source-control' },
+						{ slug: 'integrations/ssh-connections' },
+						{ slug: 'integrations/cloudflare' },
 						{ slug: 'integrations/dns-email-webhooks' },
+					],
+				},
+				{
+					label: 'Automation',
+					translations: { ru: 'Автоматизация' },
+					items: [
 						{ slug: 'integrations/api-and-mcp' },
 					],
 				},
