@@ -1,0 +1,423 @@
+---
+title: Scope reference
+description: All Gateway permission scopes, their purpose, supported restrictions, and token delegation.
+section: Identity and access
+order: 3
+audience: [security-admin, developer]
+status: ready
+lastReviewed: 2026-09-10
+---
+
+Gateway defines 226 permission scopes. The tables below list their exact names and the actions they authorize. Assign permissions through groups or a user's additional permissions; see [users and groups](/en/identity/auth-users-groups/) and [API tokens, OAuth, and MCP](/en/identity/scopes-tokens-oauth/) for setup.
+
+## How to read this reference
+
+- **Restrictions**: **Resource** means the scope supports a resource qualifier; **Folder** means it also supports a folder qualifier. **—** means the base scope has no resource qualifier.
+- **Tokens**: **API** means the scope can be delegated to an API token or OAuth for the Gateway API; **MCP** means it can be delegated to OAuth for the Gateway MCP resource. **—** means neither regular token family accepts it. User permissions and token permissions are not interchangeable.
+- A permission does not enable an unavailable product feature, bypass license requirements, or grant credentials or privileges at the external provider.
+- Delegated access is limited by the owning user's current effective permissions. MCP scope eligibility does not mean a corresponding tool exists.
+- `inference:setup` is a special OAuth scope for Inference setup, not an ordinary user or group permission.
+
+## Resource and folder restrictions
+
+A base permission such as `proxy:view` covers all routes. A qualified permission such as `proxy:view:<routeId>` covers one route; `proxy:view:folder/<folderId>` covers routes in the selected folder.
+
+The qualifier depends on the resource type. Docker container scopes use `<nodeId>` for a node or `<nodeId>/<stableResourceId>` for a specific container or deployment. Qualified Pages permissions use the project ID, including operations on its deployments, tags, and deployment tokens. Select the target in the permissions editor rather than using an ID from another resource type.
+
+For creation permissions, a folder restriction selects the destination folder, not a resource that has not been created yet. Folder management and resource operations are separate permissions: managing a folder does not itself grant access to every item in it.
+
+Create-only and delete-only permissions do not grant list visibility by themselves. Matching write permissions can imply read access while preserving their resource boundary.
+
+## Permission catalogue
+
+### PKI: Certificate Authorities
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `pki:ca:view:root` | View root certificate authorities | — | API, MCP |
+| `pki:ca:view:intermediate` | View intermediate certificate authorities | — | API, MCP |
+| `pki:ca:create:root` | Create new root certificate authorities | — | API, MCP |
+| `pki:ca:create:intermediate` | Create intermediate CAs under a root | Resource | API, MCP |
+| `pki:ca:revoke:root` | Revoke root certificate authorities | — | API, MCP |
+| `pki:ca:revoke:intermediate` | Revoke intermediate certificate authorities | — | API, MCP |
+
+### PKI: Certificates
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `pki:cert:view` | View issued certificates | Resource | API, MCP |
+| `pki:cert:issue` | Issue new certificates | Resource | API, MCP |
+| `pki:cert:revoke` | Revoke issued certificates | Resource | API, MCP |
+| `pki:cert:export` | Export certificates and keys | Resource | API, MCP |
+
+### PKI: Templates
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `pki:templates:view` | View certificate templates | — | API, MCP |
+| `pki:templates:create` | Create certificate templates | — | API, MCP |
+| `pki:templates:edit` | Edit certificate templates | — | API, MCP |
+| `pki:templates:delete` | Delete certificate templates | — | API, MCP |
+
+### Domains
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `domains:view` | View managed domains | Resource, Folder | API, MCP |
+| `domains:create` | Create managed domains | Resource, Folder | API, MCP |
+| `domains:edit` | Edit managed domains | Resource, Folder | API, MCP |
+| `domains:delete` | Delete managed domains | Resource, Folder | API, MCP |
+| `domains:folders:manage` | Organize managed domains into folders | — | API, MCP |
+
+### Routes
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `proxy:view` | View and search ingress routes | Resource, Folder | API, MCP |
+| `proxy:create` | Create new ingress routes | Resource, Folder | API, MCP |
+| `proxy:edit` | Edit ingress route configuration | Resource, Folder | API, MCP |
+| `proxy:delete` | Delete ingress routes | Resource, Folder | API, MCP |
+| `proxy:raw:read` | View raw nginx configuration | Resource, Folder | — |
+| `proxy:raw:write` | Edit raw nginx configuration | Resource, Folder | — |
+| `proxy:raw:toggle` | Switch between managed and raw config mode | Resource, Folder | — |
+| `proxy:raw:bypass` | Save raw nginx config without dangerous directive restrictions | Resource, Folder | — |
+| `proxy:advanced` | Use advanced proxy configuration | Resource, Folder | API, MCP |
+| `proxy:advanced:bypass` | Save unrestricted advanced nginx snippets | Resource, Folder | — |
+| `proxy:maintenance:bypass` | Create temporary access codes for maintained routes | Resource, Folder | — |
+| `proxy:folders:manage` | Create, reorder, and remove route folders | — | API, MCP |
+
+### Pages
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `pages:view` | View Page Projects, Deployments, Tags, previews, and usage | Resource, Folder | API, MCP |
+| `pages:create` | Create static Page Projects | Resource, Folder | API, MCP |
+| `pages:edit` | Rename Page Projects and edit their retention and quota settings | Resource, Folder | API, MCP |
+| `pages:delete` | Delete eligible Page Projects | Resource, Folder | API, MCP |
+| `pages:deploy` | Create and upload static Deployments | Resource, Folder | API, MCP |
+| `pages:deployments:manage` | Pin, unpin, clean up, and delete eligible Deployments | Resource, Folder | API, MCP |
+| `pages:tags:manage` | Create, move, and delete Page Project Tags | Resource, Folder | API, MCP |
+| `pages:tokens:manage` | Create, restrict, and revoke Project deploy credentials | Resource, Folder | API, MCP |
+| `pages:folders:manage` | Create, reorder, and remove Page Project folders | — | API, MCP |
+| `pages:settings:view` | View wildcard profile and storage defaults | — | API, MCP |
+| `pages:settings:edit` | Configure and migrate the wildcard Pages profile and storage defaults | — | API, MCP |
+
+### Proxy Templates
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `proxy:templates:view` | View nginx templates | Resource | API, MCP |
+| `proxy:templates:create` | Create nginx templates | — | API, MCP |
+| `proxy:templates:edit` | Edit nginx templates | Resource | API, MCP |
+| `proxy:templates:delete` | Delete nginx templates | Resource | API, MCP |
+
+### SSL Certificates
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `ssl:cert:view` | View SSL certificates | Resource, Folder | API, MCP |
+| `ssl:cert:issue` | Provision ACME or upload SSL certificates | Resource, Folder | API, MCP |
+| `ssl:cert:folders:manage` | Organize SSL certificates into folders | — | API, MCP |
+| `ssl:cert:delete` | Delete SSL certificates | Resource, Folder | API, MCP |
+| `ssl:cert:revoke` | Revoke SSL certificates | Resource, Folder | API, MCP |
+| `ssl:cert:export` | Export SSL certificates | Resource, Folder | API, MCP |
+
+### Access Control
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `acl:view` | View access control lists | Resource | API, MCP |
+| `acl:create` | Create access control lists | — | API, MCP |
+| `acl:edit` | Edit access control lists | Resource | API, MCP |
+| `acl:delete` | Delete access control lists | Resource | API, MCP |
+
+### Nodes
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `nodes:details` | View managed nodes | Resource, Folder | API, MCP |
+| `nodes:create` | Enroll new nodes | Resource, Folder | API, MCP |
+| `nodes:rename` | Rename nodes | Resource, Folder | API, MCP |
+| `nodes:delete` | Remove nodes | Resource, Folder | API, MCP |
+| `nodes:config:view` | View node nginx configuration | Resource, Folder | — |
+| `nodes:config:edit` | Edit node nginx configuration | Resource, Folder | — |
+| `nodes:logs` | View node daemon and nginx logs | Resource, Folder | API, MCP |
+| `nodes:console` | Open interactive shell on nodes | Resource, Folder | API, MCP |
+| `nodes:files:read` | Browse, open, copy, and download node files | Resource, Folder | API, MCP |
+| `nodes:files:write` | Create, edit, upload, move, and delete node files | Resource, Folder | API, MCP |
+| `nodes:lock` | Prevent new proxy hosts or containers on selected nodes | Resource, Folder | API, MCP |
+| `nodes:folders:manage` | Create, reorder, and remove node folders | — | API, MCP |
+
+### Administration
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `admin:users` | Create, edit, and delete users | Resource, Folder | — |
+| `admin:users:impersonate` | Temporarily act as another active user | Resource, Folder | — |
+| `admin:users:folders:manage` | Create, reorder, and remove user folders | — | API, MCP |
+| `admin:groups` | Create, edit, and delete permission groups | Resource, Folder | — |
+| `admin:groups:folders:manage` | Create, reorder, and remove permission group folders | — | API, MCP |
+| `admin:audit` | View the audit log | — | API, MCP |
+| `audit:siem:view` | View SIEM destinations and audit delivery history | — | API, MCP |
+| `audit:siem:manage` | Configure SIEM destinations and control audit deliveries | — | API, MCP |
+| `admin:system` | System-level administration (protected) | — | — |
+| `admin:details:certificates` | View internal system PKI and SSL certificates in read-only mode | — | API, MCP |
+| `admin:update` | Check for and apply updates | — | API, MCP |
+| `admin:alerts` | View and manage alerts | — | API, MCP |
+
+### Gateway Settings
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `settings:gateway:view` | View sign-in provisioning and external control-plane settings | — | — |
+| `settings:gateway:edit` | Edit sign-in provisioning and external control-plane settings | — | — |
+
+### Integrations: GitLab
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `integrations:gitlab:view` | View configured GitLab connectors and sync status | — | API, MCP |
+| `integrations:gitlab:manage` | Create, edit, rotate, and delete GitLab connectors | — | — |
+| `integrations:gitlab:sync` | Refresh projects and registries using the connector credential | — | API |
+| `integrations:gitlab:system` | Use the connector credential for otherwise permitted GitLab operations | — | — |
+| `integrations:gitlab:projects:view` | Discover allowed GitLab groups and projects | — | API, MCP |
+| `integrations:gitlab:repo:read` | Read repository trees and files through GitLab connectors | — | API, MCP |
+| `integrations:gitlab:repo:write` | Commit file changes through GitLab connectors | — | API |
+| `integrations:gitlab:ci:view` | View GitLab CI pipelines and configuration | — | API |
+| `integrations:gitlab:ci:edit` | Lint and update GitLab CI configuration | — | API |
+| `integrations:gitlab:variables:view` | View GitLab variable metadata without secret values | — | API |
+| `integrations:gitlab:variables:edit` | Create and update GitLab project variables | — | API |
+| `integrations:gitlab:variables:delete` | Delete GitLab project variables | — | API |
+| `integrations:gitlab:webhooks:manage` | Create, update, and delete GitLab project webhooks | — | API |
+| `integrations:gitlab:registry:manage` | Manage GitLab registry integration records and deploy credentials | — | API |
+| `integrations:gitlab:sandbox:clone` | Clone allowed GitLab repositories into AI sandboxes | — | API |
+
+### Integrations: GitHub
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `integrations:github:view` | View configured GitHub token connectors | — | API, MCP |
+| `integrations:github:manage` | Create, edit, rotate, and delete GitHub token connectors | — | — |
+| `integrations:github:system` | Use the connector credential instead of a personal GitHub authorization | — | — |
+
+### Integrations: Git
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `integrations:git:view` | View configured generic Git connectors | — | API, MCP |
+| `integrations:git:manage` | Create, edit, rotate, and delete generic Git connectors | — | — |
+| `integrations:git:system` | Use the connector credential instead of a personal Git authorization | — | — |
+
+### Integrations: SSH
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `integrations:ssh:view` | View configured external SSH servers | — | API, MCP |
+| `integrations:ssh:manage` | Add and configure external SSH servers and jump hosts | — | — |
+| `integrations:ssh:use` | Execute approved commands on configured external SSH servers | — | API |
+
+### Integrations: Cloudflare
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `integrations:cloudflare:view` | View configured Cloudflare connectors and synchronization status | — | API, MCP |
+| `integrations:cloudflare:manage` | Create, edit, test, synchronize, rotate, and delete Cloudflare connectors | — | — |
+
+### Integrations: Hosting
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `integrations:hosting:view` | View hosting accounts and connection status | Resource | API, MCP |
+| `integrations:hosting:manage` | Connect, configure and synchronize hosting accounts | Resource | — |
+| `hosting:resources:view` | View provider inventory and associated Gateway nodes | Resource | API, MCP |
+| `hosting:resources:create` | Order provider VMs and install Gateway roles; may incur charges | Resource | — |
+| `hosting:resources:power` | Start, shut down and reboot VMs; all hosted roles are affected | Resource | — |
+| `hosting:resources:resize` | Change VM resources; may change provider charges | Resource | — |
+| `hosting:snapshots:view` | View provider snapshots and snapshot folders without changing the VM | Resource | API, MCP |
+| `hosting:snapshots:create` | Create provider snapshots; storage may incur charges | Resource | — |
+| `hosting:snapshots:delete` | Permanently delete provider snapshots | Resource | — |
+| `hosting:snapshots:restore` | Replace current VM data with a snapshot | Resource | — |
+| `hosting:snapshots:folders:manage` | Create snapshot folders and move snapshots between folders | Resource | — |
+| `hosting:resources:delete` | Destroy provider VM data or cancel HOSTKEY rental | Resource | — |
+| `hosting:resources:recover` | Restart Gateway daemons or explicitly retry a failed installation | Resource | — |
+| `hosting:billing:view` | View account balance, charges, invoices and transactions | Resource | — |
+| `hosting:billing:topup` | Create HOSTKEY deposit invoices; payment remains provider-hosted | Resource | — |
+
+### Housekeeping
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `housekeeping:view` | View housekeeping configuration, stats, and run history | — | API, MCP |
+| `housekeeping:run` | Manually run housekeeping tasks | — | API, MCP |
+| `housekeeping:configure` | Edit housekeeping configuration and schedule | — | API, MCP |
+
+### Licensing
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `license:view` | View Gateway license status and entitlement details | — | API, MCP |
+| `license:manage` | Activate, update, or remove the Gateway license | — | API, MCP |
+
+### Features
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `ai:workspace:use` | Use the AI Workspace interface and embedded assistant | — | — |
+| `feat:ai:use` | Use Gateway Inference and view personal inference usage | — | — |
+| `feat:ai:configure` | Configure AI settings and providers | — | — |
+| `ai:skills:manage` | Create, edit, enable, disable, and delete AI Workspace skills | — | — |
+| `ai:sandbox:use` | Run bounded AI sandbox jobs | — | — |
+| `ai:sandbox:tier:medium` | Run AI sandbox jobs with medium resource limits | — | — |
+| `ai:sandbox:tier:high` | Run AI sandbox jobs with high resource limits | — | — |
+| `ai:sandbox:manage` | View and kill AI sandbox jobs | — | — |
+| `mcp:use` | Allow this user account to access the remote MCP server with OAuth | — | — |
+
+### Inference
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `inference:setup` | OAuth-only authorization for the companion CLI Inference setup resource; not assignable to users or custom groups | — | — |
+| `inference:providers:view` | View inference providers, connections, discovery, and quota | — | — |
+| `inference:providers:manage` | Connect, update, synchronize, route, and disconnect inference providers | — | — |
+| `inference:models:manage` | Create, publish, replace, and delete inference models | — | — |
+| `inference:limits:manage` | Configure default and per-user inference budgets | — | — |
+| `inference:usage:view` | View system-wide and per-user inference usage | — | — |
+
+### Docker: Containers
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:containers:view` | View Docker containers | Resource, Folder | API, MCP |
+| `docker:containers:create` | Create and duplicate containers | Resource, Folder | API, MCP |
+| `docker:containers:edit` | Edit container settings and configuration | Resource, Folder | API, MCP |
+| `docker:containers:config` | View container recreate/configuration fields | Resource, Folder | API, MCP |
+| `docker:containers:manage` | Start, stop, restart, kill, and recreate containers | Resource, Folder | API, MCP |
+| `docker:containers:environment` | Modify container environment variables | Resource, Folder | API, MCP |
+| `docker:containers:delete` | Remove containers | Resource, Folder | API, MCP |
+| `docker:containers:console` | Open interactive console in containers | Resource, Folder | API, MCP |
+| `docker:containers:files:read` | Browse and read files in containers | Resource, Folder | API, MCP |
+| `docker:containers:files:write` | Create, edit, move, and delete files in containers | Resource, Folder | API, MCP |
+| `docker:containers:export` | Export portable container archives | Resource, Folder | API, MCP |
+| `docker:containers:secrets` | View and manage encrypted secrets | Resource, Folder | API, MCP |
+| `docker:containers:webhooks` | View and manage container webhook update triggers | Resource, Folder | API, MCP |
+| `docker:containers:mounts` | Add, remove, or change container and deployment mounts | Resource, Folder | API, MCP |
+| `docker:containers:migrate` | Migrate containers and deployments between Docker nodes | Resource, Folder | API, MCP |
+| `docker:availability:manage` | Enable, scale, heal, and disable multi-node workload Availability | Resource, Folder | API, MCP |
+| `docker:containers:folders:manage` | Create, reorder, and remove Docker resource folders | — | API, MCP |
+
+### Docker: Compose
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:compose:view` | Discover and inspect Compose projects, services, monitoring, logs, revisions, and activity | Resource, Folder | API, MCP |
+| `docker:compose:create` | Validate and deploy managed Compose projects; adoption also requires Manage Compose Projects | Resource, Folder | API, MCP |
+| `docker:compose:manage` | Adopt projects and manage lifecycle, revisions, secrets, and bindings | Resource, Folder | API, MCP |
+| `docker:compose:delete` | Delete Compose projects or run destructive down/delete-volume actions | Resource, Folder | API, MCP |
+
+### Docker: Images
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:images:view` | View Docker images | Resource, Folder | API, MCP |
+| `docker:images:pull` | Pull Docker images | Resource, Folder | API, MCP |
+| `docker:images:delete` | Remove and prune Docker images | Resource, Folder | API, MCP |
+
+### Docker: Volumes
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:volumes:view` | View Docker volumes | Resource, Folder | API, MCP |
+| `docker:volumes:create` | Create Docker volumes | Resource, Folder | API, MCP |
+| `docker:volumes:delete` | Remove Docker volumes | Resource, Folder | API, MCP |
+| `docker:volumes:export` | Export portable Docker volume archives | Resource, Folder | API, MCP |
+| `docker:volumes:files:read` | Browse, open, and download Docker volume files | Resource, Folder | API, MCP |
+| `docker:volumes:files:write` | Create, edit, upload, move, and delete Docker volume files | Resource, Folder | API, MCP |
+
+### Docker: Networks
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:networks:view` | View Docker networks | Resource, Folder | API, MCP |
+| `docker:networks:create` | Create Docker networks | Resource, Folder | API, MCP |
+| `docker:networks:edit` | Connect and disconnect containers | Resource, Folder | API, MCP |
+| `docker:networks:delete` | Remove Docker networks | Resource, Folder | API, MCP |
+
+### Docker: Registries
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:registries:view` | View Docker registries | — | API, MCP |
+| `docker:registries:create` | Add Docker registries | — | API, MCP |
+| `docker:registries:edit` | Edit Docker registry settings | — | API, MCP |
+| `docker:registries:delete` | Remove Docker registries | — | API, MCP |
+| `docker:registries:internal:pull` | Pull from all internal registry repositories or selected repository scopes | Resource | API, MCP |
+| `docker:registries:internal:push` | Push to all internal registry repositories or selected repository scopes | Resource | API, MCP |
+
+### Docker: Tasks
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `docker:tasks` | View Docker task progress | Resource | API, MCP |
+| `docker:tasks:manage` | Force-cancel active Docker tasks | Resource | API, MCP |
+
+### Databases
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `databases:view` | View saved database connections | Resource, Folder | API, MCP |
+| `databases:create` | Create saved database connections | Resource, Folder | API, MCP |
+| `databases:edit` | Edit saved database connections | Resource, Folder | API, MCP |
+| `databases:delete` | Delete saved database connections | Resource, Folder | API, MCP |
+| `databases:query:read` | Browse tables, keys, and run read-only database queries | Resource, Folder | API, MCP |
+| `databases:query:write` | Insert, update, delete, and run write queries against databases | Resource, Folder | API, MCP |
+| `databases:query:admin` | Run administrative or DDL database commands | Resource, Folder | API, MCP |
+| `databases:credentials:reveal` | Reveal saved database credentials and connection strings | Resource, Folder | API, MCP |
+| `databases:folders:manage` | Create, reorder, and remove database folders | — | API, MCP |
+
+### Notifications
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `notifications:alerts:view` | View notification alert rules | — | API, MCP |
+| `notifications:alerts:create` | Create notification alert rules | — | API, MCP |
+| `notifications:alerts:edit` | Edit notification alert rules | — | API, MCP |
+| `notifications:alerts:delete` | Delete notification alert rules | — | API, MCP |
+| `notifications:webhooks:view` | View notification webhooks | — | API, MCP |
+| `notifications:webhooks:create` | Create notification webhooks | — | API, MCP |
+| `notifications:webhooks:edit` | Edit notification webhooks | — | API, MCP |
+| `notifications:webhooks:delete` | Delete notification webhooks | — | API, MCP |
+| `notifications:deliveries:view` | View webhook delivery attempts | — | API, MCP |
+| `notifications:view` | Read notification resources across alerts, webhooks, and deliveries | — | API, MCP |
+| `notifications:manage` | Full management access to alerts, webhooks, and deliveries | — | API, MCP |
+
+### Logging
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `logs:environments:view` | View external logging environments | Resource, Folder | API, MCP |
+| `logs:environments:create` | Create logging environments | Resource, Folder | API, MCP |
+| `logs:environments:edit` | Edit logging environments and schemas | Resource, Folder | API, MCP |
+| `logs:environments:delete` | Delete logging environments | Resource, Folder | API, MCP |
+| `logs:environments:folders:manage` | Create, reorder, and remove logging environment folders | — | API, MCP |
+| `logs:tokens:view` | View logging ingest tokens | Resource | API, MCP |
+| `logs:tokens:create` | Create logging ingest tokens | Resource | API, MCP |
+| `logs:tokens:delete` | Revoke logging ingest tokens | Resource | API, MCP |
+| `logs:schemas:view` | View reusable logging schemas | Resource, Folder | API, MCP |
+| `logs:schemas:create` | Create reusable logging schemas | Resource, Folder | API, MCP |
+| `logs:schemas:edit` | Edit reusable logging schemas | Resource, Folder | API, MCP |
+| `logs:schemas:delete` | Delete reusable logging schemas | Resource, Folder | API, MCP |
+| `logs:schemas:folders:manage` | Create, reorder, and remove logging schema folders | — | API, MCP |
+| `logs:read` | Search and inspect external logs | Resource, Folder | API, MCP |
+| `logs:manage` | Full access to external logging | — | API, MCP |
+
+### Status Page
+
+| Scope | Description | Restrictions | Tokens |
+| --- | --- | --- | --- |
+| `status-page:view` | View status page configuration, exposed services, incidents, and preview | — | API, MCP |
+| `status-page:manage` | Edit status page settings and exposed services | — | API, MCP |
+| `status-page:incidents:create` | Create manual incidents and promote automatic incidents | — | API, MCP |
+| `status-page:incidents:update` | Edit incident details and post incident timeline updates | — | API, MCP |
+| `status-page:incidents:resolve` | Resolve active status page incidents | — | API, MCP |
+| `status-page:incidents:delete` | Delete resolved status page incidents | — | API, MCP |
+

@@ -222,6 +222,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'identity/auth-users-groups' },
 						{ slug: 'identity/scopes-tokens-oauth' },
+						{ slug: 'identity/scopes-reference' },
 					],
 				},
 				{
