@@ -33,7 +33,7 @@ After installation, validate capability reporting rather than assuming host pack
 - **Ingress:** terminates TLS and serves public Domains and Routes. It needs nginx configuration validation, certificate storage, logs, and public ports where applicable.
 - **Docker:** manages ordinary application workloads and Docker resources. It needs a supported Docker Engine and the privileges required for the selected runtime features.
 - **Build Worker:** runs Git builds on isolated BuildKit/containerd services. It must be dedicated to builds and must not expose an ordinary Docker Engine socket to the builder profile.
-- **Storage:** runs managed PostgreSQL, Redis, and ClickHouse, managed MinIO object storage, and database backup jobs with dedicated storage preparation and a restricted Docker daemon profile. Generic application containers and builds are rejected. Nodes enrolled with the earlier **Databases** role keep their identity, enrollment, configuration, and data; updating their daemon enables the Storage capabilities without re-enrollment or data relocation.
+- **Storage:** runs managed PostgreSQL, Redis, and ClickHouse, managed SeaweedFS object storage, and database backup jobs with dedicated storage preparation and a restricted Docker daemon profile. Generic application containers and builds are rejected. Nodes enrolled with the earlier **Databases** role keep their identity, enrollment, configuration, and data; updating their daemon enables the Storage capabilities without re-enrollment or data relocation.
 - **Monitoring:** collects supported host health and metrics without receiving workload lifecycle permissions.
 - **Relay:** installs the Relay supervisor, advertises a reachable address, and joins the Secure Link Relay Pool.
 

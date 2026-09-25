@@ -71,7 +71,7 @@ Use these terms in runbooks, support requests, automation, and architecture deci
 
 **Managed database** — A PostgreSQL, Redis, or ClickHouse instance provisioned and operated on a Storage Node.
 
-**Managed storage** — MinIO object storage provisioned and operated by Gateway on one or more Storage Nodes, private by default.
+**Managed storage** — S3-compatible object storage provisioned and operated by Gateway on a Storage Node, private by default. New clusters run SeaweedFS; clusters created before 2.11 may run the legacy MinIO engine.
 
 **Storage connection** — A saved, encrypted connection to S3-compatible, FTP, FTPS, or SFTP storage operated outside Gateway.
 

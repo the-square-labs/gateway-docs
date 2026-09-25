@@ -47,8 +47,8 @@ Ingress nodes receive public application traffic on ports 80 and 443 according t
 | Gateway | OIDC, SMTP, DNS, webhook, SIEM, AI providers | Enabled integration only |
 | Application client | published database TLS port | Only when direct access is deliberately enabled |
 | Gateway | License service `license.thesqlabs.com` over HTTPS | Registration and heartbeats; every Gateway update on every plan; paid key activation |
-| Storage client | managed storage S3 port (9000 by default), SFTP (8022), FTP (2121) and its passive range | Only when publication or a file protocol is deliberately enabled; these listeners bind on every member |
-| Distributed storage member | other members' service IP on the S3 port | Always for a distributed managed storage cluster |
+| Storage client | managed storage S3 port (9000 by default) | Only when publication is deliberately enabled |
+| Storage Node | `ghcr.io`, then Docker Hub as a fallback | Pulling managed database and storage images and the backup runner |
 | Backup executor Storage Node | external databases, storage endpoints, and `ghcr.io` | Database backups and restores |
 | External Redis restore target | executor service IP, TCP 20000–39999 | Only during a restore into an external Redis |
 | External ClickHouse server | S3 staging endpoint | Backups and restores of external ClickHouse |

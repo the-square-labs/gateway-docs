@@ -38,7 +38,7 @@ You need permission to create the database and use the selected Storage Node. Co
 
 Keep direct publication disabled unless an external client has a documented need. Private application connectivity should use bindings. Enabling direct publication is an intentional change to the instance's exposure and does not open a host firewall automatically.
 
-Read the curated version catalog in the UI before provisioning. Supported versions are an operational contract: do not pin an arbitrary upstream patch version or keep an obsolete engine only because its container can still start. For production data, document the upgrade path and restore compatibility before selecting a version.
+Read the curated version catalog in the UI before provisioning. Supported versions are an operational contract: do not pin an arbitrary upstream patch version or keep an obsolete engine only because its container can still start. For production data, document the upgrade path and restore compatibility before selecting a version. Each catalog version is pinned to an image digest. The Storage Node pulls it from the Gateway mirror at `ghcr.io/the-square-labs/gateway` first and falls back to Docker Hub, verifying the same digest either way.
 
 ## Provision and verify
 

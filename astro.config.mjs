@@ -58,7 +58,7 @@ const llmsLinkSections = [
 			['databases/bindings', 'Application database bindings', 'private workload access to managed databases through a dedicated engine identity per binding'],
 			['databases/backups', 'Database backups', 'scheduled native backups of managed and external PostgreSQL, Redis, and ClickHouse to storage connections, and restore'],
 			['databases/operations', 'Database operations', 'monitoring, explorers, consoles, and recovery runbooks'],
-			['storage/overview', 'Storage', 'S3-compatible, FTP, FTPS, and SFTP storage connections and managed MinIO object storage with private workload links'],
+			['storage/overview', 'Storage', 'S3-compatible, FTP, FTPS, and SFTP storage connections and managed SeaweedFS object storage with private workload links, including migrating from MinIO'],
 			['journeys/private-database', 'Connect an application to a private database', 'end-to-end managed database and binding journey'],
 		],
 	},

@@ -1,6 +1,6 @@
 ---
 title: Storage
-description: Connect S3-compatible, FTP, FTPS, and SFTP storage and run managed MinIO object storage with private workload links.
+description: Connect S3-compatible, FTP, FTPS, and SFTP storage and run managed SeaweedFS object storage with private workload links.
 section: Storage
 order: 1
 audience: [platform-engineer, operator, developer]
@@ -8,17 +8,17 @@ status: ready
 lastReviewed: 2026-09-25
 ---
 
-The **Storage** area manages two kinds of resource. A **storage connection** records access to object or file storage that runs elsewhere. **Managed storage** is MinIO object storage that Gateway provisions and runs on a Storage Node. Both require Personal or higher. Storage resources serve as destinations for [database backups](/en/databases/backups/), and managed storage can give workloads private, bucket-scoped access.
+The **Storage** area manages two kinds of resource. A **storage connection** records access to object or file storage that runs elsewhere. **Managed storage** is S3-compatible object storage that Gateway provisions and runs on a Storage Node; new clusters use SeaweedFS. Both require Personal or higher. Storage resources serve as destinations for [database backups](/en/databases/backups/), and managed storage can give workloads private, bucket-scoped access.
 
 | Question | Storage connection | Managed storage |
 | --- | --- | --- |
-| Who runs the service | The provider or your storage team | Gateway, as MinIO on one or more Storage Nodes with bounded disks |
-| Protocols | S3 (AWS S3, Cloudflare R2, MinIO, other S3-compatible services), SFTP, FTP, FTPS | S3, with optional FTP and SFTP listeners |
+| Who runs the service | The provider or your storage team | Gateway, as SeaweedFS on one Storage Node with a bounded disk |
+| Protocols | S3 (AWS S3, Cloudflare R2, MinIO, other S3-compatible services), SFTP, FTP, FTPS | S3 |
 | Object browser | Yes | Yes |
 | Backup destination | Yes | Yes |
 | Access keys and workload links | No | Yes |
-| Public exposure | Not applicable | Private by default; public S3, FTP, and SFTP listeners are opt-in |
-| Delete | Removes only Gateway's saved connection | Removes the service and erases its data on every member |
+| Public exposure | Not applicable | Private by default; a public S3 listener is opt-in |
+| Delete | Removes only Gateway's saved connection | Removes the service and erases its data |
 
 ## Storage connections
 
@@ -38,31 +38,53 @@ The **Objects** tab browses buckets and objects, opens and edits files, uploads 
 
 ## Managed object storage
 
-Choose **Deploy managed storage** to provision MinIO on a Storage Node. The runtime is one curated MinIO version pinned to an immutable image digest, and there is no in-place version change; review its maintenance and upgrade policy before relying on it in production. Set CPU, memory, and disk limits when you provision it; the Console caps the disk at the Node's free space minus its reserve. The disk is a preallocated, bounded image on the Storage Node, like the storage of managed databases. Gateway generates the root credentials, and revealing them requires `storage:credentials:reveal`.
+Choose **Deploy managed storage** to provision object storage on a Storage Node. New clusters run SeaweedFS 4.47, pinned to an immutable image digest; there is no in-place version change. The Storage Node pulls the image from the Gateway mirror at `ghcr.io/the-square-labs/gateway` first and falls back to Docker Hub, verifying the same digest either way. If both sources fail, provisioning stops with `MANAGED_STORAGE_IMAGE_PULL_FAILED`.
 
-After provisioning you can change the name, tags, CPU, memory, swap, disk size, and S3 publication. The disk can only grow, and a change is rejected while a previous one is still being applied. **Restart** and retrying a failed provisioning are also available.
+A cluster runs on one Storage Node; distributed clusters are not available for SeaweedFS. Set CPU, memory (at least 512 MiB), and disk limits when you provision it; the Console caps the disk at the Node's free space minus its reserve. The disk is a preallocated, bounded image on the Storage Node, like the storage of managed databases. Gateway generates the root credentials, and revealing them requires `storage:credentials:reveal`.
 
-Managed storage is private by default. Gateway reaches it through authenticated Relay routes, and the MinIO console is never published. You can enable additional access paths explicitly:
+After provisioning you can change the name, tags, CPU, memory, swap, disk size, and S3 publication. The disk can only grow, and a change is rejected while a previous one is still being applied. Growing the disk, and turning publication on or off or changing its port, recreate the storage container; data and keys are retained. **Restart** and retrying a failed provisioning are also available.
 
-- **Publish S3 endpoint** exposes the S3 API on a host port, 9000 by default. You can change it after provisioning.
-- **TLS** encrypts S3 with a certificate from the Gateway Storage CA and enables FTPS.
-- **SFTP access** and **FTP access** open file-protocol listeners on their own ports, 8022 and 2121 by default; FTP also needs a passive port range of up to 64 ports. They can be enabled only when the storage is created, listen on all interfaces of every member, and authenticate with IAM access keys.
+Managed storage is private by default. Gateway reaches it through authenticated Relay routes. You can enable additional access paths explicitly:
 
-Gateway does not change host firewalls. Open only the ports that an identified client needs.
+- **Publish S3 endpoint** exposes the S3 API on a host port, 9000 by default.
+- **TLS** encrypts the S3 endpoint with a certificate from the Gateway Storage CA. It is chosen when the cluster is created and cannot be turned on later. Clients must trust that CA: the credentials dialog shows its SHA-256 fingerprint and lets you download it as `storage-ca.pem` or copy it. Through the API, `GET /api/managed-storage/{id}/ca-certificate` returns the certificate and fingerprint to anyone who can view the cluster, or `MANAGED_STORAGE_TLS_DISABLED` (409) when TLS is off; the MCP tool `manage_managed_storage` offers the same as the `ca_certificate` action.
 
-### Distributed cluster
+SeaweedFS clusters offer S3 only; they have no FTP or SFTP listeners.
 
-Enable **Distributed cluster** to run MinIO across at least four Storage Nodes. Each member contributes one bounded disk, and the smallest member determines the disk size. Every member needs a service address that is an IP address, not a host name, and the members must reach each other on it; configure member connectivity before provisioning. In a cluster, the S3 API listens on each member's service IP even when the storage is not published, so restrict that network accordingly. Provisioning completes only after the members report read and write quorum. The primary member currently owns Gateway's Relay endpoint for the cluster, so the cluster protects data across Nodes but is not a separately highly available endpoint.
+[Database backups](/en/databases/backups/) reach managed storage through a local listener and verify its certificate as `localhost` or `127.0.0.1`. Clusters created with an earlier release receive a certificate with those names the next time their settings are saved; until then, backups to them fail with `BACKUP_STORAGE_CERTIFICATE_OUTDATED`. Gateway does not change host firewalls. Open only the ports that an identified client needs.
+
+### Capacity
+
+Each bucket is stored in at least one data volume of its own, and Gateway sizes the volumes from the disk, so plan for roughly one data volume per bucket and prefer a moderate number of buckets. When the disk is full, writes fail with HTTP 500 while existing objects stay readable; free space by deleting objects, or grow the disk in the settings, which recreates the container, and writes resume.
 
 ### Access keys and workload links
 
-On the storage detail page, the **IAM Keys** tab issues S3 credentials with an optional name, read-only or read-write access, up to 64 buckets (none means all buckets), and an optional expiry. The secret key is shown once when the key is created. Creating and revoking keys requires `storage:iam`.
+On the storage detail page, the **IAM Keys** tab issues S3 credentials with an optional name, read-only or read-write access, up to 64 buckets (none means all buckets), and an optional expiry. Each key is its own IAM principal in the engine, limited to its buckets: it can list only those buckets, read objects, and—with read-write access—write and delete objects, but it cannot create or delete buckets. The engine enforces the expiry itself, and revoking a key removes its principal immediately. The secret key is shown once when the key is created. Creating and revoking keys requires `storage:iam`.
+
+The credentials dialog shows AWS CLI and rclone quick-start commands. For a TLS cluster they pass the downloaded CA as `--ca-bundle storage-ca.pem` (AWS CLI) or `--ca-cert storage-ca.pem` (rclone). With a bucket-scoped key, rclone needs `no_check_bucket = true` (included in the quick start); otherwise it tries to create the bucket and fails with 403.
 
 A **managed storage link** gives a Container or Deployment private access to 1–32 buckets. Add it from the workload's **Environment** tab; Compose services are not supported. Gateway issues a key limited to those buckets, runs a small connector on a private network for the link, and stores the values as managed secrets in environment variables that default to `S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET` (the first bucket), and `AWS_REGION`. The key can reach only the listed buckets, so a compromised workload cannot read the rest of the storage. Creating a link requires `storage:iam` and permission to edit the workload's environment and secrets.
 
 For advanced nginx configuration, a Route can also use an additional Secure Link binding to ready managed object storage, without a shared Docker network or a published S3 port; clients still need S3 credentials. Managed storage cannot be a Route's main upstream. Creating the binding requires Route edit access and view access to the storage; see [Secure upstreams](/en/ingress/secure-upstreams/).
 
-Deleting managed storage erases its data on every member and removes its workload links automatically. It is refused while Route Secure Link bindings refer to it, and backup references are handled as described below.
+Deleting managed storage erases its data and removes its workload links automatically. It is refused while Route Secure Link bindings refer to it, and backup references are handled as described below.
+
+## Migrating from MinIO
+
+MinIO is no longer distributed by its vendor, so Gateway 2.11 creates new managed storage with SeaweedFS. Managed MinIO clusters created with earlier releases keep running as a legacy engine and are marked **Legacy MinIO engine** in the Console:
+
+- They keep serving S3, their access keys, workload links, Secure Link bindings, and any FTP or SFTP listeners, and day-to-day operations continue while the MinIO image is still on the Storage Node.
+- New MinIO clusters cannot be created.
+- An operation that needs to recreate the container and therefore pull the image—for example changing publication, growing the disk, or recovering a lost container—fails with `MANAGED_STORAGE_ENGINE_IMAGE_UNAVAILABLE` if the image is no longer on the Node, because it can no longer be downloaded. Gateway raises this before touching the container or its data.
+
+A one-click in-place migration is planned for a later release. Until then, migrate manually:
+
+1. **Create the target.** Deploy a SeaweedFS managed storage cluster with enough disk for the data, on the same or another Storage Node.
+2. **Make both clusters reachable for the copy.** Private clusters are reachable only through Gateway. Temporarily enable **Publish S3 endpoint** on both clusters, which recreates their containers, and keep the ports closed to other hosts in the firewall if you run the copy on the Storage Node itself. For a MinIO cluster, publication needs the MinIO image on the Node. Clusters with TLS present certificates from the Gateway Storage CA: download `storage-ca.pem` from each cluster's credentials dialog, check the SHA-256 fingerprint shown there, and pass it to rclone with `--ca-cert`. Both clusters use the same Storage CA, so one file usually covers both; compare the fingerprints to confirm.
+3. **Copy the buckets.** Reveal the root credentials of both clusters and configure two rclone S3 remotes with `force_path_style = true`; use the provider `Minio` for the source and `SeaweedFS` for the target. Copy each bucket, for example `rclone sync minio:<bucket> seaweedfs:<bucket>`, then compare with `rclone check`. With root credentials rclone creates the target buckets. If you copy with bucket-scoped keys instead, create the buckets first and set `no_check_bucket = true`.
+4. **Recreate access.** Create new IAM keys on the SeaweedFS cluster and update their clients. Replace each workload's managed storage link with a link to the new cluster from the workload's **Environment** tab; the environment variable names stay the same, but the values change.
+5. **Repoint dependents.** Point Route Secure Link bindings and backup policies at the new cluster; in the Console, delete and recreate a backup policy, or change its destination through the API. Backup history stays attached to the storage where the backup was written, so keep the MinIO cluster until you no longer need to restore those backups through Gateway.
+6. **Retire MinIO.** Turn publication off again, verify the applications, then delete the MinIO cluster. Deleting it erases its data, and any remaining backup history must be forgotten first; see [Delete storage that backups refer to](#delete-storage-that-backups-refer-to).
 
 ## Delete storage that backups refer to
 
@@ -92,5 +114,5 @@ Scopes can be limited to one storage resource or a folder. See the [scope refere
 
 - Storage resources require Personal or higher; enrolling a Storage Node does not. See [Plans and entitlements](/en/reference/plans-and-entitlements/#feature-matrix).
 - Storage Nodes run managed databases, managed storage, and backup jobs; generic application containers and builds run on Docker Nodes and Build Workers. See [Node roles](/en/nodes/roles-and-installation/).
-- A single-node managed storage lives on one host. Keep backups and other important copies outside its failure domain.
+- Managed storage lives on one host. Keep backups and other important copies outside its failure domain.
 - Keep destination-side encryption, retention, and access policies in the storage system that holds the data.
