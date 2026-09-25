@@ -90,6 +90,8 @@ Provider sources normally use one of two accounting modes:
 
 Local or privately hosted endpoints still need an explicit pricing and source policy if they participate in budget enforcement. Do not publish a source with unknown capabilities or pricing merely because a health check succeeds.
 
+A published model can also carry a **System prompt** for the Codex harness. **Append to harness default** keeps Codex's default instructions, including its tool and patch-format rules, and adds the prompt after them; **Replace harness default** substitutes them entirely, so a replacement must restate any rules the model still needs. The prompt reaches a device on its next model-catalog refresh and Codex restart.
+
 ## Request lifecycle and failover
 
 For each request Gateway:
@@ -156,7 +158,7 @@ burn multiplier = min(8, max(
 ))
 ```
 
-Gateway uses the worst active provider quota window. Missing quota data leaves the multiplier at `1×`; stale, empty, or exhausted discovered quota can force the protective `8×` value.
+Gateway computes the multiplier per model across that model's subscription accounts. A quota window that a provider limits to one model family counts only for that family. Missing quota data leaves the multiplier at `1×`; stale, empty, or exhausted discovered quota can force the protective `8×` value.
 
 ### Worked example
 
@@ -201,7 +203,7 @@ Treat the table as a policy baseline, not a promise of a fixed number of request
 
 Subscription usage can be limited independently over 5 hours, 7 days, and 30 days. A charge is counted in every enabled window and naturally recovers as ledger entries age out. The UI reports the projected recovery time for each window.
 
-Gateway reserves capacity before sending a request and keeps a safety margin to avoid overrunning the configured limit. Normal admission treats about 95% of an enabled subscription limit as spendable, with a narrow allowance for the final request. Users can therefore see a limit become unavailable slightly before the displayed configured number.
+Gateway reserves capacity before sending a request, and the full configured subscription limit is spendable. A request admitted while the user still has a positive balance always runs to completion, so the final turn can settle slightly past the limit; Gateway never shortens an admitted request. The next request after the balance is exhausted is denied with the window's recovery time.
 
 API-key sources do not consume subscription credits. Gateway prices uncached input, cached input, cache writes, output, reasoning, and supported unit charges using the source's current pricing snapshot, then applies the configured monthly USD limit. Reconcile that operational estimate with the provider statement before making financial decisions.
 

@@ -16,12 +16,12 @@ The platform owner controls connectivity, the database owner controls data lifec
 
 ## Decide whether a managed database is appropriate
 
-Use a Gateway-managed PostgreSQL, Redis, or ClickHouse instance when you want Gateway to own provisioning, runtime lifecycle, capacity settings, credentials, monitoring, and private workload bindings on a database Node. Use an external connection when another platform already owns the database lifecycle and Gateway only needs a governed connection record and supported operations.
+Use a Gateway-managed PostgreSQL, Redis, or ClickHouse instance when you want Gateway to own provisioning, runtime lifecycle, capacity settings, credentials, monitoring, and private workload bindings on a Storage Node. Use an external connection when another platform already owns the database lifecycle and Gateway only needs a governed connection record and supported operations. Bindings, and therefore this journey, apply only to managed databases; an application that uses an external database receives its connection values as workload secrets. Compare both models in [Managed and external databases at a glance](/en/databases/overview/#managed-and-external-databases-at-a-glance).
 
 Before creating data, approve:
 
 - the database engine and supported version;
-- the database Node and durable storage location;
+- the Storage Node and durable storage location;
 - CPU, memory, swap, and storage limits;
 - backup, retention, restore, and deletion ownership;
 - whether direct TCP publication is genuinely required;
@@ -30,27 +30,27 @@ Before creating data, approve:
 
 Managed database deletion is destructive and removes its managed disk/image or mount together with the instance. A connection or binding deletion is not the same action. Make this distinction clear in operator permissions and runbooks.
 
-## 1. Prepare the database Node
+## 1. Prepare the Storage Node
 
-Enroll a dedicated **Databases** Node and verify its storage preflight. Database Nodes use fixed-size managed storage with enforcement at the host boundary. The installer checks the local Docker Engine and the loop-device, mount, write, growth, resize, unmount, and detach lifecycle used by managed instances.
+Enroll a dedicated **Storage** Node and verify its storage preflight. Storage Nodes use fixed-size managed storage with enforcement at the host boundary. The installer checks the local Docker Engine and the loop-device, mount, write, growth, resize, unmount, and detach lifecycle used by managed instances.
 
 A VM or bare-metal host normally exposes these capabilities directly. An LXC guest requires explicit loop-device and mount permissions from its outer host; Gateway does not fall back to an unbounded volume when the required boundary is absent.
 
-The Node should be online, have enough unallocated storage for the requested database, and have a documented backup destination. Do not place application containers on a database Node simply because both use Docker internally.
+The Node should be online, have enough unallocated storage for the requested database, and have a documented backup destination. Do not place application containers on a Storage Node simply because both use Docker internally.
 
 ## 2. Provision the database privately
 
-Open **Databases**, choose the supported engine/version, select the database Node, and configure the resource and storage limits. Keep **Publish TCP** disabled unless direct client access is a reviewed requirement. TCP publication and its host port are fixed at provisioning time; changing that endpoint requires recreating the managed instance.
+Open **Databases**, choose the supported engine/version, select the Storage Node, and configure the resource and storage limits. Keep **Publish TCP** disabled unless direct client access is a reviewed requirement. Publication and its host port can be changed later in the database settings; Gateway then recreates the database container and keeps its data, so plan a short interruption.
 
 Wait for provisioning and health checks to reach **Ready**. Confirm the displayed engine, Node, storage capacity, TLS state, and monitoring. Do not proceed from a merely created or starting state.
 
-The owner credential shown by **Reveal credentials** is for controlled administration and recovery. It is not the credential to copy into every application.
+Gateway keeps the engine owner credential internal. **Reveal credentials** shows a separate direct-access user only while TCP publication is enabled; it is for controlled external administration, not the credential to copy into every application.
 
 ## 3. Create the application binding
 
 Open the target Container, Deployment, or Compose service and create a managed database link. Select the database and the supported connection variables/options. Gateway creates a distinct PostgreSQL role, Redis ACL user, or ClickHouse user for that binding.
 
-For a standalone Container, Gateway attaches the private binding network and uses the normal recreate flow to apply the connection environment. For a Deployment, the desired configuration is updated and a slot rolls so future blue and green instances receive the same connector endpoint. Compose keeps the binding attached to the owning service rather than an ephemeral child container name.
+For a standalone Container, Gateway attaches the private binding network and uses the normal recreate flow to apply the connection environment. For a Deployment, the desired configuration is updated and a slot rolls so future blue and green instances receive the same private endpoint, served by a listener that the target Docker daemon owns. Compose keeps the binding attached to the owning service rather than an ephemeral child container name.
 
 Apply or recreate the workload only when the UI indicates that the changed runtime configuration requires it. The binding's desired state is durable; a normal workload recreation must not create a new engine user every time.
 
@@ -60,7 +60,7 @@ Apply or recreate the workload only when the UI indicates that the changed runti
 
 Use the application or a controlled diagnostic inside the workload to open a connection and perform a harmless engine-specific operation. Verify:
 
-- the hostname, port, TLS mode, and database name come from the binding rather than copied owner credentials;
+- the hostname, port, database name, and credentials come from the binding rather than copied owner credentials; the binding connects over the private binding network and does not add TLS settings;
 - the connection succeeds without publishing the database host port;
 - the engine sees the binding-specific user;
 - connection and query behavior matches the application's pool settings;
@@ -82,7 +82,7 @@ A private binding is not a backup, replication, or high-availability system. Dat
 
 ## Failure and safe recovery
 
-If the binding is unhealthy, first identify which layer is unavailable: application workload, Docker Node, daemon-owned listener, Relay, database Node, database instance, engine identity, or TLS. Inspect bounded operation history and logs before changing state.
+If the binding is unhealthy, first identify which layer is unavailable: application workload, Docker Node, daemon-owned listener, Relay, Storage Node, database instance, engine identity, or TLS. Inspect bounded operation history and logs before changing state.
 
 Prefer reconciliation or a targeted retry after correcting the root cause. Do not delete Gateway-owned networks, listeners, or engine users manually; that can turn a recoverable runtime outage into an ownership mismatch or orphaned cleanup problem. Do not publish the database port merely to bypass a private-link incident.
 
@@ -92,7 +92,7 @@ If application access must be removed, delete the binding and verify that its en
 
 | Symptom | Check first | Detailed guide |
 | --- | --- | --- |
-| Database never reaches **Ready** | Database Node, storage preflight, engine version, provisioning Task | [Managed databases](/en/databases/managed-databases/) |
+| Database never reaches **Ready** | Storage Node, storage preflight, engine version, provisioning Task | [Managed databases](/en/databases/managed-databases/) |
 | Binding is unhealthy | Database, both Nodes, Relay, listener, and engine identity | [Application database bindings](/en/databases/bindings/) |
 | Application is denied | Connection values, TLS mode, and the binding-specific principal | [Database operations](/en/databases/operations/) |
 | Binding fails after a Node restart | Node freshness and reconciliation history | [Node updates and offline behavior](/en/nodes/updates-and-offline-behavior/) |

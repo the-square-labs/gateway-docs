@@ -17,7 +17,7 @@ Add pool members when the business requires more connection capacity, planned ma
 
 The local Relay is a required long-lived data-plane service and the sole public owner of `9443/tcp`. It authenticates managed-node sessions and supported private tunnel traffic.
 
-A Relay Pool adds supervisor/worker members and fault-domain-aware placement. Operators verify distinct physical domains, advertise reachable worker endpoints, rebalance explicitly, drain members, and apply signed rolling updates one member at a time.
+A Relay Pool adds supervisor/worker members and fault-domain-aware placement. Operators verify distinct physical domains and advertise reachable worker endpoints; Gateway rebalances assignments automatically, and the Relay Pool update drains, updates, and verifies one member at a time.
 
 Gateway does not create firewall rules, NAT traversal, or a general overlay network. Every assigned managed host must reach its worker data endpoint. During a Relay incident, preserve the identity volume and avoid introducing an alternate unauthenticated path.
 
@@ -43,18 +43,26 @@ A pending Relay Node is not pool capacity. Do not treat a created database recor
 
 Place members in distinct failure domains when resilience matters. Confirm every managed host can reach every Relay that may be assigned to it. Assignment spread controls how many ready Relays receive new workload connections; increasing spread improves redundancy but consumes additional connections and memory.
 
-Rebalance is explicit. Use it after adding capacity, changing placement, or recovering a member; do not assume existing assignments move automatically merely because a new Relay is online.
+Rebalancing is automatic. When Relay capacity or workload spread changes, Gateway starts a rebalance after the new placement has stayed stable for 30 seconds; existing connections drain without interruption. A failed attempt is retried automatically after 5 minutes, and **Rebalance** retries it immediately. Automatic rebalancing pauses during a Relay Pool update, but workloads continue to move off drained members.
 
 ## Drain, update, and remove
 
-1. Drain the member so new tunnels stop selecting it.
-2. Allow existing streams to finish or disconnect them explicitly when the incident requires it.
-3. Apply the signed supervisor/worker update.
-4. Verify worker readiness, version, and reconnect.
-5. Return the member to service and observe new assignments.
-6. Remove a remote Relay identity only after it is drained and no assignments depend on it.
+**Drain** moves new tunnels to other members. Existing streams can continue for up to 10 minutes and are then disconnected; **Force disconnect** ends the wait immediately. **Resume** returns the member to service. Drain, resume, and force disconnect require `admin:system`.
+
+A Relay Pool update performs the rolling procedure itself: it drains each remote member, updates it, verifies it, and returns it to service before moving to the next. It waits up to 30 minutes for streams on a member to end and otherwise pauses the run; a failed run releases the drains it took. The local Relay is updated with Gateway. In 2.11, Relay releases require Gateway 2.11 or newer, and Gateway does not offer an update while its local Relay is two or more minor versions behind the target.
+
+Remove a remote Relay after it is drained and nothing is assigned to it. An offline member can also be removed when its policy has expired, it has not been seen for at least 90 seconds, and every affected workload is served by a ready remaining member; Gateway refuses removal that would orphan an endpoint.
 
 Removing the Gateway record does not replace normal host decommissioning. Uninstall the supervisor and remove host material through the documented operational process.
+
+## Relay recovery in 2.11
+
+Gateway repairs common Relay trust and certificate problems itself:
+
+- **Certificates.** Relay server certificates are renewed automatically before they expire; see [Certificate renewal](/en/nodes/updates-and-offline-behavior/#certificate-renewal). Each member shows whether its certificate is expiring, expired, or failed to renew. **Renew certificate** appears for an expired certificate or a failed renewal and requires the member to be connected.
+- **Policy trust, local Relay.** If the local Relay rejects Gateway's signed policy, Gateway re-pins the active signing key automatically, at most once every 10 minutes, and records the recovery in the audit log. A local Relay without this capability shows a message with the manual procedure; update the Relay Pool first.
+- **Policy trust, remote members.** A remote member that no longer trusts any key Gateway can sign with is marked for re-enrollment.
+- **Re-enroll.** For a remote member that needs re-enrollment, has an expired certificate, or is offline or failing, **Re-enroll** issues a single-use installer command, valid for 7 days, pinned to the Relay version the pool runs. The member keeps its place and assignments; on the host, the supervisor keeps its previous identity aside and restores it if Gateway rejects the enrollment. The local Relay cannot be re-enrolled; Gateway recovers it automatically.
 
 ## Incident checks
 
@@ -62,15 +70,15 @@ For a Relay warning, inspect the local Relay or remote worker process, identity 
 
 ## Capacity and resilience validation
 
-Pool size alone does not prove resilience. Members must occupy independent failure domains and managed nodes must be able to reach the endpoints they may receive. Test connectivity from representative Ingress, Docker, Databases, Monitoring, and Build Worker networks before increasing assignment spread. A second Relay behind the same host, power domain, firewall, or failed route may add capacity without adding availability.
+Pool size alone does not prove resilience. Members must occupy independent failure domains and managed nodes must be able to reach the endpoints they may receive. Test connectivity from representative Ingress, Docker, Storage, Monitoring, and Build Worker networks before increasing assignment spread. A second Relay behind the same host, power domain, firewall, or failed route may add capacity without adding availability.
 
 Observe connection count, active streams, memory, reconnect rate, and admission failures during normal load. Establish enough headroom for a remaining member to accept reassigned nodes when one member is drained or unavailable. Rebalancing during an incident can increase reconnect load, so recover the failed dependency first unless assignment concentration is itself the problem.
 
 ## Recovery and rollback
 
-If a member update fails, keep it drained and restore the signed known-good supervisor and worker release through the supported update path. Do not copy binaries or identity material from another member. Verify its advertised endpoint and readiness before returning it to assignment.
+If a member update fails, the Relay Pool update pauses or releases its drains; retry or abandon the run, and restore the signed known-good supervisor and worker release through the supported update path. Do not copy binaries or identity material from another member. Verify its advertised endpoint and readiness before returning it to assignment.
 
-If the pool control state is healthy but one network cannot connect, correct routing, DNS, firewall, or NAT for that advertised endpoint rather than replacing Relay identities. If the identity volume is lost, treat the member as a replacement enrollment and remove the old record only after its assignments are safe. For a local Relay incident, preserve the configured identity and data volume; recreating the container without them creates a different and unusable transport identity.
+If the pool control state is healthy but one network cannot connect, correct routing, DNS, firewall, or NAT for that advertised endpoint rather than replacing Relay identities. If a remote member's identity is lost or no longer trusted, use **Re-enroll** before considering a replacement enrollment, and remove an old record only after its assignments are safe. For a local Relay incident, preserve the configured identity and data volume; recreating the container without them creates a different and unusable transport identity.
 
 After any recovery, test a new managed-node session and a real private path such as a Secure Link or database binding. Existing long-lived streams alone can hide a failure to admit new connections.
 

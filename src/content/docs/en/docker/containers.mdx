@@ -9,7 +9,7 @@ lastReviewed: 2026-08-30
 ---
 
 
-A Container is the direct-management option for one Docker runtime. Gateway stores its configuration and access relationships, while the selected Docker daemon starts and supervises the actual process. Use a Container when blue/green release slots or multi-service project ownership are not required.
+A Container is the direct-management option for one Docker runtime. Gateway stores its configuration and access relationships, while the selected Docker daemon starts and supervises the actual process. Use a Container when blue/green release slots or multi-service project ownership are not required. Containers that already run on a Docker Node are listed and can be operated without being recreated by Gateway; see [Containers that Gateway did not create](#containers-that-gateway-did-not-create).
 
 ## When a Container is the right owner
 
@@ -19,9 +19,22 @@ Choose a Deployment instead when a release must be prepared and health-checked b
 
 Success means more than a `running` state. The expected health check must pass, the application must listen on the selected port, its Route or private connection must work, and persistent data must remain attached after a recreate. Define those checks before the first production update.
 
+## Containers that Gateway did not create
+
+The Docker daemon reports every container on its Node, not only the containers created through Gateway. A container started with `docker run` or by another tool, without Docker Compose project labels, appears in **Docker > Containers** as an ordinary standalone Container with a stable Gateway resource identity. There is no separate adoption step: users with the matching scopes can view its logs, statistics, and processes, start, stop, restart, or kill it, open the console or file browser, and edit or recreate it.
+
+Gateway does not grant anyone access to a discovered container automatically. Users with Node-wide or global Docker scopes see it immediately; other users need a group or direct grant for that container, its Node, or a Docker folder that contains it. See [Operate workloads without adopting them](/en/concepts/permissions/#operate-workloads-without-adopting-them) for example grants.
+
+Two other kinds of container are treated differently:
+
+- **Compose containers.** A container with a `com.docker.compose.project` label belongs to its [Compose Project](/en/docker/compose/) and is not listed as a standalone Container. Logs, monitoring, console, and file access remain available for its services. Start, stop, restart, edit, recreate, duplicate, and delete are rejected for individual Compose containers, whether the project is external or managed by Gateway.
+- **Gateway-internal containers.** Service containers that Gateway runs for itself are hidden from user lifecycle APIs.
+
+Resource-scoped grants follow the Gateway resource identity. Gateway keeps that identity, and the grants on it, across a recreate or update performed through Gateway. If a container is removed and started again outside Gateway, even with the same name, Gateway records a new resource and revokes the grants on the old one. Change containers that have resource-scoped grants through Gateway, or grant access at the Node or folder level.
+
 ## Before you begin
 
-You need access to the target Docker node and permission to create or change the Container. Confirm that the image is available from a permitted registry, the node has capacity, and the requested runtime is supported. Review ports, Routes, database bindings, managed volumes, and secrets before choosing a name: those relationships can affect later rename, migration, or deletion work.
+You need access to the target Docker node and permission to create or change the Container. Confirm that the image is available from a permitted registry, the node has capacity, and the requested runtime is supported. Review ports, Routes, database bindings, managed volumes, and secrets before choosing a name: those relationships can affect later rename, migration, or deletion work. A Container can be bound to a managed database; an external database is reached through connection values stored as Container secrets. See [Managed and external databases at a glance](/en/databases/overview/#managed-and-external-databases-at-a-glance).
 
 New host bind mounts are rejected. Use Gateway-managed local volumes for new persistent data. Legacy bind mounts can remain during an ordinary update, but once removed they cannot be added back through Gateway.
 
@@ -45,7 +58,7 @@ After a restart or daemon reconnection, Gateway should reconcile the saved desir
 
 ## Failure handling and cleanup
 
-An image pull failure, unavailable registry credential, port conflict, invalid mount, unsupported runtime capability, or exhausted node resource must be corrected before retrying. The Task history identifies the stage that stopped; retries without changing the prerequisite usually repeat the same failure.
+An image pull failure, unavailable registry credential, port conflict, invalid mount, unsupported runtime capability, or exhausted node resource must be corrected before retrying. While a Git build is being rolled out to the Container, lifecycle, configuration, and secret changes return `BUILD_ROLLOUT_IN_PROGRESS` until the rollout ends; see [Git sources and Build Workers](/en/docker/git-builds/). The Task history identifies the stage that stopped; retries without changing the prerequisite usually repeat the same failure.
 
 Before deletion, inspect Routes, database bindings, grants, volumes, source settings, and exported data. Deleting the Container removes its resource grants, so a later Container with the same name does not inherit access. Volume deletion is a separate destructive action; retain or back up persistent data before removing either resource.
 

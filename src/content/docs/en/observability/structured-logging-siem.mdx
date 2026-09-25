@@ -59,7 +59,7 @@ Capacity success is not merely a healthy ClickHouse process. Confirm that the ne
 
 Configure each HTTPS collector with the narrowest supported authentication method. Validate certificate trust, request signing, receiver idempotency, accepted batch size, retry behavior, and durable delivery history. The outbox records delivery progress so a temporary collector outage does not require operators to recreate events manually.
 
-If SIEM is disabled or entitlement is lost, destination configuration and historical terminal records remain. Confirm the receiver's last accepted event and Gateway's queue age before resuming normal operation.
+If SIEM is disabled, destination configuration and historical terminal records remain. After a license grace period ends, SIEM forwarding pauses: configuration, delivery history, and records already queued are kept, but audit events that occur while forwarding is paused are not queued; forwarding resumes on renewal without reconfiguration. Structured-log ingestion keeps working after grace. See [Downgrade and expiry](/en/reference/plans-and-entitlements/#downgrade-and-expiry). Confirm the receiver's last accepted event and Gateway's queue age before resuming normal operation.
 
 ## Operator details: SIEM delivery contract
 

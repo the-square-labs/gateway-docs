@@ -26,7 +26,7 @@ The target Docker daemon owns a TCP listener on a dedicated private bridge netwo
 
 Recreating the workload keeps the binding available because authorization follows the stable Gateway resource identity rather than a transient Container ID. Gateway reconciles the listener and injects current connection settings again. Deleting the binding removes the listener relationship and retires its engine identity through one recorded lifecycle; the normal path must not leave orphan roles or users.
 
-For a failed database binding, check the managed database and Database Node, then the target Docker Node and workload, binding desired state, daemon-owned listener, engine identity and permissions, and finally application configuration. Do not delete the role, bridge network, or listener manually as a generic repair step. That can turn a recoverable mismatch into an orphaned identity or failed future reconciliation.
+For a failed database binding, check the managed database and Storage Node, then the target Docker Node and workload, binding desired state, daemon-owned listener, engine identity and permissions, and finally application configuration. Do not delete the role, bridge network, or listener manually as a generic repair step. That can turn a recoverable mismatch into an orphaned identity or failed future reconciliation.
 
 ## Ingress upstream links
 

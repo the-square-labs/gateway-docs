@@ -52,6 +52,8 @@ Start recovery with host power and network, system time, DNS, the daemon service
 
 After reconnect, wait for a fresh capability and inventory report. Review failed or interrupted operations before retrying them, then verify every resource family owned by the Node. A green connection indicator alone does not prove that Routes, certificates, workloads, Compose Projects, database bindings, or monitoring have converged.
 
+License state follows the same principle. An expired key or an unreachable license service blocks new paid-only management actions after the documented grace, but Gateway does not stop, delete, or reconcile away workloads, Routes, managed databases, or published Pages deployments because of it. See [Downgrade and expiry](/en/reference/plans-and-entitlements/#downgrade-and-expiry).
+
 ## Long-running operations
 
 Builds, migrations, Deployments, certificate work, updates, and database provisioning are durable Tasks. Use operation history and bounded logs rather than repeating an action because a page appears slow. Starting a second conflicting mutation may be rejected, deferred, or create a more difficult recovery path.

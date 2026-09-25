@@ -47,9 +47,23 @@ Do not substitute one type for another merely because it is easier to copy. Cred
 
 Avoid embedding tokens in repository URLs, command history, screenshots, or logs. A masked UI value cannot be recovered later; create a replacement and revoke the old token when the secret is lost.
 
+## What tokens can and cannot do in 2.11
+
+API tokens and OAuth grants for the Gateway API or MCP can hold every permission scope except a short user-only list: the AI Workspace and AI sandbox scopes (`ai:workspace:use`, `feat:ai:configure`, `ai:skills:manage`, and `ai:sandbox:*`), `mcp:use`, `inference:setup`, `admin:users:impersonate`, and `integrations:gitlab:sandbox:clone`. Programmatic access can therefore manage Nodes and their configuration, users and groups, Gateway settings, integration and hosting connectors, hosting VMs, Relay operations, updates, inference administration, and the owner's personal `gwi_` inference keys. Every delegated scope stays bounded by the owner's current permissions.
+
+Some actions stay tied to an interactive browser session:
+
+- creating API tokens and OAuth authorizations, and OAuth consent itself;
+- AI Workspace chat and AI sandboxes;
+- starting impersonation;
+- signing in, and changing the owner's own sign-in methods, MFA, passkeys, or sessions; a token that tries returns `SELF_SIGN_IN_PROGRAMMATIC`;
+- managing personal GitLab credentials.
+
+Because tokens can now hold administrative scopes, treat an administrator-scoped token like an administrator account: give it an owner, an expiry, and a narrow resource scope where possible.
+
 ## OAuth and MCP
 
-Register exact redirect URIs and reject wildcard redirect behavior. Review requested scopes during consent and separate development clients from production clients. Remote MCP tools use the same authorization checks and resource visibility as REST and the Console; tool discovery does not grant permission to execute a tool.
+Register exact redirect URIs and reject wildcard redirect behavior. Review requested scopes during consent and separate development clients from production clients. Consent leaves high-risk scopes unchecked by default so that they must be selected explicitly—for example `admin:system`, `admin:users`, `admin:groups`, `settings:gateway:edit`, `nodes:config:edit`, `proxy:raw:write`, connector system credentials, `integrations:ssh:use`, paid or destructive hosting actions, `storage:credentials:reveal`, `storage:iam`, `databases:backups:restore`, and `feat:ai:use`. Remote MCP tools use the same authorization checks and resource visibility as REST and the Console; tool discovery does not grant permission to execute a tool.
 
 Handle authorization failures distinctly:
 

@@ -8,7 +8,7 @@ status: ready
 lastReviewed: 2026-08-31
 ---
 
-Do not begin by moving the most critical system. A useful Gateway evaluation starts with one representative, reversible workload and proves the operating model before the scope grows.
+Do not begin by moving the most critical system. A useful Gateway evaluation starts with one representative, reversible workload and proves the operating model before the scope grows. For short answers to common pre-purchase questions, see [Evaluating Gateway](/en/getting-started/evaluating-gateway/).
 
 The goal of a pilot is not to click every screen. It is to answer three business questions:
 
@@ -34,6 +34,8 @@ Prove:
 ## Stage 2: representative staging workload
 
 Choose a service that resembles production but has a simple rollback. Include the dependencies you actually care about: source build or image delivery, Route, certificate, environment configuration, monitoring, and optionally a private database binding.
+
+If the service already runs as a Docker Compose application, rehearse [adopting the Compose project](/en/docker/compose/#adopt-an-external-project) on a staging copy first. Rewrite unsupported keys such as `env_file` and host bind mounts, confirm that named volumes resolve to the same names, and record how one-off migration steps will run.
 
 Run the complete journey with the people who will use it. A platform engineer should not silently finish every difficult step on behalf of the application owner; the pilot must reveal whether the normal path is understandable.
 

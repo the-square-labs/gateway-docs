@@ -69,7 +69,13 @@ Use these terms in runbooks, support requests, automation, and architecture deci
 
 **Immutable artifact** — A build or Pages output identified by content or release identity and not modified in place. Mutable pointers such as Pages Tags select an immutable artifact.
 
-**Managed database** — A PostgreSQL, Redis, or ClickHouse instance provisioned and operated on a Database Node.
+**Managed database** — A PostgreSQL, Redis, or ClickHouse instance provisioned and operated on a Storage Node.
+
+**Managed storage** — MinIO object storage provisioned and operated by Gateway on one or more Storage Nodes, private by default.
+
+**Storage connection** — A saved, encrypted connection to S3-compatible, FTP, FTPS, or SFTP storage operated outside Gateway.
+
+**Storage Node** — A managed Node role that runs managed databases, managed object storage, and database backup jobs; formerly the Databases role.
 
 **Operation ID** — A durable identifier used to reconcile a lifecycle command when its immediate response is lost or interrupted.
 
@@ -81,7 +87,7 @@ Use these terms in runbooks, support requests, automation, and architecture deci
 
 **Route-owned binding** — A Secure Link relationship created and retired with its owning ingress Route.
 
-**Runtime profile** — A restricted daemon or workload mode with a defined capability and security boundary, such as Build Worker, Databases, Default runtime, or Secure Runtime.
+**Runtime profile** — A restricted daemon or workload mode with a defined capability and security boundary, such as Build Worker, Storage, Default runtime, or Secure Runtime.
 
 **Service address** — A role-specific reachable address reported or configured for peers that cannot use the Node's generic local address.
 

@@ -39,6 +39,23 @@ Global scopes apply across the permitted product area. Node-scoped grants restri
 
 Resource visibility and host visibility are intentionally distinct. A user can operate an assigned workload without learning unrelated host inventory. Search, navigation, REST, MCP discovery, realtime subscriptions, and direct resource requests must all apply the same effective access rules. A hidden navigation item is not proof of denial; verify a direct request as well.
 
+## Operate workloads without adopting them
+
+Resource-scoped Docker permissions work on containers that Gateway discovered but did not create. You can let a team restart a service and read its logs without handing the whole host, or the application's configuration, over to Gateway.
+
+| Goal | Grant | Notes |
+| --- | --- | --- |
+| Read logs, statistics, and processes of one standalone container | `docker:containers:view:<node-id>/<resource-id>` | There is no separate logs scope; `view` covers them |
+| Start, stop, restart, or kill one standalone container and read its logs | `docker:containers:manage:<node-id>/<resource-id>` | `manage` implies `view` on the same container. It also allows kill and recreate; there is no restart-only scope |
+| Open a shell in that container | add `docker:containers:console:<node-id>/<resource-id>` | Console access is always a separate grant |
+| Read the aggregated logs and monitoring of an external Compose project | `docker:compose:view:<node-id>/<project-id>` | Works before adoption and on every plan |
+| Start, stop, or restart a Compose project | `docker:compose:manage:<node-id>/<project-id>` after the project is [adopted](/en/docker/compose/#adopt-an-external-project) | External projects are read-only until adoption; lifecycle actions apply to the whole project, not to individual Compose containers |
+| Apply the same access to a group of resources | the same scopes with `folder/<folder-id>` | Covers supported resources in the Docker folder and its subfolders |
+
+A standalone container is any container without Docker Compose project labels, including one started with `docker run`. Gateway gives it a stable resource identity that survives recreate and update operations performed through Gateway. If the container is removed and started again outside Gateway, Gateway records a new resource and revokes grants on the old identity. See [Containers that Gateway did not create](/en/docker/containers/#containers-that-gateway-did-not-create).
+
+An external Compose project keeps its identity while Gateway observes it. If the project disappears from the Node, for example after `docker compose down`, Gateway removes it from inventory unless the project is placed in a Docker folder; when it reappears it receives a new identity, and grants on the old project identity no longer match. Place external projects that carry project-scoped grants in a Docker folder, or grant access through the folder.
+
 ## Important separations
 
 - Container editing does not imply mount editing.

@@ -21,7 +21,9 @@ The workload owner decides the maintenance window and validates application beha
 
 Cross-node migration performs capacity preflight, artifact and volume transfer, target verification, cutover, and cleanup recovery. The target must be online, have sufficient resources, support the selected runtime, and reach any required registry artifact.
 
-GPU-attached workloads, secure-runtime workloads, host bind mounts, and Compose Projects are not portable in the current workflow. Treat this as a hard boundary rather than a condition to work around by altering Gateway-owned runtime configuration.
+GPU-attached workloads, secure-runtime workloads, host bind mounts, and Compose Projects are not portable in the current workflow. Treat this as a hard boundary rather than a condition to work around by altering Gateway-owned runtime configuration. To bring an existing Compose application under Gateway management on its current Node, [adopt the Compose project](/en/docker/compose/#adopt-an-external-project) instead.
+
+Migration copies the data of the workload's local named volumes and creates them on the target with the same names. Preflight stops the migration if the target already has a volume with the same name, or if a volume is shared with another workload, non-local, or disk-image backed.
 
 ## Migrate a workload
 
@@ -35,7 +37,9 @@ If transfer, target startup, or cutover fails, inspect the operation stage. Use 
 
 ## Export and import GWCA archives
 
-GWCA archives can be self-contained or registry-backed. They include supported configuration and ordinary environment values, and can optionally include secrets and writable-layer changes. They never include volume contents.
+GWCA archives can be self-contained or registry-backed. They include the supported container configuration and can optionally include environment values, secrets, and writable-layer changes. They never include volume contents. On import, each archived volume is created empty under a new name, or you map it to an existing Gateway-managed volume.
+
+Export supports a portable subset of container settings. Containers with host bind mounts, anonymous volumes, privileged mode or changed capabilities, devices or GPUs, host namespaces, healthchecks, custom logging, or other host-specific settings are rejected, and the error lists the unsupported settings. Containers that belong to a Compose project—any container with a `com.docker.compose.project` label—cannot be exported: the REST API and MCP refuse them with `DOCKER_ARCHIVE_COMPOSE_CONTAINER` (HTTP 409) and the Console hides **Export archive**. Manage them through their [Compose Project](/en/docker/compose/). Blue/green Deployment slots are also rejected.
 
 Before export, decide whether including secrets is necessary and ensure the archive is handled as sensitive material when it is. Before import, review the target node, image availability, runtime compatibility, network mapping, and occupied ports. Restore volumes separately, then verify the imported workload before routing traffic to it.
 

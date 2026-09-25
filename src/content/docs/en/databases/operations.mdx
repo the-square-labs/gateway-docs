@@ -9,7 +9,7 @@ lastReviewed: 2026-08-30
 ---
 
 
-Database operations combine engine health with the infrastructure that makes the engine usable: database-node availability, storage, binding listeners, workload connectivity, and access identity. Monitor all of those layers before treating a failed application query as an engine incident.
+Database operations combine engine health with the infrastructure that makes the engine usable: Storage Node availability, storage, binding listeners, workload connectivity, and access identity. Monitor all of those layers before treating a failed application query as an engine incident.
 
 The operating goal is to protect data and restore the customer path with the smallest justified change. The database owner owns backup, integrity, and engine decisions; the platform owner owns Node and storage availability; the application owner verifies real queries and permission boundaries. A successful recovery restores the original client path, explains the failure, preserves evidence, and removes temporary access or exposure.
 
@@ -17,7 +17,9 @@ Agree on recovery point objective (RPO), recovery time objective (RTO), escalati
 
 ## What to monitor
 
-For a running managed database, monitor engine health, database-node availability, storage growth, latency, connection pressure, recent operation results, and each binding's state. The database detail view also exposes the engine-specific metrics, logs, and eligible Explorer or Console functions.
+For a running managed database, monitor engine health, Storage Node availability, storage growth, latency, connection pressure, recent operation results, and each binding's state. The database detail view also exposes the engine-specific metrics, logs, and eligible Explorer or Console functions.
+
+External connections get the same health checks, engine metrics, Explorer, and Console, but no engine logs, lifecycle actions, or bindings, because Gateway does not run the engine. If an external connection shows **TLS certificate is not verified**, add its CA certificate or use **Test and enable verification**; see [TLS certificate verification](/en/databases/overview/#tls-certificate-verification-for-external-connections). See [Managed and external databases at a glance](/en/databases/overview/#managed-and-external-databases-at-a-glance).
 
 A paused instance intentionally disables normal health, metrics, Explorer, and Console behavior until it is unpaused. Do not alert on that expected absence as an engine failure; record the pause window and verify that the service returns to **Ready** before re-enabling dependent workloads.
 
@@ -25,7 +27,9 @@ A paused instance intentionally disables normal health, metrics, Explorer, and C
 
 Use logs to classify startup, storage, authentication, permission, and recovery errors. Read an operation's stage before making a corrective change, especially after provisioning, resizing, or deletion. Use Explorer or Console only with the required read, write, or administrative permission, and avoid unbounded production queries through an operator interface.
 
-Gateway configuration backups do not replace database data backups. Use an engine-appropriate backup method, retain recovery evidence, and test restores against a separate target. Plan a backup before destructive lifecycle work, substantial resize, or a migration that involves persistent data.
+Explorer browses schemas and rows for PostgreSQL and ClickHouse; schema changes such as adding or altering columns are available for PostgreSQL. Redis uses the command Console. Each Console statement is classified as a read, write, or administrative operation and requires `databases:query:read`, `databases:query:write`, or `databases:query:admin` respectively.
+
+Gateway configuration backups do not replace database data backups. Use an engine-appropriate backup method, retain recovery evidence, and test restores against a separate target. Plan a backup before destructive lifecycle work, substantial resize, or a migration that involves persistent data. The control-plane recovery set is described in [Updates, backups, and restore](/en/operations/updates-backups/).
 
 The interactive Console is intentionally bounded by an execution budget shared across statements. It is an operator tool, not a batch migration runner. Prefer versioned migration tooling for schema changes and long-running maintenance, and use a read-only or narrowly privileged identity whenever possible. A browser disconnect must not be treated as proof that a query was cancelled; check the resulting engine state before retrying.
 
@@ -35,7 +39,7 @@ Monitoring collection is background-owned. Gateway starts collection after boots
 
 Check a failed binding in this order:
 
-1. Confirm that the managed database is **Ready** and that its database node is online.
+1. Confirm that the managed database is **Ready** and that its Storage Node is online.
 2. Confirm the target Docker node and workload are online and reporting current state.
 3. Review the durable binding desired state and its most recent operation.
 4. Check that the daemon-owned listener is reconciled on the dedicated bridge network.
@@ -52,12 +56,12 @@ When deleting a database, remove or migrate bindings first and wait for their li
 
 ## Backup and restore runbook
 
-Define an engine-specific recovery point objective and recovery time objective before production use. Keep backups off the Database Node, encrypt them, record the engine version and restore command, and test them on an isolated target. A successful backup command without a successful restore test is not recovery evidence.
+Define an engine-specific recovery point objective and recovery time objective before production use. On Personal and higher, configure a [backup policy](/en/databases/backups/) with an off-node storage destination and a retention count; otherwise use engine-native tooling. Keep backups off the Storage Node, encrypt them, record the engine version and restore command, and test them on an isolated target. A successful backup without a successful restore test is not recovery evidence.
 
 For a restore exercise:
 
 1. Create a separate target with compatible engine and storage capacity.
-2. Restore the backup without overwriting the active instance.
+2. Restore the backup without overwriting the active instance; Gateway restore creates a new managed database by default and requires an empty target.
 3. Run integrity checks and representative application queries.
 4. Recreate access with new bindings or narrowly scoped client identities.
 5. Compare row/key/table counts and application-level invariants.

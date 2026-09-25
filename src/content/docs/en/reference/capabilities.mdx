@@ -11,11 +11,14 @@ lastReviewed: 2026-09-05
 
 | Area | Current documentation |
 | --- | --- |
+| Pre-purchase questions | [Evaluating Gateway](/en/getting-started/evaluating-gateway/) |
 | Ingress, Domains, Routes, TLS | [Ingress overview](/en/ingress/overview/) |
 | Docker containers and Deployments | [Docker overview](/en/docker/overview/) |
 | Compose Projects | [Compose Projects](/en/docker/compose/) |
 | Git builds and Build Workers | [Git sources and Build Workers](/en/docker/git-builds/) |
 | Managed and external databases | [Databases overview](/en/databases/overview/) |
+| Database backup and restore | [Database backups](/en/databases/backups/) |
+| Storage connections and managed object storage | [Storage](/en/storage/overview/) |
 | Private database bindings | [Application database bindings](/en/databases/bindings/) |
 | Pages | [Pages overview](/en/pages/overview/) |
 | Monitoring, logs, notifications, and status | [Monitoring and operations signals](/en/observability/overview/) |
@@ -27,8 +30,8 @@ lastReviewed: 2026-09-05
 ## Availability and target versions
 
 - **Workload Availability (HA) — available**, Business/Enterprise: replication or failover for mount-free Containers, Deployments, and whole Compose Projects. See the [HA guide](/en/docker/availability/).
-- **Storages — expected in 2.11:** external connections on every plan; managed storages with Secure Links on Personal and higher.
-- **Managed-database backup and restore — expected in 2.12**, Personal and higher.
+- **Storage — available in 2.11**, Personal and higher: connections to S3-compatible, FTP, FTPS, and SFTP storage, and managed MinIO object storage with private workload links and Secure Links. See [Storage](/en/storage/overview/).
+- **Database backup and restore — available in 2.11**, Personal and higher: native backups of managed and external PostgreSQL, Redis, and ClickHouse to storage connections. See [Database backups](/en/databases/backups/).
 - **Gateway configuration export for transfer to another instance — expected in 2.12**, every plan.
 
 Future versions are estimates. The full [plan matrix](/en/reference/plans-and-entitlements/) separates ready capabilities from the roadmap.
@@ -52,17 +55,18 @@ Use this index to answer three evaluation questions: whether Gateway owns the wo
 
 - **Ingress:** Domains, Routes, TLS, access lists, maintenance, health checks, managed upstreams, and nginx placement.
 - **Docker:** standalone containers, blue/green Deployments, Compose inventory and lifecycle, images, volumes, networks, registries, builds, migrations, archives, tasks, and monitoring.
-- **Databases:** external connections, managed PostgreSQL/Redis/ClickHouse, explorers, monitoring, direct TLS, and private application bindings.
+- **Databases (Personal and higher):** external connections, managed PostgreSQL/Redis/ClickHouse, explorers, monitoring, direct TLS, private application bindings, and scheduled backup and restore.
+- **Storage (Personal and higher):** S3-compatible, FTP, FTPS, and SFTP connections with an object browser, and managed MinIO object storage with access keys, private workload links, and optional public listeners.
 - **Pages:** immutable static deployments, Tags, Routes, previews, and optional Git builds.
 - **Nodes and Relay:** role-based enrollment, capability reporting, signed updates, monitoring, and multi-member Relay operation.
 - **Identity:** users, groups, MFA, OIDC, tokens, OAuth, resource scopes, and impersonation.
 - **Operations visibility:** health, metrics, logs, Tasks, alerts, notifications, status pages, structured logging, audit, and SIEM. These are connected product surfaces, not one universal observability dashboard.
-- **Automation and AI:** REST, OAuth, MCP, AI Workspace, scenarios, Plan Mode, and Gateway Inference.
+- **Automation and AI:** REST, OAuth, MCP, AI Workspace chat, and Gateway Inference on every plan; AI Plan Mode, Scenarios, and Sandboxes on Personal and higher.
 - **Security:** system PKI, user-facing Internal PKI, encrypted secrets, audit, admission boundaries, and fail-closed lifecycle checks.
 
 ## Runtime prerequisites
 
-A plan entitlement does not replace host capability. Secure Runtime needs a healthy gVisor capability, Git builds need a dedicated Build Worker, managed databases need a prepared Database Node, public ingress needs a reachable Ingress node, and private links need a healthy Relay path.
+A plan entitlement does not replace host capability. Secure Runtime needs a healthy gVisor capability, Git builds need a dedicated Build Worker, managed databases need a prepared Storage Node, public ingress needs a reachable Ingress node, and private links need a healthy Relay path.
 
 Use the feature-specific page to verify prerequisites, lifecycle consequences, and recovery behavior before enabling a capability in production. See [Plans and entitlements](/en/reference/plans-and-entitlements/) for plan behavior.
 

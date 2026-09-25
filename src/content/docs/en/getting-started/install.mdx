@@ -25,7 +25,7 @@ Both methods deploy the same Gateway foundation. Choose [manual installation wit
 Choose a dedicated Linux host or VM that meets the [capacity requirements](/en/getting-started/requirements/). The automatic Docker setup supports Debian, Ubuntu, Fedora, CentOS, and RHEL families. You also need:
 
 - an account with root access or working `sudo`;
-- outbound internet access to the Gateway update service, container registries, and Docker package repositories;
+- outbound internet access to the Gateway update service, the license service (`license.thesqlabs.com`), container registries, and Docker package repositories; Gateway registers with the license service after its first start, and every update authorizes the target release there;
 - `curl` and OpenSSL;
 - a plan for the final Gateway URL and DNS record;
 - inbound access to the web listener and Relay path described in [Ports and network paths](/en/reference/ports-and-network/).

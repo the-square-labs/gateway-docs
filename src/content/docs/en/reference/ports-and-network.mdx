@@ -32,7 +32,7 @@ Keep PostgreSQL, Redis, internal gRPC, the inference core, database owner ports,
 
 Managed daemons initiate outbound authenticated connections to Relay. Operators normally do not expose daemon control ports to Gateway. Remote Relay workers are the exception: their advertised `9443/tcp` endpoint must be reachable from the managed hosts assigned to them.
 
-Ingress nodes receive public application traffic on ports 80 and 443 according to Route and ACME requirements. Docker and Database Nodes do not need public workload or owner ports for Secure Links. A published managed database endpoint is an explicit opt-in and should be restricted independently.
+Ingress nodes receive public application traffic on ports 80 and 443 according to Route and ACME requirements. Docker and Storage Nodes do not need public workload or owner ports for Secure Links. A published managed database endpoint is an explicit opt-in and should be restricted independently.
 
 ## Firewall planning
 
@@ -46,6 +46,12 @@ Ingress nodes receive public application traffic on ports 80 and 443 according t
 | Gateway/Build Worker | Git and registry providers | Source discovery, build input, push/pull |
 | Gateway | OIDC, SMTP, DNS, webhook, SIEM, AI providers | Enabled integration only |
 | Application client | published database TLS port | Only when direct access is deliberately enabled |
+| Gateway | License service `license.thesqlabs.com` over HTTPS | Registration and heartbeats; every Gateway update on every plan; paid key activation |
+| Storage client | managed storage S3 port (9000 by default), SFTP (8022), FTP (2121) and its passive range | Only when publication or a file protocol is deliberately enabled; these listeners bind on every member |
+| Distributed storage member | other members' service IP on the S3 port | Always for a distributed managed storage cluster |
+| Backup executor Storage Node | external databases, storage endpoints, and `ghcr.io` | Database backups and restores |
+| External Redis restore target | executor service IP, TCP 20000–39999 | Only during a restore into an external Redis |
+| External ClickHouse server | S3 staging endpoint | Backups and restores of external ClickHouse |
 
 Use provider allowlists and egress policy where practical, but include certificate validation, redirects, DNS, and package/registry endpoints required by the selected feature. Do not use a broad “allow all” rule to hide an unresolved dependency.
 

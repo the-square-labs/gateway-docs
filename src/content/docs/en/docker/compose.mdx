@@ -23,11 +23,11 @@ A successful project has one understood configuration owner, a reproducible acti
 
 ## External and managed projects
 
-An **external** project is discovered from canonical Docker Compose labels. Gateway shows inventory, status, service health, monitoring, and aggregated logs, but does not read a host Compose file or mutate the project until an operator explicitly adopts it.
+An **external** project is discovered from canonical Docker Compose labels on its containers, volumes, and networks. Gateway shows inventory, status, service health, monitoring, and aggregated logs, and permitted users can open a service container's console or file browser. External projects are read-only: Gateway does not read the host Compose file and offers no start, stop, restart, revision, secret, or delete action until an operator explicitly adopts the project. Keep operating an external project with its original `docker compose` workflow, or adopt it. For access design, see [Operate workloads without adopting them](/en/concepts/permissions/#operate-workloads-without-adopting-them).
 
 A **managed** project stores its authored Compose YAML, variables, protected secret keys, and immutable revisions in Gateway. The Docker daemon applies the selected revision through Gateway's pinned Compose runtime. Single-node lifecycle is available on Personal and higher. Multi-node Workload Availability is available on Business and Enterprise; metric autoscaling and same-node replica scaling remain **In development**.
 
-Project-owned child containers, named volumes, and non-external networks are controlled through the Compose Project. They are hidden or protected from conflicting standalone lifecycle actions. Images and explicitly external or shared resources remain global Docker resources.
+Project-owned child containers, named volumes, and non-external networks are controlled through the Compose Project. They are hidden or protected from conflicting standalone lifecycle actions: an individual Compose container cannot be started, stopped, restarted, edited, recreated, or deleted on its own, whether the project is external or managed. Lifecycle actions apply to the whole project. Images and explicitly external or shared resources remain global Docker resources.
 
 ## Create a managed project
 
@@ -43,9 +43,38 @@ Manual projects are image-only: images must already be pullable by the target no
 
 ## Adopt an external project
 
-Adoption is an explicit ownership transfer. Open the discovered project, choose **Adopt**, and provide the complete configuration that Gateway should own. Gateway validates and prepares the first immutable revision before applying it.
+Adoption is an explicit ownership transfer. It requires Personal or higher and both `docker:compose:create` and `docker:compose:manage` for the project. Open the discovered project, choose **Adopt into Gateway**, and paste the complete configuration that Gateway should own. Gateway does not read the Compose file from the host, so the editor starts empty. Gateway validates the YAML, stores it as the first immutable revision, and then applies it with **Adopt & Apply**.
 
 Confirm that the submitted YAML matches the running application's services, volumes, networks, variables, and secrets. Gateway never trusts a label-supplied host path as source input. After adoption, future changes must go through new revisions rather than direct child-container mutation.
+
+### What adoption keeps and what it changes
+
+- **Project name.** The adopted project keeps the name Docker already reports, and Gateway runs every operation with that Compose project name. Gateway does not rename or prefix the project, its services, or its volumes. A top-level `name:` in the YAML is optional, but if present it must equal the project name.
+- **Named volumes.** Because the project name is unchanged, Docker Compose resolves the same volume names as before—`<project>_<volume>` by default, or the explicit `name:` of a volume—and reuses the existing volumes and their data. Volumes declared `external: true` are referenced, not created. Before the first apply, compare the volumes listed on the discovered project with the volumes that the submitted YAML resolves to; a renamed volume key creates a new, empty volume.
+- **Containers.** Gateway adds its own management labels to each service, so expect the first apply to recreate the service containers. Plan a short maintenance window.
+- **Environment and secrets.** `env_file` and a project `.env` file are not used. Declare variables in each service's `environment:` and reference values with `${NAME}`. Gateway supplies non-secret variables and encrypted project secrets for interpolation when it applies a revision. In the Console, the **Variables** and **Secrets** tabs become available after adoption; use `${NAME}` placeholders for values that you will add there.
+- **Host bind mounts.** Bind mounts are rejected, including relative paths such as `./config:/etc/app`, `~` paths, and sources built from variables. Move configuration files into the image or a named volume before adoption.
+- **One-off jobs.** Gateway has no equivalent of `docker compose run`, and no pre-deploy or release hook. For a migration step, either run the command in a service container through the console, which requires `docker:containers:console`, or model it as a service with `restart: "no"` that other services wait for through `depends_on`. Use `condition: service_completed_successfully` when other services must wait for the job to finish. Gateway expects revision services to keep running, so a finished one-shot service is reported as not running and the project can show **degraded**.
+
+### Supported Compose configuration
+
+Manual and adopted revisions accept a single-file Compose document up to 1 MiB, without YAML anchors or aliases. Top-level keys are limited to `name`, `version`, `services`, `volumes`, and `networks`, so `include`, top-level `secrets` and `configs`, and `x-` extensions are rejected.
+
+Each service must use `image` and may use only these keys: `image`, `command`, `entrypoint`, `working_dir`, `user`, `hostname`, `environment`, `labels`, `ports`, `volumes`, `networks`, `depends_on`, `healthcheck`, `restart`, `extra_hosts`, `cpus`, `cpu_shares`, `mem_limit`, `mem_reservation`, `memswap_limit`, and `pids_limit`. Everything else is rejected, including `build`, `env_file`, `container_name`, `privileged`, `cap_add`, `devices`, `network_mode`, `pid`, `ipc`, `security_opt`, `tmpfs`, `ulimits`, `logging`, `deploy`, `profiles`, `extends`, service-level `secrets` and `configs`, and `links`.
+
+Other rules:
+
+- `restart` must be `no`, `always`, `on-failure`, or `unless-stopped`;
+- ports cannot use ranges and must be TCP or UDP;
+- a service network entry can set only `aliases`, and every network a service uses must be declared at top level, except the implicit `default` network;
+- every named volume a service mounts must be declared at top level;
+- a long-syntax volume mount can set only `type`, `source`, `target`, and `read_only`, must include `type` (`VOLUME_TYPE_REQUIRED` otherwise), and must use `type: volume` with a named volume as its source;
+- `depends_on` accepts a list of services or a long-syntax mapping; in the mapping form, each entry can set only `condition`, which is required and must be `service_started`, `service_healthy`, or `service_completed_successfully`; every dependency must be a service in the same file;
+- top-level volumes and networks can set only `external`, `name`, `driver`, and `labels`, so `driver_opts` is rejected;
+- labels that start with `com.docker.compose.` or `wiolett.gateway.compose.` are reserved;
+- every `${NAME}` reference needs a provided variable or secret.
+
+Gateway and the Docker daemon apply the same rules, so a revision that passes validation is not rejected later when it is applied. Business and Enterprise projects with a Git source can additionally use a bounded `build` section; see [Create a managed project](#create-a-managed-project). The same rules apply to revisions created through the API, MCP, or AI Workspace. Rewriting a Compose file to fit these rules is part of adoption planning, so do it in staging first.
 
 ## Revisions and lifecycle
 
@@ -55,11 +84,13 @@ Editing configuration creates a new immutable revision. Use **Pull & Apply** to 
 
 ![Compose service monitoring with resource metrics and the live process table](/screenshots/product-tour/compose-monitoring.png)
 
-Lifecycle work is represented by durable operations and Tasks. Reloading the page does not cancel an operation. If cancellation is available, refresh the project and daemon-reported state before starting a replacement action.
+Lifecycle work is represented by durable operations and Tasks. Reloading the page does not cancel an operation. While a Git build is being rolled out to the project, revision, lifecycle, secret, and delete actions return `BUILD_ROLLOUT_IN_PROGRESS` until the rollout ends; cancelling an operation remains possible. During a Gateway update, new Compose operations are refused with `GATEWAY_UPDATING`. If cancellation is available, refresh the project and daemon-reported state before starting a replacement action.
 
 ## Routes and database bindings
 
 Routes and Secure Links can target a managed Compose service by stable project and service identity rather than an ephemeral container name. Managed database bindings update the project's revision while preserving authored configuration and protected secrets. Removing a service or binding must go through a new revision so Gateway can reconcile dependent relationships safely.
+
+Bindings are available only for [managed databases](/en/databases/managed-databases/). To reach an external database, pass its connection values through variables and secrets; see [Managed and external databases](/en/databases/overview/#managed-and-external-databases-at-a-glance).
 
 ## Drift and troubleshooting
 
@@ -69,7 +100,7 @@ Do not repair a managed project by deleting its child containers, networks, or r
 
 ## Delete a project
 
-Bring a managed project down and remove dependent Routes or bindings before deletion. Deleting the Gateway project record removes its managed revision history, but runtime volumes are not deleted automatically. Back up or remove persistent data separately according to the application's retention requirements.
+Bring a managed project down and remove dependent Routes or bindings before deletion. Deleting a managed project removes its containers, non-external networks, revisions, secrets, and every volume that carries the project's Docker Compose labels, which includes the named volumes Compose created for the project. Resources that do not belong to the project, such as volumes created separately and declared `external: true`, are not deleted. Back up persistent data before deletion. External projects cannot be deleted from Gateway.
 
 ## Operator details: revision recovery
 

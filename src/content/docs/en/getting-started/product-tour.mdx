@@ -77,7 +77,7 @@ Docker supports standalone Containers, health-checked Deployments, Compose Proje
 
 ### Databases: give an application exactly the access it needs
 
-Gateway connects PostgreSQL, Redis, and ClickHouse and provisions managed databases on Nodes with the appropriate role. A managed database is private by default. The application receives a binding-specific identity instead of the database owner credential. Removing the binding revokes the application's access; deleting the database itself removes data, so define backup and recovery first.
+Gateway connects to external PostgreSQL, Redis, and ClickHouse databases and provisions managed databases on Nodes with the appropriate role. An external connection gives your team health, metrics, Explorer, and Console for a database run elsewhere; a managed database is also provisioned, resized, and bound to workloads by Gateway. See [Managed and external databases at a glance](/en/databases/overview/#managed-and-external-databases-at-a-glance). A managed database is private by default. The application receives a binding-specific identity instead of the database owner credential. Removing the binding revokes the application's access; deleting the database itself removes data, so define backup and recovery first.
 
 ### Pages: publish static sites with simple rollback
 

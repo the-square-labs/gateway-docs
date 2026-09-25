@@ -11,7 +11,7 @@ lastReviewed: 2026-09-10
 
 Source-control integration establishes which reviewed source may become a Gateway-managed artifact. The application owner owns repository and branch policy, the platform owner owns build and deployment settings, and the security owner approves provider permissions and secrets. Success means a specific commit can be traced through build evidence to an immutable artifact and a verified release.
 
-Configure source integrations under **Settings > Integrations**. Supported providers are GitLab, GitHub, and generic Git according to connector and plan availability. For access to a remote operating system, use the separate [SSH connections](/en/integrations/ssh-connections/) guide.
+Configure source integrations under **Settings > Integrations**. Supported providers are GitLab, GitHub, and generic Git. GitHub and generic Git connectors are available on every plan; the GitLab integration, including GitLab registry discovery, requires Personal or higher. GitLab connectors created on Community before 2.11 are kept but cannot be opened until a Personal or higher key is active. Git source builds require Business or Enterprise. For access to a remote operating system, use the separate [SSH connections](/en/integrations/ssh-connections/) guide.
 
 Use a dedicated machine or application identity with read-only repository access unless a workflow explicitly requires more. Restrict allowed repositories and hosts. Verify webhook authenticity, branch selection, commit resolution, and credential rotation.
 

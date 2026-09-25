@@ -9,20 +9,51 @@ lastReviewed: 2026-08-30
 ---
 
 
-Gateway brings two different database models into one operational surface: saved external connections and managed database instances. The difference is ownership. An external connection records access to a service operated elsewhere; a managed instance has a Gateway-controlled lifecycle on a database-profile node.
+Gateway brings two different database models into one operational surface: saved external connections and managed database instances. The difference is ownership. An external connection records access to a service operated elsewhere; a managed instance has a Gateway-controlled lifecycle on a Storage Node.
 
 Choose the model before onboarding an application. Use an external connection when another platform or database team already owns availability, backups, upgrades, and network policy. Use a managed instance when Gateway should provision the engine, enforce a bounded local disk, expose health and lifecycle operations, and create private application bindings. Converting one model into the other is a migration project, not a metadata toggle.
 
-| Question | External connection | Managed instance |
+## Managed and external databases at a glance
+
+Both models support PostgreSQL, Redis, and ClickHouse and appear in the same **Databases** list. The table shows what Gateway provisions and runs, and what it only connects to.
+
+| Capability | Managed database | External connection |
 | --- | --- | --- |
-| Who runs and upgrades the engine? | External database owner | Gateway through a Databases Node |
-| Who owns data backup and restore? | External database owner | Your operator team, using engine-appropriate tooling |
-| How do Gateway workloads connect? | The saved external connection path you configure | Private application bindings by default |
-| Can Gateway pause, resize, or delete the engine? | No | Yes, within the managed lifecycle |
+| Who provisions and runs the engine | Gateway, as a container with fixed-size storage on a Storage Node | The database's current owner, outside Gateway |
+| Engine versions | A curated catalog of digest-pinned PostgreSQL, Redis, and ClickHouse images | Whatever the owner runs |
+| Connection test, health, and metrics | Yes, including container CPU, memory, swap, and processes | Yes, engine health and metrics |
+| Explorer for schemas and data | PostgreSQL and ClickHouse | PostgreSQL and ClickHouse |
+| SQL console or Redis command console | Yes | Yes |
+| PostgreSQL extensions | Enable or disable extensions included in the image | No |
+| Engine logs | Yes | No |
+| Pause, unpause, restart, and retry of failed provisioning | Yes | No |
+| Resize CPU, memory, swap, and storage | Yes; storage can only grow | No |
+| Engine settings | Redis persistence and memory settings, ClickHouse XML configuration | No |
+| Direct TCP publication with native TLS | Opt-in, can be changed later | Not applicable |
+| How Gateway verifies TLS | Gateway reaches the instance through the mutually authenticated Relay tunnel; PostgreSQL TLS is also verified against the Gateway Database CA | Certificate chain and hostname are verified by default; optional custom CA; explicit opt-out. See [TLS certificate verification](#tls-certificate-verification-for-external-connections) |
+| Credentials | Gateway keeps the owner credential internal; reveal and rotation apply to a separate direct-access user of a published instance | Saved connection details, encrypted at rest and revealable with `databases:credentials:reveal`; a revealed PostgreSQL URI uses `sslmode=verify-full` when verification is on and `sslmode=require` when it is off |
+| [Private bindings](/en/databases/bindings/) to Containers, Deployments, and Compose services | Yes, with a distinct engine identity per binding | No; deliver connection values as workload secrets |
+| Engine version upgrade | No in-place version change; move data to a new instance | The owner's responsibility |
+| [Backup and restore](/en/databases/backups/) | Scheduled native backups to a storage connection; restore into a new managed database, or into an empty existing database through the API | Same as managed databases |
+| Delete | Removes the engine, its storage, and its data; blocked while bindings exist | Removes only Gateway's saved record |
+| Plan | Personal or higher | Personal or higher |
+
+Explorer and console access require the separate `databases:query:read`, `databases:query:write`, or `databases:query:admin` scopes in addition to `databases:view`. Gateway classifies each console statement as a read, write, or administrative operation and requires the matching scope.
+
+## TLS certificate verification for external connections
+
+When an external connection uses TLS, Gateway verifies the server certificate chain and that the certificate was issued for the configured host. This is the default for new connections. In the connection settings:
+
+- **Verify server certificate** turns verification on or off for this connection. Turning it off keeps traffic encrypted but lets anyone on the network path impersonate the database and capture its credentials; use it only as a deliberate exception.
+- **CA certificate** accepts a PEM bundle of a private CA that is trusted instead of the public CA bundle. Only certificates are accepted; a pasted private key is rejected.
+
+Gateway tests the connection with the new settings before it saves a new or changed connection. If the certificate cannot be verified, the change is rejected with `DATABASE_TLS_VERIFICATION_FAILED` (HTTP 422) and the saved connection stays unchanged. Turning verification off, or switching a verified connection to a different CA, requires re-entering the database password, because the saved password could otherwise reach a server that is not verified.
+
+A connection that uses TLS without verification shows **TLS certificate is not verified** on its detail page. **Test and enable verification** turns verification on after a successful test, and **Add CA certificate** opens the settings to add a private CA. PostgreSQL and Redis connections that used TLS before 2.11 start in this unverified state so that the upgrade keeps them connected; ClickHouse HTTPS connections were already verified. [Database backups](/en/databases/backups/) use the same setting.
 
 ## Resource model
 
-Managed PostgreSQL, Redis, and ClickHouse instances are private by default. Gateway coordinates engine configuration, storage, credentials, health, logs, operations, and application bindings. The selected database node runs the engine, while Gateway retains the desired resource state and its relationships to workloads.
+Managed PostgreSQL, Redis, and ClickHouse instances are private by default. Gateway coordinates engine configuration, storage, credentials, health, logs, operations, and application bindings. The selected Storage Node runs the engine, while Gateway retains the desired resource state and its relationships to workloads.
 
 An external connection does not transfer database ownership to Gateway. Gateway stores its connection configuration and credentials encrypted at rest, subject to explicit permission, but the external database's availability, backup, access policy, and engine lifecycle remain the responsibility of its operator.
 
@@ -30,7 +61,7 @@ Treat saved credentials as privileged infrastructure secrets. Grant view, edit, 
 
 ## Private-by-default access
 
-Use an application binding when a managed workload needs access to a managed database. A binding grants a separate least-privilege engine identity and a private endpoint that Gateway preserves across normal workload recreation. There is no additional per-binding service for the application team to operate.
+Use an application binding when a managed workload needs access to a managed database. A binding grants a separate engine identity with application-level privileges—never the owner or superuser credential—and a private endpoint that Gateway preserves across normal workload recreation. There is no additional per-binding service for the application team to operate. Bindings are not available for external connections.
 
 This transport is distinct from the nginx/workload Secure Link connector. Secure Link remains a separate component for its own ingress and relay function. Do not treat a binding failure as evidence that the Secure Link component should be removed, recreated, or configured as database transport.
 
@@ -46,8 +77,8 @@ Pause preserves data while intentionally disabling engine compute. A paused inst
 
 Before handing a database to an application team, verify the complete ownership boundary:
 
-1. The selected Database Node is online and reports supported storage capabilities.
-2. The managed instance is **Ready**, or the external endpoint is reachable with the intended TLS policy.
+1. The selected Storage Node is online and reports supported storage capabilities.
+2. The managed instance is **Ready**, or the external endpoint is reachable with TLS certificate verification enabled.
 3. Backup ownership, retention, and restore evidence are documented outside the instance itself.
 4. The application uses a binding-specific identity or another least-privilege account rather than an owner credential.
 5. Monitoring is collecting without requiring an operator to keep the detail page open.
@@ -70,3 +101,6 @@ The private endpoint is a TCP listener owned by the target Docker daemon on a de
 - [Provision and retire a managed database](/en/databases/managed-databases/)
 - [Create private application bindings](/en/databases/bindings/)
 - [Monitor and recover database operations](/en/databases/operations/)
+- [Connect an application to a private database](/en/journeys/private-database/) from start to finish
+- Bind a database to a [Container](/en/docker/containers/), a [Deployment](/en/docker/deployments/), or a [Compose service](/en/docker/compose/#routes-and-database-bindings)
+- Plan data protection with [Updates, backups, and restore](/en/operations/updates-backups/)

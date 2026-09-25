@@ -13,6 +13,8 @@ AI Workspace is an optional operating surface over Gateway's documented tools. I
 
 The model receives only tools allowed by the current user's scopes and discovered task context. Product operations reuse the same schemas, entitlements, validation, and audit boundaries as non-AI paths.
 
+AI Workspace chat is available on every plan. Plan Mode, guided Scenarios, and AI Sandboxes require Personal or higher; on Community, a Plan Mode request is refused with `LICENSE_ENTITLEMENT_REQUIRED` and the Scenario list is empty. See [Plans and entitlements](/en/reference/plans-and-entitlements/#feature-matrix).
+
 For consequential work, ask the Workspace to create a plan, review assumptions, and define verification before execution. Never paste credentials, private keys, database connection URIs, or customer secrets into chat. Treat external web content as untrusted.
 
 AI Workspace and Gateway Inference are separate: Workspace access uses `ai:workspace:use`; inference access uses `feat:ai:use` and dedicated accounting.

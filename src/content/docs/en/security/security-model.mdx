@@ -42,7 +42,7 @@ Gateway is not a host hardening product, firewall manager, general VPN, or repla
 | Managed Node | Protect daemon identity, systemd service, local runtime, storage, and role-specific privileges |
 | Build Worker | Isolate untrusted source builds from ordinary workloads and host-control endpoints |
 | Ingress Node | Protect TLS private keys, nginx configuration, logs, and public traffic |
-| Database Node | Protect owner credentials, storage images, Database CA material, and engine administration |
+| Storage Node | Protect owner credentials, storage images, Database CA material, and engine administration |
 | External provider | Apply provider-specific credential, retention, availability, and network controls |
 
 Administrators and anyone able to control the Gateway host Docker socket are trusted at a high level. Gateway-owned internal containers are hidden and protected from normal user lifecycle APIs, but this does not turn host-level Docker access into an untrusted boundary.
@@ -58,6 +58,35 @@ Resource-scoped permissions limit which objects a user can see or mutate. Sensit
 Secrets are encrypted at rest and masked in normal responses. Write-only values must be replaced rather than retrieved. Keep master keys outside database backups, redact logs and screenshots, and avoid passing credentials through command arguments or repository URLs.
 
 Managed database workloads receive binding-specific identities, not owner credentials. The target Docker daemon owns the private listener and allows only the intended stable workload identity on the binding network.
+
+## Where secrets live in a self-hosted installation
+
+Every plan can be self-hosted, and a self-hosted installation keeps its secrets in the environment you control:
+
+| Material | Where it is stored |
+| --- | --- |
+| Credentials that Gateway stores for you: Docker secrets and environment values, registry credentials, DNS, Cloudflare, and hosting-provider tokens, SSH keys, OIDC and SMTP secrets, database and storage credentials, AI and Inference provider keys, webhook signing secrets, certificate-authority and ACME private keys, and the license key, installation token, and registration nonce | The installation's own PostgreSQL database, encrypted with AES-256-GCM envelope encryption: each value has its own random data key, which is encrypted with the master key |
+| Master key (`PKI_MASTER_KEY`) | Generated on the Gateway host during installation and kept in the installation's `.env` file with restricted permissions; it is passed to Gateway services at start and is not stored in the database |
+| Gateway's own TLS private key | A file in Gateway's persistent data on the Gateway host |
+| Managed Node identity | The Node's daemon private key stays on that Node |
+| Managed database TLS keys | Daemon-owned storage on the Storage Node, outside the database image |
+
+Anyone who controls the Gateway host, its `.env` file, or its Docker socket can reach this material. Keep the master key backup separate from database backups, and never paste `.env` contents into chat or support tickets. See [Updates, backups, and restore](/en/operations/updates-backups/) for the recovery set.
+
+## What leaves a self-hosted installation
+
+Gateway makes these outbound connections on its own. Everything else depends on integrations you configure, such as ACME and DNS providers, source-control systems, registries, identity providers, email, webhooks, SIEM receivers, and AI providers.
+
+| Destination | Purpose | Data sent |
+| --- | --- | --- |
+| License service (`license.thesqlabs.com`) | Registration after the first start, heartbeats every 15 minutes with a paid key or every 30 minutes on Community, key activation and deactivation, release authorization before every update on every plan, and commercial-core downloads for licensed installations | Installation ID, installation name, Gateway version, entitlements schema version, installation token, a random request nonce, and the pinned signing key IDs; a one-time registration nonce at registration, the paid key at activation, and the target version, release ID, and file path for updates. See [Plans and entitlements](/en/reference/plans-and-entitlements/#license-service-communication) |
+| Update service (`updates.thesqlabs.com`) | Release checks at startup and every 4 hours by default (`UPDATE_CHECK_INTERVAL_HOURS`), and signed release downloads | Release channel, component, and current version |
+| Container registries such as `ghcr.io` | Pulling Gateway release images | Standard image pull requests |
+| Public IP lookup services | Detecting the public addresses of Gateway and managed Nodes | Standard HTTPS requests; the Gateway backend skips the lookup when both `PUBLIC_IPV4` and `PUBLIC_IPV6` are set |
+
+The installation script contacts only the update service, container registries, and Docker package repositories; Gateway registers with the license service shortly after its first start. The license and update services do not receive infrastructure configuration, resource contents, secrets, logs, prompts, or model responses. Gateway contains no usage telemetry or crash-reporting client. When AI Workspace or Gateway Inference is enabled, prompts go to the model providers that an administrator configures, not to Square Labs.
+
+Responses from the license service are signed license states. Gateway pins the service's Ed25519 public keys and accepts a state only when it was signed for this installation and request, and issued within 15 minutes of the local clock; it rejects unsigned, forged, replayed, or foreign states and verifies stored states again whenever it reads the license. See [Signed license states](/en/reference/plans-and-entitlements/#signed-license-states).
 
 ## Fail-closed examples
 

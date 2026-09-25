@@ -58,7 +58,7 @@ Reference: [OpenSSH authorized_keys and server authentication](https://man.openb
 
 ## Access and hosting installation
 
-`integrations:ssh:view`, `integrations:ssh:manage`, and `integrations:ssh:use` separate visibility, administration, and use. Connector administration is session-only. Gateway MCP does not delegate external SSH integration scopes; external agents need their own approved SSH tooling. See [API and MCP](/en/integrations/api-and-mcp/).
+`integrations:ssh:view`, `integrations:ssh:manage`, and `integrations:ssh:use` separate visibility, administration, and use. In 2.11 these scopes can also be delegated to API tokens and OAuth grants, and Gateway MCP exposes an external SSH toolset to agents that hold them. OAuth consent leaves `integrations:ssh:use` unchecked by default, so running commands through an agent must be selected explicitly. See [API and MCP](/en/integrations/api-and-mcp/).
 
 For supported [hosting installation](/en/integrations/hosting-providers/), Gateway verifies that the SSH destination is an actual assigned address of the selected VM. A working connection to a different host is not an installation channel for that VM. Hosting may use a supported Guest Agent channel instead; do not add SSH solely because a provider account exists.
 

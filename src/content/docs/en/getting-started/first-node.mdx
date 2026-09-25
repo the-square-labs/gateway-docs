@@ -25,12 +25,12 @@ Successful enrollment means the node is **Online** with the intended role and ca
 | --- | --- | --- |
 | **Ingress** | Routes, TLS materialization, Pages, nginx logs and traffic metrics | Which public addresses and ports this host owns |
 | **Docker** | Containers, Deployments, Compose Projects, images, volumes, networks and runtime operations | Which workloads may share this Docker host |
-| **Databases** | Gateway-managed PostgreSQL, Redis and ClickHouse | Storage, backup and stateful workload isolation |
+| **Storage** | Gateway-managed PostgreSQL, Redis, and ClickHouse, managed object storage, and database backup jobs | Storage, backup, and stateful workload isolation |
 | **Build Worker** | Isolated Git-source builds with BuildKit/containerd | Build egress and separation from reusable credentials |
 | **Monitoring** | Supported monitoring collection | Which systems the Node may observe |
 | **Relay** | Secure Link data-plane capacity and resilience | Reachable advertised address and physical fault domain |
 
-Do not select a role merely because its installer happens to work on the host. A production role should match the host's intended trust boundary, network placement, storage, and recovery owner. In particular, Build Workers and database Nodes should normally be dedicated to their purpose.
+Do not select a role merely because its installer happens to work on the host. A production role should match the host's intended trust boundary, network placement, storage, and recovery owner. In particular, Build Workers and Storage Nodes should normally be dedicated to their purpose.
 
 ![Add Node dialog with the Relay role selected and its advertised address configured](/screenshots/product-tour/node-enrollment-relay.png)
 
@@ -42,9 +42,9 @@ Also confirm role-specific ownership:
 
 - Ingress Nodes need the intended public listeners and a clear DNS/TLS operating model.
 - Docker Nodes need a local supported Docker Engine and sufficient capacity for their workloads; the Node installer can prepare supported runtime components on a fresh compatible host.
-- Database Nodes need eligible durable storage and the required loop/mount capabilities. Do not assume an ordinary restricted LXC guest is sufficient.
+- Storage Nodes need eligible durable storage and the required loop/mount capabilities. Do not assume an ordinary restricted LXC guest is sufficient.
 - Build Workers need a dedicated host or outer unprivileged container and an approved egress profile.
-- Relay Nodes need an address and port reachable from participating Gateway, Docker, Ingress, and database hosts. Gateway does not open the firewall or traverse NAT for you.
+- Relay Nodes need an address and port reachable from participating Gateway, Docker, Ingress, and Storage hosts. Gateway does not open the firewall or traverse NAT for you.
 
 ## Enroll the node on your own host
 
@@ -77,7 +77,7 @@ For Relay, successful enrollment makes the physical host eligible for the Relay 
 
 - **Ingress:** validate nginx configuration, inspect the service address, confirm ports 80/443 where required, and open bounded nginx logs.
 - **Docker:** confirm inventory synchronization, runtime status, filesystem access, and any expected GPU or Secure Runtime capability.
-- **Databases:** confirm the selected storage root, capacity enforcement, and preflight completion before creating a managed database.
+- **Storage:** confirm the selected storage root, capacity enforcement, and preflight completion before creating a managed database or managed storage.
 - **Build Worker:** confirm BuildKit/containerd health, enforced resource profile, scanner availability, and the selected egress policy.
 - **Relay:** confirm the supervisor and worker health, advertised endpoint, active-tunnel count, and fault-domain placement.
 

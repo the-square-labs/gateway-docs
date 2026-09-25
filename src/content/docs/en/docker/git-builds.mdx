@@ -11,7 +11,7 @@ lastReviewed: 2026-09-10
 Configure the connector using [Git hosting](/en/integrations/source-control/). That guide also separates repository permissions from the target permissions needed to start saved builds and read their history. Registry credentials are covered under [Container registries](/en/docker/registries/).
 
 
-Git source support connects an approved repository revision to an immutable build artifact. It can supply a Docker Container, Deployment, or Pages release, but the resulting workload still follows the lifecycle of its owning resource. A source connection is not permission to change a production route or traffic target by itself.
+Git source support connects an approved repository revision to an immutable build artifact. It can supply a Docker Container, Deployment, Compose Project, or Pages release, but the resulting workload still follows the lifecycle of its owning resource. A source connection is not permission to change a production route or traffic target by itself.
 
 ## Decide what automation is allowed to do
 
@@ -34,6 +34,8 @@ Build Secrets are source-scoped and mounted as secrets during the build. Do not 
 3. Start the build and follow its Task from worker assignment through artifact publication.
 4. Review redacted logs, vulnerability findings, policy result, source commit, and immutable artifact digest.
 5. Select the approved digest in the owning Container, Deployment, or Pages workflow.
+
+While a build is rolled out to a Container, Deployment, or Compose Project, Gateway locks that target: lifecycle and configuration changes, secret changes, Availability changes, and migrations are refused with `BUILD_ROLLOUT_IN_PROGRESS` until the rollout succeeds, fails, or is cancelled, and the Console shows a banner on the target. The lock survives a Gateway restart. If the target is busy with another operation when the rollout starts, the rollout waits up to 5 minutes and then fails with `BUILD_ROLLOUT_TARGET_BUSY`. Pages releases are not locked this way. During a Gateway update, builds triggered by webhooks or polling are deferred and start once after the update.
 
 Automatic build and automatic deploy are independent controls. Keep automatic deployment disabled until the health and rollback path is proven for that workload. A successful build only proves that an artifact exists; it does not prove that the application starts correctly on a target node.
 

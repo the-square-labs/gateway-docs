@@ -17,7 +17,7 @@ PKI means public key infrastructure: the authorities, certificates, private keys
 
 Private keys are encrypted with `PKI_MASTER_KEY`. Preserve this key independently from the database backup. Limit export permissions and audit every authority, certificate, revocation, and private-key operation.
 
-User-facing Internal PKI is separate from Gateway's hidden system PKI used for managed transport. Entitlement loss disables the user-facing feature without deleting authorities, certificates, templates, or audit history; system transport must continue to function.
+User-facing Internal PKI is separate from Gateway's hidden system PKI used for managed transport. After a license grace period ends, existing authorities, certificates, templates, and audit history are kept; you can still view them, download revocation lists, revoke and export certificates, and delete templates, while creating authorities, issuing certificates, and changing templates require the plan again. System transport continues to function.
 
 ## Trust model
 
@@ -63,4 +63,4 @@ Retiring an authority requires more than deleting it from navigation. Stop issua
 
 ## Entitlement and deletion behavior
 
-If the entitlement is lost, Gateway preserves authorities and certificates but disables user-facing PKI operations. It must not disable system transport. Before deleting an authority, resolve all child intermediates and certificates and preserve required revocation evidence.
+After a license grace period ends, Gateway preserves authorities and certificates and keeps viewing, revocation lists, certificate revocation and export, and deletion available, while creating authorities, issuing certificates, and changing templates require the plan again. System transport is never disabled. Before deleting an authority, resolve all child intermediates and certificates and preserve required revocation evidence.

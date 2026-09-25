@@ -18,7 +18,7 @@ flowchart TB
 
     subgraph hosts["Managed hosts"]
         direction LR
-        daemons["Role daemons<br/>nginx · Docker · Databases · Build Worker · Monitoring"]
+        daemons["Role daemons<br/>nginx · Docker · Storage · Build Worker · Monitoring"]
         workloads["Private application and database endpoints"]
         daemons -.->|"Host-local lifecycle"| workloads
     end
@@ -47,11 +47,11 @@ If Relay is unavailable, new managed-node operations and new private-link admiss
 
 ## Managed daemons
 
-Each managed daemon has a bounded role and identity. Ingress, Docker, Databases, Build Worker, Monitoring, and Relay profiles expose different capabilities and trust boundaries. A Docker daemon cannot become a database daemon because a client changes a request, and user lifecycle APIs must not mutate Gateway-owned internal containers.
+Each managed daemon has a bounded role and identity. Ingress, Docker, Storage, Build Worker, Monitoring, and Relay profiles expose different capabilities and trust boundaries. A Docker daemon cannot become a database daemon because a client changes a request, and user lifecycle APIs must not mutate Gateway-owned internal containers.
 
 Daemons report capabilities, inventory, health, metrics, service addresses, and operation results. Gateway uses those reports to decide whether a host can safely perform an action. Installed packages alone do not prove capability: the daemon must report the feature as available and healthy. When a node is offline or its capability report is stale, read-only views may remain available from a sanitized snapshot, but mutations that need current host state are rejected.
 
-The daemon owns execution on its host: for example, nginx applies configuration, Docker manages runtime objects, and a Database Node runs database engines. Gateway owns the durable identity and desired configuration of managed resources. This split lets a workload keep running during a temporary control-plane interruption without allowing the host to invent new authorized state.
+The daemon owns execution on its host: for example, nginx applies configuration, Docker manages runtime objects, and a Storage Node runs database engines. Gateway owns the durable identity and desired configuration of managed resources. This split lets a workload keep running during a temporary control-plane interruption without allowing the host to invent new authorized state.
 
 ## Data plane
 

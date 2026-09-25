@@ -259,7 +259,7 @@ Snapshot creation, deletion, and restore are mutually exclusive with conflicting
 
 ## Permissions, alerts, and recovery
 
-Hosting permissions supplement access to the bound node; they do not make an otherwise hidden node accessible. Account inventory, VM actions, connector administration, and billing are separate permissions. Restrict creation to the intended accounts/providers and actions to the intended nodes/resources. Creating a hosted node also requires node-creation permission. High-risk hosting actions require an interactive session; see [Scopes and tokens](/en/identity/scopes-tokens-oauth/).
+Hosting permissions supplement access to the bound node; they do not make an otherwise hidden node accessible. Account inventory, VM actions, connector administration, and billing are separate permissions. Restrict creation to the intended accounts/providers and actions to the intended nodes/resources. Creating a hosted node also requires node-creation permission. API tokens and OAuth or MCP grants can perform hosting actions when they hold the matching `integrations:hosting:*` and `hosting:*` scopes, always bounded by the owner's current permissions. OAuth consent leaves connector administration, VM creation and deletion, snapshot restore, and deposit top-ups unchecked by default; see [Scopes and tokens](/en/identity/scopes-tokens-oauth/).
 
 Configure [notifications](/en/observability/notifications-status-pages/) for VM power changes, operation failures, synchronization, and balance thresholds where supported. Balance rules require billing access and an explicit currency. Do not treat stale provider data as a successful operation or a zero balance.
 

@@ -1,0 +1,96 @@
+---
+title: Storage
+description: Connect S3-compatible, FTP, FTPS, and SFTP storage and run managed MinIO object storage with private workload links.
+section: Storage
+order: 1
+audience: [platform-engineer, operator, developer]
+status: ready
+lastReviewed: 2026-09-25
+---
+
+The **Storage** area manages two kinds of resource. A **storage connection** records access to object or file storage that runs elsewhere. **Managed storage** is MinIO object storage that Gateway provisions and runs on a Storage Node. Both require Personal or higher. Storage resources serve as destinations for [database backups](/en/databases/backups/), and managed storage can give workloads private, bucket-scoped access.
+
+| Question | Storage connection | Managed storage |
+| --- | --- | --- |
+| Who runs the service | The provider or your storage team | Gateway, as MinIO on one or more Storage Nodes with bounded disks |
+| Protocols | S3 (AWS S3, Cloudflare R2, MinIO, other S3-compatible services), SFTP, FTP, FTPS | S3, with optional FTP and SFTP listeners |
+| Object browser | Yes | Yes |
+| Backup destination | Yes | Yes |
+| Access keys and workload links | No | Yes |
+| Public exposure | Not applicable | Private by default; public S3, FTP, and SFTP listeners are opt-in |
+| Delete | Removes only Gateway's saved connection | Removes the service and erases its data on every member |
+
+## Storage connections
+
+Select **Add Storage** and choose a provider:
+
+| Provider | Connection details |
+| --- | --- |
+| AWS S3, Cloudflare R2, MinIO, Other (S3-compatible) | Region, access key ID, and secret access key; an endpoint for everything except AWS; optional session token, default bucket, and path-style addressing (on by default for MinIO) |
+| SFTP | Host, port (22 by default), user name, password or private key with an optional passphrase, and the server's SHA-256 **SSH host key fingerprint**, which is required and checked on every connection |
+| FTP, FTPS | Host, port (21, or 990 for implicit FTPS), user name, and password; FTPS supports explicit or **Implicit TLS** and always verifies the server certificate with the system trust store or a **CA Certificate** you provide |
+
+For FTP, FTPS, and SFTP, directories below the configured **Base Path** appear as buckets. SMB is not supported.
+
+Gateway stores secrets, host-key fingerprints, and CA certificates encrypted and never returns secrets to the form: leaving a secret field blank keeps the stored value, but changing the endpoint, host, user name, protocol, or trust settings requires entering the secret again. Revealing saved credentials requires `storage:credentials:reveal`. `storage:credentials:use` lets database backups use the saved credentials without revealing them. A bucket that backup policies or backup history refer to cannot be deleted; for storage connections, see [Delete storage that backups refer to](#delete-storage-that-backups-refer-to).
+
+The **Objects** tab browses buckets and objects, opens and edits files, uploads files, creates folders, and deletes files and folders. It is unavailable while the storage is offline. Creating a bucket appears when a connection has no buckets and requires `storage:objects:admin`. The API additionally deletes buckets and creates presigned download links; presigned links are not available for private managed storage, which must be downloaded through Gateway, or for FTP, FTPS, and SFTP. See [Permissions](#permissions).
+
+## Managed object storage
+
+Choose **Deploy managed storage** to provision MinIO on a Storage Node. The runtime is one curated MinIO version pinned to an immutable image digest, and there is no in-place version change; review its maintenance and upgrade policy before relying on it in production. Set CPU, memory, and disk limits when you provision it; the Console caps the disk at the Node's free space minus its reserve. The disk is a preallocated, bounded image on the Storage Node, like the storage of managed databases. Gateway generates the root credentials, and revealing them requires `storage:credentials:reveal`.
+
+After provisioning you can change the name, tags, CPU, memory, swap, disk size, and S3 publication. The disk can only grow, and a change is rejected while a previous one is still being applied. **Restart** and retrying a failed provisioning are also available.
+
+Managed storage is private by default. Gateway reaches it through authenticated Relay routes, and the MinIO console is never published. You can enable additional access paths explicitly:
+
+- **Publish S3 endpoint** exposes the S3 API on a host port, 9000 by default. You can change it after provisioning.
+- **TLS** encrypts S3 with a certificate from the Gateway Storage CA and enables FTPS.
+- **SFTP access** and **FTP access** open file-protocol listeners on their own ports, 8022 and 2121 by default; FTP also needs a passive port range of up to 64 ports. They can be enabled only when the storage is created, listen on all interfaces of every member, and authenticate with IAM access keys.
+
+Gateway does not change host firewalls. Open only the ports that an identified client needs.
+
+### Distributed cluster
+
+Enable **Distributed cluster** to run MinIO across at least four Storage Nodes. Each member contributes one bounded disk, and the smallest member determines the disk size. Every member needs a service address that is an IP address, not a host name, and the members must reach each other on it; configure member connectivity before provisioning. In a cluster, the S3 API listens on each member's service IP even when the storage is not published, so restrict that network accordingly. Provisioning completes only after the members report read and write quorum. The primary member currently owns Gateway's Relay endpoint for the cluster, so the cluster protects data across Nodes but is not a separately highly available endpoint.
+
+### Access keys and workload links
+
+On the storage detail page, the **IAM Keys** tab issues S3 credentials with an optional name, read-only or read-write access, up to 64 buckets (none means all buckets), and an optional expiry. The secret key is shown once when the key is created. Creating and revoking keys requires `storage:iam`.
+
+A **managed storage link** gives a Container or Deployment private access to 1–32 buckets. Add it from the workload's **Environment** tab; Compose services are not supported. Gateway issues a key limited to those buckets, runs a small connector on a private network for the link, and stores the values as managed secrets in environment variables that default to `S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET` (the first bucket), and `AWS_REGION`. The key can reach only the listed buckets, so a compromised workload cannot read the rest of the storage. Creating a link requires `storage:iam` and permission to edit the workload's environment and secrets.
+
+For advanced nginx configuration, a Route can also use an additional Secure Link binding to ready managed object storage, without a shared Docker network or a published S3 port; clients still need S3 credentials. Managed storage cannot be a Route's main upstream. Creating the binding requires Route edit access and view access to the storage; see [Secure upstreams](/en/ingress/secure-upstreams/).
+
+Deleting managed storage erases its data on every member and removes its workload links automatically. It is refused while Route Secure Link bindings refer to it, and backup references are handled as described below.
+
+## Delete storage that backups refer to
+
+Backup policies and active backup runs always block deleting a storage connection or managed storage; delete or move the policies and wait for the runs to finish. When only finished backup history refers to the storage, deletion is refused with `STORAGE_BACKUP_HISTORY_EXISTS` (409) until you confirm **Forget history and delete**. Forgetting removes that history from Gateway, so those backups can no longer be restored or deleted from Gateway, and the audit log records where their files are. The files of a storage connection stay in its buckets; the files in managed storage are erased with it.
+
+Through the API, pass `backupHistory=forget` to `DELETE /api/object-storage/{id}` or `DELETE /api/managed-storage/{id}`. The AI Workspace and MCP storage tools accept the same confirmation as `config.backupHistory`. To delete individual backups together with their files first, use [backup history](/en/databases/backups/#deletion-and-retention-rules).
+
+## Permissions
+
+| Scope | Allows |
+| --- | --- |
+| `storage:view` | View storage connections, managed storage, access keys, and links |
+| `storage:create` | Create storage connections and managed storage |
+| `storage:edit` | Change settings, restart, and retry provisioning |
+| `storage:delete` | Delete storage connections and managed storage |
+| `storage:credentials:reveal` | Reveal saved credentials; includes `storage:credentials:use` |
+| `storage:credentials:use` | Let database backups use saved credentials without revealing them |
+| `storage:iam` | Create and revoke access keys and workload links |
+| `storage:objects:read` | Browse and download objects and create presigned download links |
+| `storage:objects:write` | Upload, create prefixes, and delete objects |
+| `storage:objects:admin` | Create and delete buckets |
+| `storage:folders:manage` | Organize storage folders |
+
+Scopes can be limited to one storage resource or a folder. See the [scope reference](/en/identity/scopes-reference/#storage).
+
+## Operating boundaries
+
+- Storage resources require Personal or higher; enrolling a Storage Node does not. See [Plans and entitlements](/en/reference/plans-and-entitlements/#feature-matrix).
+- Storage Nodes run managed databases, managed storage, and backup jobs; generic application containers and builds run on Docker Nodes and Build Workers. See [Node roles](/en/nodes/roles-and-installation/).
+- A single-node managed storage lives on one host. Keep backups and other important copies outside its failure domain.
+- Keep destination-side encryption, retention, and access policies in the storage system that holds the data.

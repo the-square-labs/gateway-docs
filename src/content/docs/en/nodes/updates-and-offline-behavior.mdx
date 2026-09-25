@@ -27,13 +27,32 @@ In 2.10, Docker, nginx, monitoring, and the Relay supervisor gained a separate l
 
 Local readiness does not prove Relay connectivity or application health. Continue to verify version, reconnect, Node capabilities, and a real operation after updating. If launcher bootstrap is unavailable and the daemon runs directly, launcher rollback protection is unavailable.
 
+In 2.11, a candidate daemon that declares control-connection readiness must also receive its first command from Gateway within 3 minutes, otherwise the launcher rolls the update back. After a healthy update, the launcher refreshes its own copy.
+
+## Certificate renewal
+
+Gateway renews its internal certificates while it runs, without a restart, and records each renewal in the audit log:
+
+| Certificate | Validity | Renewal |
+| --- | --- | --- |
+| Gateway listeners and the local Relay's service and client certificates | 365 days | Checked hourly and renewed 30 days before expiry; existing connections keep the old certificate until they reconnect. While unused enrollment tokens exist, renewal waits until the last 7 days, because installer commands pin the Gateway certificate fingerprint; commands generated before a renewal must then be generated again |
+| A certificate supplied through `GRPC_TLS_CERT` | Set by you | Never renewed by Gateway; a daily warning is logged |
+| Remote Relay server certificates | 365 days | Checked hourly while the Relay supervisor is connected and renewed 60 days before expiry, at most once a day |
+| Daemon client certificates on every Node | 365 days | Checked daily by the daemon and renewed 7 days before expiry; the new certificate takes effect when the daemon reconnects with it |
+
+A Node must stay connected to renew its certificate. Keep Nodes online, and investigate a Node that has been offline for a long time before its certificate expires.
+
+## Enrollment tokens
+
+Enrollment tokens are single-use and expire after 7 days. For a Node that is still pending, **New enrollment token** issues a replacement installer command. An enrolled Node cannot be re-enrolled in place; only Relay members support re-enrollment. See [Relay and Relay Pool](/en/nodes/relay-pool/#relay-recovery-in-211).
+
 ## Before an update
 
 1. Read the component release notes and compatibility floor.
 2. Confirm the installation update channel is intentional: Stable for production releases or Preview for explicitly accepted prereleases.
 3. Verify the Node is online and not running a conflicting lifecycle operation.
 4. Record its current version, capabilities, active workloads, and recent errors.
-5. For a Relay Pool, drain and update one member at a time.
+5. For a Relay Pool, use the Relay Pool update, which drains, updates, and verifies one member at a time.
 6. Ensure an operator can reach the host if automatic recovery fails.
 
 Gateway and daemons verify signed update manifests and checksums. Do not replace a failed signed update with an unsigned binary copied from another host.

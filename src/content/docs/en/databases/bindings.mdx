@@ -1,6 +1,6 @@
 ---
 title: Application database bindings
-description: Give workloads private, least-privilege database access that survives recreation.
+description: Give workloads private database access with a dedicated engine identity that survives recreation.
 section: Databases
 order: 3
 audience: [platform-engineer, developer, security-admin]
@@ -9,9 +9,19 @@ lastReviewed: 2026-08-30
 ---
 
 
-An application binding gives one Container, Deployment, or eligible workload service private access to one managed database. Gateway creates a distinct engine user or role for the binding and grants only the database permissions that binding requires. The engine identity belongs to the binding, not to a transient workload process.
+An application binding gives one Container, Deployment, or eligible workload service private access to one managed database. Gateway creates a distinct engine user or role for the binding with application-level privileges on the managed database, never the owner or superuser credential. The engine identity belongs to the binding, not to a transient workload process.
 
-Use a binding when an application needs database access without sharing an owner credential or publishing the database to a broader network. The database owner approves the permissions, the application owner chooses how connection values enter the workload, and the platform owner keeps the Database and Docker Nodes available. Success means the application can perform its required work, cannot perform ungranted work, and keeps access after a controlled workload recreation without creating duplicate identities.
+Bindings exist only for [managed databases](/en/databases/managed-databases/). For a database that runs elsewhere and is registered as an external connection, store its connection values as workload secrets or Compose variables instead; see [Managed and external databases at a glance](/en/databases/overview/#managed-and-external-databases-at-a-glance).
+
+| Engine | Binding identity |
+| --- | --- |
+| PostgreSQL | A login role that is a member of the application role, with the application role as its default; no superuser, database, or role creation rights |
+| ClickHouse | A user whose role has all privileges on the application database and read access to the system tables Gateway needs; no access to other databases |
+| Redis | An ACL user limited to read, write, connection, transaction, publish/subscribe, and script-evaluation commands; dangerous and administrative commands are denied |
+
+Privileges are not chosen per binding: every binding on the same database receives the same application-level access through its own identity.
+
+Use a binding when an application needs database access without sharing an owner credential or publishing the database to a broader network. The database owner approves which workloads receive access, the application owner chooses how connection values enter the workload, and the platform owner keeps the Storage and Docker Nodes available. Success means the application can perform its required work, cannot perform administrative work outside the application database, and keeps access after a controlled workload recreation without creating duplicate identities.
 
 The main risk is credential or permission reuse. Create a separate binding for each workload boundary, keep the database private by default, and retire the binding when the workload no longer needs it.
 
@@ -28,16 +38,16 @@ The nginx/workload Secure Link connector is a separate real component. It serves
 Before creating a binding, confirm that the managed database is **Ready**, the target Docker node is online, the workload is eligible, and you have access to both resources. Review the intended database or role permissions and make sure the workload can consume the delivered connection settings without placing them in source control.
 
 1. Select the managed database and the target workload.
-2. Choose the intended least-privilege database access.
+2. Choose which connection values to deliver and the environment variable name for each.
 3. Create the binding and wait for Gateway to provision its engine identity and reconcile the daemon-owned listener.
 4. Apply or recreate the workload only when its configuration change requires it.
 5. Verify a real application query, then inspect binding telemetry and workload and database logs.
 
 Use private bindings for workload access even when direct TCP publication is enabled for an external client. Publication is opt-in and does not replace binding isolation.
 
-Bindings can target an eligible standalone Container, Deployment, or Compose service. Gateway delivers a connection URI and, where configured, individual host, port, database, user, and password values to the selected workload environment. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
+Bindings can target an eligible standalone Container, Deployment, or Compose service on an online Docker Node, and the database must be **Ready**. Gateway delivers the values you select—connection URI, host, port, database, username, and password—under the environment variable names you choose; at least one value is required. The Console suggests names such as `DATABASE_URL` or `REDIS_URL`, or engine-specific names for individual values. The URI uses the engine's plain protocol on the private binding network (`postgresql://`, `redis://`, or `http://` for ClickHouse); bindings do not add TLS settings. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
 
-One database can serve multiple workloads through separate bindings. That is preferable to reusing one shared account: each binding can be audited, rotated, permissioned, and retired independently. Gateway rejects conflicting environment-variable assignments rather than silently replacing an existing application value.
+One database can serve multiple workloads through separate bindings. That is preferable to reusing one shared account: each binding can be audited, rotated, and retired independently. Gateway rejects conflicting environment-variable assignments rather than silently replacing an existing application value; the only exception is an explicit opt-in to replace existing values on a standalone Container.
 
 ## Verify isolation
 
@@ -45,7 +55,7 @@ After creation or workload recreation, verify all of the following:
 
 - the binding reports **Ready** and its target workload is running;
 - the workload received the expected variable names without exposing their values;
-- a permitted query succeeds and a deliberately ungranted operation fails;
+- an application query succeeds and an administrative operation outside the application database, such as creating a role or database, fails;
 - binding runtime telemetry shows the expected stream and no sustained admission rejects;
 - recreating the workload preserves the same binding relationship and does not create an additional engine role;
 - an unrelated workload cannot reach the private listener or reuse the binding identity.
@@ -56,7 +66,7 @@ Credential reveal is an exceptional diagnostic action. It requires explicit acce
 
 Desired binding state remains durable through workload recreation, Docker daemon restart, node reconnection, and Relay restart. Reconciliation restores the daemon-owned listener and confirms the engine identity without creating a new identity for every transient runtime. This is how Gateway avoids orphan roles after normal restart and recreation paths.
 
-For a failed binding, diagnose in this order: managed database readiness; target database node; target Docker node; binding desired state; daemon listener state; engine identity and permissions; then application configuration. Inspect the binding operation and telemetry before retrying. Do not delete the engine role, bridge network, or listener manually as a general repair tactic, because that can desynchronize the durable record from the database and daemon.
+For a failed binding, diagnose in this order: managed database readiness; target Storage Node; target Docker node; binding desired state; daemon listener state; engine identity and permissions; then application configuration. Inspect the binding operation and telemetry before retrying. Do not delete the engine role, bridge network, or listener manually as a general repair tactic, because that can desynchronize the durable record from the database and daemon.
 
 ## Delete and recover
 

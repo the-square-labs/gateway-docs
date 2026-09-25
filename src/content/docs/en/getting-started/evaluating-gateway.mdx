@@ -1,0 +1,93 @@
+---
+title: Evaluating Gateway
+description: Answers to common pre-purchase questions about self-hosting, keys, licensing, permissions, adopting existing Compose projects, and migration help.
+section: Start here
+order: 2
+audience: [evaluator, security-admin, platform-engineer]
+status: ready
+lastReviewed: 2026-09-25
+---
+
+This page answers the questions buyers and their security reviewers usually ask before choosing Gateway. Each answer is short and links to the page that documents the behavior in detail. Answers describe the current release; roadmap items are labeled in the [plan matrix](/en/reference/plans-and-entitlements/#feature-matrix).
+
+## Can we self-host Gateway on a paid plan?
+
+Yes. Every plan—Community, Personal, Business, and Enterprise—can be installed and operated on your own infrastructure. A paid plan is a license key applied to a self-hosted installation; it does not move the control plane anywhere else. A managed cloud option, in which Square Labs operates the Gateway control plane, is offered separately by request. It is an alternative, never a requirement for a plan.
+
+Community needs no license key and allows up to 25 managed Nodes, 3 users, and 1 custom permission group. Personal, Business, and Enterprise keys each cover one active Gateway installation without those quotas. Paid features are delivered as a signed commercial core that the installation downloads and verifies; see [Commercial core](/en/reference/plans-and-entitlements/#commercial-core). See [Install Gateway](/en/getting-started/install/) or the [manual installation](/en/getting-started/manual-install/) if your review does not allow piping an installer into a shell.
+
+## Where do our secrets and keys live in a self-hosted installation?
+
+Inside the installation. Gateway is a control plane you run, so the credentials it uses to operate your infrastructure stay in your environment:
+
+- Stored credentials—Docker secrets and environment values, registry credentials, DNS and hosting-provider tokens, SSH keys, OIDC and SMTP secrets, database credentials, AI provider keys, certificate-authority and ACME private keys, and the license key itself—are encrypted with AES-256-GCM envelope encryption and stored in the installation's own PostgreSQL database.
+- The master key that protects them (`PKI_MASTER_KEY`) is generated on your host during installation and kept in the installation's `.env` file, not in the database. It does not leave the host unless you copy it.
+- Gateway's own TLS private key stays on the Gateway host. Each managed Node keeps its daemon private key locally, and Storage Nodes keep database TLS keys in daemon-owned storage.
+
+Protect the Gateway host as a privileged system, and back up the master key separately from database backups: a database backup without its master key cannot be decrypted. See [Security model](/en/security/security-model/#where-secrets-live-in-a-self-hosted-installation) and [Updates, backups, and restore](/en/operations/updates-backups/).
+
+## What does Gateway send to the license service?
+
+Installation metadata only. Gateway contacts `https://license.thesqlabs.com` to register the installation, to send a heartbeat—every 15 minutes with a paid key and every 30 minutes on Community—to activate or deactivate a key, to authorize the target release before every update on every plan, and, for a licensed installation, to download the signed commercial core.
+
+Requests carry the installation ID, the installation name (the host name of the configured public URL, or the server host name), the Gateway version, the entitlements schema version, and an installation token. A one-time registration nonce is sent during registration, the paid key when you activate it, and the target version, release ID, and file path during an update. Infrastructure configuration, resource contents, secrets, logs, user or resource counts, prompts, and model responses are not sent.
+
+Permission and entitlement checks use the cached license state stored in your installation, so individual operations do not wait for the license service. Other outbound connections, such as release checks, are listed in [What leaves a self-hosted installation](/en/security/security-model/#what-leaves-a-self-hosted-installation).
+
+## What happens if the license expires or the license service is unreachable?
+
+Running infrastructure keeps running. Neither expiry nor an unreachable license service stops or deletes containers, Deployments, Compose Projects, Routes, certificates, managed database engines, or published Pages deployments.
+
+- **Key expiry.** After the expiry date the paid plan stays fully active for a plan-specific grace period: 24 hours on Personal, 3 days on Business, and 7 days on Enterprise. The Dashboard shows a warning during grace. After grace, workloads, the data plane, and data keep running; scheduled backups, restores into existing databases, viewing, logs, monitoring, credential reveal, and deletion of existing paid resources keep working. Creating paid resources and changing their configuration are blocked, and SIEM forwarding and external registry access pause until renewal.
+- **License service unreachable.** A previously valid paid installation keeps its plan for 100 days after the issue time of its last signed license state, with the status **Licensed with warning**. This does not extend a known expiry date. After 100 days the behavior matches an ordinary expiry. Community installations keep running while the service is unreachable. Activating a paid key and updating Gateway on any plan require the service to be reachable; a failed update leaves the current version running. See [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
+- **Resources above Community limits.** Community limits apply only when you create a managed Node, user, or custom permission group. Existing Nodes, users, and groups above the limit keep working and are never deleted.
+- **Downgrade and renewal.** A downgrade to a lower paid plan keeps the higher plan for its grace period. Renewing the key restores full operations without rebuilding resources. Installations that held a paid plan keep receiving updates with the commercial core, so existing paid resources keep running after an update.
+
+Revocation, transfer of the key to another installation, deactivation, or an invalid key gets no grace: the after-grace rules apply immediately, and running workloads still keep working. License states from the service are signed and verified by Gateway, so a forged or replayed response cannot change the plan. See [Downgrade and expiry](/en/reference/plans-and-entitlements/#downgrade-and-expiry).
+
+## Can a team restart containers and read logs without adopting the project?
+
+Yes for standalone containers, and read-only for external Compose projects.
+
+- **Standalone containers**, including containers started with `docker run` outside Gateway, are listed on their Docker Node without an adoption step. A group can receive `docker:containers:manage` for one container to start, stop, restart, or kill it and read its logs, without access to other containers or host details. `manage` also allows recreate; there is no restart-only scope.
+- **External Compose projects** are discovered from Docker Compose labels. `docker:compose:view` for one project shows its services, health, monitoring, and aggregated logs on every plan. Restarting an external project, or an individual container that belongs to it, is not available: lifecycle actions require adopting the project, which requires Personal or higher. After adoption, `docker:compose:manage` for that project starts, stops, or restarts the whole project.
+
+Grants can target one resource, one Node, or a Docker folder. See [Operate workloads without adopting them](/en/concepts/permissions/#operate-workloads-without-adopting-them) for the exact scopes and how resource identities behave when containers are recreated outside Gateway.
+
+## How do we hand over an existing Docker Compose project?
+
+Adopt the discovered project. Adoption is an explicit ownership transfer and requires Personal or higher. You paste the complete Compose file—Gateway does not read it from the host—and Gateway validates it, stores it as the first immutable revision, and applies it under the same Compose project name.
+
+- **Named volumes keep their names.** Gateway does not rename or prefix the project or its volumes, so Docker Compose reuses the existing `<project>_<volume>` volumes, or volumes with an explicit `name:`, and their data. For stateful services such as Temporal, keep the volume keys unchanged and compare the volume list with the discovered project before the first apply.
+- **`env_file` is not supported.** Declare variables in `environment:` and supply their values as Gateway variables and encrypted project secrets through `${NAME}` interpolation.
+- **Host bind mounts are rejected**, including relative paths such as `./config`. Move configuration files into the image or a named volume.
+- **One-off jobs.** There is no `docker compose run` and no pre-deploy hook. Run a migration command through a service container's console, or model it as a `restart: "no"` service that other services wait for through `depends_on`; a finished one-shot service is reported as not running.
+- **Other limits.** Services must use pre-built images unless the project has a Git source on Business or Enterprise, and keys such as `container_name`, `privileged`, `cap_add`, `devices`, `network_mode`, and `deploy` are rejected. See the complete [supported Compose configuration](/en/docker/compose/#supported-compose-configuration).
+- **Deletion.** Deleting a managed project deletes the volumes it owns. Back up persistent data first.
+
+Expect the first apply to recreate the service containers, and rehearse the adoption on a staging copy. Compose Projects cannot be moved between Nodes with cross-node migration, and their containers cannot be exported as GWCA archives. Standalone containers can: migration copies volume data and keeps volume names, while GWCA archives never include volume data. See [Compose Projects](/en/docker/compose/#adopt-an-external-project) and [Migrations and container archives](/en/docker/migrations-archives/).
+
+## What is the difference between managed and external databases?
+
+Gateway works with PostgreSQL, Redis, and ClickHouse in two models:
+
+- A **managed database** is provisioned and run by Gateway as a container with fixed-size storage on a Storage Node. Gateway handles its lifecycle, resizing, TLS publication, logs, PostgreSQL extensions, and private bindings that inject connection settings into workloads.
+- An **external connection** stores encrypted connection details for a database that runs elsewhere. Gateway tests the connection, monitors health, and provides explorers and consoles, but it does not provision, pause, resize, bind, or delete that engine.
+
+Both models require Personal or higher in 2.11, and both can be protected with scheduled [database backups](/en/databases/backups/) to a storage connection.
+
+See [Databases overview](/en/databases/overview/#managed-and-external-databases-at-a-glance) for the full comparison.
+
+## Do you help with migration?
+
+Start with the [adoption pilot](/en/getting-started/adoption-pilot/), a staged and reversible evaluation plan with explicit gates, which works on any plan. Business includes **Guided Onboarding and Configuration Review**, and Enterprise includes **Assisted Deployment and Migration**, as plan benefits; the scope of that assistance is defined by the commercial agreement. For migration help on another plan or for a specific project, contact Square Labs through the [Good Gateway website](https://goodgateway.dev/).
+
+## Where is pricing?
+
+Current plan prices are published in the pricing section of the [Good Gateway website](https://goodgateway.dev/#pricing). This documentation does not define prices or price commitments; contract and pricing terms, including Enterprise terms, belong to the applicable commercial agreement. Plan features and limits are listed in [Plans and entitlements](/en/reference/plans-and-entitlements/).
+
+## Next steps
+
+- Compare required capabilities in the [plan matrix](/en/reference/plans-and-entitlements/#feature-matrix).
+- Review the [security model](/en/security/security-model/) and [host requirements](/en/getting-started/requirements/).
+- Plan a staged, reversible evaluation with the [adoption pilot](/en/getting-started/adoption-pilot/).

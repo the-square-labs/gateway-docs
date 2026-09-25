@@ -42,6 +42,12 @@ If preparation or health validation fails before traffic switches, the existing 
 
 If a customer-visible regression appears after cutover, use the explicit rollback action. It restores traffic to the retained known-good slot and records the event in the Deployment history. Verify the Route, application health, and logs after rollback. Do not delete the newer slot until the incident record and the desired follow-up are clear.
 
+## Operations during restarts, updates, and builds
+
+Deployment operations survive Gateway restarts. A durable sweep finishes the drain of the previous slot, and an interrupted release is reconstructed from the slot that the Node's router actually serves. If the Node cannot be inspected within 5 minutes, the release is marked failed with a reason such as a stopped router or a daemon that cannot report its serving slot; update the Docker daemon in the latter case.
+
+While a release is running, the Deployment's settings are locked: saving returns `DEPLOYMENT_BUSY` and the Console disables **Save** until the release finishes. While a Git build is being rolled out to the Deployment, lifecycle and configuration changes return `BUILD_ROLLOUT_IN_PROGRESS`; wait for the rollout to finish. During a Gateway update, new Deployment operations are refused with `GATEWAY_UPDATING` until the update completes; see [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
+
 ## Retirement consequences
 
 Removing a Deployment removes its managed slots and can remove access relationships that belong only to that resource. First detach or migrate Routes, database bindings, and persistent data that must survive. A Deployment rollback protects a prior runtime slot; it is not a substitute for backing up mutable volume data.

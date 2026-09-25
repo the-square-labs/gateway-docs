@@ -33,7 +33,7 @@ An image's presence in the internal registry does not make it a public release. 
 
 ## Optional external Docker-client access
 
-External Docker-client access is a distinct entitlement and ingress configuration. It requires selected nginx placement, a Domain, TLS certificate, and a repository- or action-scoped token. Each token request rechecks current authorization and entitlement, so revoking either takes effect for subsequent access.
+External Docker-client access is a distinct entitlement and ingress configuration. It requires selected nginx placement, a Domain, TLS certificate, and a repository- or action-scoped token. After a license grace period ends, the external entry point and its settings are kept, but the token endpoint issues no new tokens until the plan is renewed. Each token request rechecks current authorization and entitlement, so revoking either takes effect for subsequent access.
 
 Enable external access only when a real client workflow requires it. Validate TLS, authentication, and the minimum repository/action permissions with a non-production client before relying on it for automation. Removing the ingress configuration stops client access but does not delete internally retained artifacts.
 

@@ -68,12 +68,12 @@ Choose only the roles you need:
 
 - **nginx node:** ingress, TLS materialization, Pages, access/error logs, and traffic metrics;
 - **Docker node:** Containers, Deployments, Compose Projects, files, logs, and runtime health;
-- **database node:** managed PostgreSQL, Redis, or ClickHouse instances and their durable storage;
+- **Storage Node:** managed PostgreSQL, Redis, or ClickHouse instances, managed object storage, their durable storage, and database backup jobs;
 - **Build Worker:** isolated BuildKit/containerd execution without exposing a Docker Engine socket;
 - **monitoring node:** monitoring-specific collection for supported targets;
 - **Relay Pool member:** additional Secure Link data-plane capacity and resilience.
 
-Role separation is an operational and security decision. A database node should have storage and backup policies appropriate for stateful services. A Build Worker processes repository-controlled build input and should not share a host with unrelated workloads or reusable infrastructure credentials. Treat the worker's outer VM or unprivileged system container as the security boundary; the inner build sandbox is defense in depth, not the only boundary.
+Role separation is an operational and security decision. A Storage Node should have storage and backup policies appropriate for stateful services. A Build Worker processes repository-controlled build input and should not share a host with unrelated workloads or reusable infrastructure credentials. Treat the worker's outer VM or unprivileged system container as the security boundary; the inner build sandbox is defense in depth, not the only boundary.
 
 A Docker Node normally needs control of the local Docker Engine. Anyone who controls that daemon path can create privileged containers, mount host paths, and affect other workloads on the same engine. Treat a Docker Node as root-equivalent within that host's Docker trust boundary; use a dedicated host or deliberately accepted workload boundary rather than assuming resource scopes isolate a compromised host administrator.
 

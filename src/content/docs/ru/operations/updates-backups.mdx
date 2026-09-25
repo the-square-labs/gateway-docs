@@ -28,11 +28,13 @@ lastReviewed: 2026-09-05
 
 Проверка восстановления должна подтвердить вход, расшифровку, повторное подключение нод, авторизацию Relay, работу Routes и сертификатов, привязки управляемых баз данных и непрерывность аудита. Резервная копия, которую ни разу не восстанавливали, не является планом восстановления.
 
-## Планируемые встроенные функции
+Данные баз данных не входят в этот набор. На тарифах Personal и выше [резервное копирование баз данных](/ru/databases/backups/) создаёт по расписанию штатные резервные копии управляемых и внешних баз PostgreSQL, Redis и ClickHouse в подключённом хранилище; на Community, а также для движков, которым нужно восстановление на момент времени, используйте штатные средства движка. См. [Управляемые и внешние базы данных: сравнение](/ru/databases/overview/#управляемые-и-внешние-базы-данных-сравнение).
 
-Подключения к внешним хранилищам для всех планов и управляемые хранилища с Secure Links с Personal ожидаются в **2.11**. Встроенное резервное копирование и восстановление управляемых баз данных с Personal, а также экспорт конфигурации Gateway для переноса на другой экземпляр на всех планах ожидаются в **2.12**. Это ориентиры дорожной карты, а не доступные сегодня операции.
+## Встроенные функции и дорожная карта
 
-Планируемый экспорт конфигурации не следует путать с существующим экспортом контейнерных архивов. До выпуска этих функций используйте описанные ниже ручные резервные копии и средства движков баз данных; перенос конфигурации сам по себе не заменяет защиту данных приложений.
+[Подключения к хранилищам и управляемое объектное хранилище](/ru/storage/overview/), а также [резервное копирование и восстановление баз данных](/ru/databases/backups/) доступны в 2.11 на тарифах Personal и выше. Экспорт конфигурации Gateway для переноса на другой экземпляр ожидается в **2.12** на всех тарифах; это ориентир дорожной карты, а не доступная сегодня операция.
+
+Планируемый экспорт конфигурации не следует путать с существующим экспортом контейнерных архивов. До его выпуска защищайте плоскость управления Gateway описанным ниже ручным набором для восстановления; резервные копии баз данных защищают данные приложений, а не состояние самого Gateway.
 
 ## Соберите комплект восстановления
 
@@ -54,49 +56,49 @@ PostgreSQL — авторитетное хранилище идентичнос�
 | `gateway_registry_auth` | материалы подписи токенов реестра |
 | `redis_data` | постоянное состояние Redis; полезно для согласованного полного восстановления, но не заменяет PostgreSQL |
 
-Сохраните также `.env` и использованный файл `docker-compose.manual.yml`. В `.env` находятся критичные для восстановления секреты: шифруйте его резервную копию отдельно и не прикладывайте к обращениям в поддержку.
+Сохраните также `.env` и использованный файл `docker-compose.yml`; и установщик, и ручная установка хранят его рядом с `.env`, при установке скриптом — по умолчанию в `/opt/gateway`. В `.env` находятся критичные для восстановления секреты: шифруйте его резервную копию отдельно и не прикладывайте к обращениям в поддержку.
 
 Следующий пример создаёт короткое окно согласованной офлайн-копии. Выполняйте команды из каталога с ручным Compose-файлом:
 
 ```bash
 mkdir -p gateway-recovery/{gateway_data,gateway_relay_identity,gateway_relay_state,gateway_registry_data,gateway_registry_auth,redis_data}
-cp .env docker-compose.manual.yml gateway-recovery/
+cp .env docker-compose.yml gateway-recovery/
 chmod 700 gateway-recovery
 chmod 600 gateway-recovery/.env
 
-docker compose -f docker-compose.manual.yml stop app relay registry
-docker compose -f docker-compose.manual.yml exec -T postgres \
+docker compose -f docker-compose.yml stop app relay registry
+docker compose -f docker-compose.yml exec -T postgres \
   pg_dump -U gateway -d gateway -Fc > gateway-recovery/postgres.dump
-docker compose -f docker-compose.manual.yml stop redis
-docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway/. gateway-recovery/gateway_data/
-docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway-relay/. gateway-recovery/gateway_relay_identity/
-docker compose -f docker-compose.manual.yml cp --archive relay:/var/lib/gateway-relay/state/. gateway-recovery/gateway_relay_state/
-docker compose -f docker-compose.manual.yml cp --archive registry:/var/lib/registry/. gateway-recovery/gateway_registry_data/
-docker compose -f docker-compose.manual.yml cp --archive app:/var/lib/gateway-registry-auth/. gateway-recovery/gateway_registry_auth/
-docker compose -f docker-compose.manual.yml cp --archive redis:/data/. gateway-recovery/redis_data/
-docker compose -f docker-compose.manual.yml start redis registry app relay
+docker compose -f docker-compose.yml stop redis
+docker compose -f docker-compose.yml cp --archive app:/var/lib/gateway/. gateway-recovery/gateway_data/
+docker compose -f docker-compose.yml cp --archive app:/var/lib/gateway-relay/. gateway-recovery/gateway_relay_identity/
+docker compose -f docker-compose.yml cp --archive relay:/var/lib/gateway-relay/state/. gateway-recovery/gateway_relay_state/
+docker compose -f docker-compose.yml cp --archive registry:/var/lib/registry/. gateway-recovery/gateway_registry_data/
+docker compose -f docker-compose.yml cp --archive app:/var/lib/gateway-registry-auth/. gateway-recovery/gateway_registry_auth/
+docker compose -f docker-compose.yml cp --archive redis:/data/. gateway-recovery/redis_data/
+docker compose -f docker-compose.yml start redis registry app relay
 ```
 
-Перенесите `gateway-recovery` в зашифрованное хранилище вне хоста и проверьте там контрольную сумму. Этот пример не копирует базы данных на нодах баз данных — для данных приложений используйте штатные средства соответствующего движка.
+Перенесите `gateway-recovery` в зашифрованное хранилище вне хоста и проверьте там контрольную сумму. Этот пример не копирует базы данных на нодах хранилища — для данных приложений используйте штатные средства соответствующего движка.
 
 Для восстановления на чистом совместимом хосте сначала верните `.env` и тот же Compose-файл, создайте остановленные Containers, скопируйте постоянные данные, запустите PostgreSQL и импортируйте дамп, а затем запускайте остальной контур управления:
 
 ```bash
-docker compose -f docker-compose.manual.yml create
+docker compose -f docker-compose.yml create
 
-docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_data/. app:/var/lib/gateway
-docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_relay_identity/. app:/var/lib/gateway-relay
-docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_relay_state/. relay:/var/lib/gateway-relay/state
-docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_registry_data/. registry:/var/lib/registry
-docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/gateway_registry_auth/. app:/var/lib/gateway-registry-auth
-docker compose -f docker-compose.manual.yml cp --archive gateway-recovery/redis_data/. redis:/data
+docker compose -f docker-compose.yml cp --archive gateway-recovery/gateway_data/. app:/var/lib/gateway
+docker compose -f docker-compose.yml cp --archive gateway-recovery/gateway_relay_identity/. app:/var/lib/gateway-relay
+docker compose -f docker-compose.yml cp --archive gateway-recovery/gateway_relay_state/. relay:/var/lib/gateway-relay/state
+docker compose -f docker-compose.yml cp --archive gateway-recovery/gateway_registry_data/. registry:/var/lib/registry
+docker compose -f docker-compose.yml cp --archive gateway-recovery/gateway_registry_auth/. app:/var/lib/gateway-registry-auth
+docker compose -f docker-compose.yml cp --archive gateway-recovery/redis_data/. redis:/data
 
-docker compose -f docker-compose.manual.yml up -d postgres
-docker compose -f docker-compose.manual.yml cp gateway-recovery/postgres.dump postgres:/tmp/gateway.dump
-docker compose -f docker-compose.manual.yml exec -T postgres \
+docker compose -f docker-compose.yml up -d postgres
+docker compose -f docker-compose.yml cp gateway-recovery/postgres.dump postgres:/tmp/gateway.dump
+docker compose -f docker-compose.yml exec -T postgres \
   pg_restore -U gateway -d gateway --clean --if-exists /tmp/gateway.dump
 
-docker compose -f docker-compose.manual.yml up -d redis registry app relay
+docker compose -f docker-compose.yml up -d redis registry app relay
 ```
 
 Сначала используйте ту же версию. Проверьте вход, расшифровку секретов, идентичность Relay и свежие подключения нод до обновления. Владельцы файлов могут различаться между хостами; при ошибке прав сравните владельцев внутри исходных и восстановленных Containers, не открывая запись всем пользователям.
@@ -104,7 +106,7 @@ docker compose -f docker-compose.manual.yml up -d redis registry app relay
 ## Процедура обновления Gateway
 
 1. Прочитайте примечания к выпуску и требования к промежуточным версиям.
-2. Подтвердите активный канал обновлений и целевую версию.
+2. Подтвердите активный канал обновлений и целевую версию, а также доступность службы лицензирования для Gateway; см. [Условия обновления в 2.11](#условия-обновления-в-211).
 3. Проверьте свежие резервные копии PostgreSQL и постоянных томов.
 4. Запишите текущие версии и дайджесты образов Gateway, Relay и демонов.
 5. Проверьте состояние PostgreSQL, Redis, Relay и диска.
@@ -116,9 +118,19 @@ docker compose -f docker-compose.manual.yml up -d redis registry app relay
 
 Работающий Container ещё не доказывает успешность обновления. Приложение должно расшифровывать существующие секреты, читать прежнее состояние, согласовывать фоновые службы с желаемым состоянием и обслуживать клиентские пути без ошибок.
 
+## Условия обновления в 2.11
+
+Каждое обновление Gateway на любом тарифе сначала авторизует целевой выпуск в службе лицензирования `license.thesqlabs.com`. Это касается и обновлений, запущенных из Console, и повторного запуска установщика. Gateway проверяет подписанный выпуск до изменения хоста:
+
+- **Служба лицензирования недоступна:** обновление останавливается до каких-либо изменений, а текущий Gateway продолжает работать. Поддерживаемого способа обновления без доступа к службе в 2.11 нет, поэтому на время окна обновления разрешите исходящие соединения со службой лицензирования.
+- **Платные установки:** установка, у которой есть или была платная активация, — в том числе истёкшая, отозванная, перенесённая или деактивированная, — получает коммерческое ядро для целевой версии, поэтому её существующие платные ресурсы продолжают работать после обновления. Gateway проверяет подпись, версию, размеры и хеши ядра и принимает авторизацию только в виде подписанного состояния лицензии для этого запроса. Если авторизация или проверка не удалась, текущий Gateway продолжает работать; Gateway никогда незаметно не заменяет платную установку на Community. Установка, у которой никогда не было платного тарифа, обновляется как Community.
+- **Выполняющиеся операции:** после загрузки образов и до изменения хоста Gateway ждёт завершения выполняющихся и ожидающих операций оркестрации — Deployments, операций Compose, действий Workload Availability, миграций и развёртываний сборок. Ожидание длится до 15 минут по умолчанию или до самого позднего срока, объявленного выполняющейся операцией, но не более 60 минут. Новые операции оркестрации во время ожидания отклоняются с кодом `GATEWAY_UPDATING`. Администратор может завершить ожидание раньше кнопкой **Update now**.
+
+Предыдущие образ и коммерческое ядро сохраняются, чтобы неудачное обновление можно было откатить. Как поставляются платные функции, описано в разделе [Коммерческое ядро](/ru/reference/plans-and-entitlements/#коммерческое-ядро).
+
 ## Обновления демонов и Relay
 
-Обновляйте по одному домену отказа. Для участников Relay Pool последовательно выводите каждого участника из обслуживания, обновляйте, проверяйте и возвращайте его, прежде чем переходить к следующему. Для обычных нод после повторного подключения проверяйте ресурсы, относящиеся к их роли. Не обновляйте одновременно все ноды Ingress, баз данных или Relay, если для среды не проверен независимый путь восстановления.
+Обновляйте по одному домену отказа. Для участников Relay Pool последовательно выводите каждого участника из обслуживания, обновляйте, проверяйте и возвращайте его, прежде чем переходить к следующему. Для обычных нод после повторного подключения проверяйте ресурсы, относящиеся к их роли. Не обновляйте одновременно все ноды Ingress, ноды хранилища или участников Relay, если для среды не проверен независимый путь восстановления.
 
 ## Процедура восстановления
 

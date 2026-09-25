@@ -41,6 +41,8 @@ Gateway owns the metadata and desired state for resources it creates or adopts. 
 
 Some Docker objects belong to a higher-level owner. Deployment slots are controlled through their Deployment, and Compose-labelled containers are grouped under their discovered project context. Do not mutate owner-managed children through a standalone lifecycle path: direct changes can create drift between the running daemon state and Gateway's recorded configuration.
 
+Containers that Gateway did not create are still visible and operable. A standalone container started with `docker run` can be restarted and inspected under resource-scoped permissions without adoption, while an external Compose project stays read-only until it is adopted. See [Containers that Gateway did not create](/en/docker/containers/#containers-that-gateway-did-not-create) and [Adopt an external project](/en/docker/compose/#adopt-an-external-project).
+
 Gateway-managed internal resources may include labels, runtime names, networks, volumes, credentials, build artifacts, and task records. Treat these as implementation details unless an action in Gateway explicitly exposes them. Deleting or renaming them through Docker tooling can break reconciliation, routing, or a future rollback.
 
 ## How lifecycle work is performed
@@ -48,6 +50,8 @@ Gateway-managed internal resources may include labels, runtime names, networks, 
 Long-running changes are represented as Tasks or operations. An operation records intent, progresses through daemon work, and finishes with a success or failure result that can be inspected later. Starting a second conflicting action while one is active can be rejected or deferred; wait for the current operation before retrying.
 
 Before changing a workload, review its dependent Routes, database bindings, grants, mounted volumes, source settings, and restart policy. Before deleting it, decide whether its data and public entry points must be retained elsewhere. A successful runtime stop is not the same as a completed deletion.
+
+Workloads reach databases in one of two ways. A [managed database](/en/databases/managed-databases/) can be bound to a Container, Deployment, or Compose service, and Gateway injects connection values for a dedicated engine identity. An external database is reached through connection values that you store as workload secrets. See [Managed and external databases at a glance](/en/databases/overview/#managed-and-external-databases-at-a-glance).
 
 ## Safe operational sequence
 

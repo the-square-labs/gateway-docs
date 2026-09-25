@@ -53,6 +53,8 @@ Keep a previous known-good Deployment available for the rollback window. Runtime
 
 A failed or cancelled build must not change the active public release. Inspect the worker assignment and logs to distinguish source authorization, dependency, build command, Build Secret, policy, or artifact-output failures. Correct the cause and retry; each retry creates a new operation rather than mutating the historical result.
 
+During a Gateway update, builds triggered by webhooks or polling are deferred and start once after the update completes.
+
 If a promoted release causes an incident, move the Route's Tag back to the prior verified Deployment. Then verify the route response, assets, runtime configuration, and nginx application state. Do not edit or replace the failed Deployment in place: its immutable record is important for diagnosis and rollback evidence.
 
 ## Operator details: build failure classification

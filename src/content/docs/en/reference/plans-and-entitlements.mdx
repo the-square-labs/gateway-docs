@@ -13,20 +13,26 @@ Gateway uses Community, Personal, Business, and Enterprise plans. Availability, 
 
 Choose a plan from the operating requirements, not from organization size. Start with the workflows that must be supported, the resource limits they need, the security controls required by policy, and the support or commercial terms required by the buyer. The installation owner is responsible for monitoring license health; resource owners should know which operations depend on paid entitlements.
 
-Ready paid features are enforced at the operation boundary as well as in the UI. Ordinary key expiry preserves existing configured infrastructure and enabled runtime modules while blocking new premium resources, paid-feature expansion, and paid-only operations after grace. An explicit deactivation, activation replacement, revocation, invalid key, or policy violation is an authoritative loss and can disable protected entry points. Grace periods and exact feature availability can change with product releases; review the current matrix before publication.
+Ready paid features are enforced at the operation boundary as well as in the UI. When a paid plan ends, existing infrastructure keeps running: after the grace period, creating paid resources and changing their configuration are blocked, while existing paid resources keep working. Revocation, transfer to another installation, and deactivation have no grace period. Grace periods and exact feature availability can change with product releases; review the current matrix before publication.
 
-Community installations do not require a key. A Business or Enterprise key represents one active Gateway instance; resource quotas inside a Gateway instance must not be confused with separate Wiolett Cloud quotas.
+Community installations do not require a key. A Personal, Business, or Enterprise key represents one active Gateway instance; resource quotas inside a Gateway instance must not be confused with separate Wiolett Cloud quotas.
+
+## Self-hosting and managed cloud
+
+Every plan—Community, Personal, Business, and Enterprise—can be self-hosted. A paid key unlocks paid features and limits on an installation you run; no plan requires Square Labs to host the control plane. A managed cloud option, in which Square Labs operates the Gateway control plane, is offered separately by request. In a self-hosted installation, encrypted credentials and the master key stay in your environment; see [Where secrets live in a self-hosted installation](/en/security/security-model/#where-secrets-live-in-a-self-hosted-installation). For common pre-purchase questions, see [Evaluating Gateway](/en/getting-started/evaluating-gateway/).
 
 ## Plan progression
 
 | Plan | Typical capability boundary |
 | --- | --- |
-| Community | Core ingress, Docker, external databases, monitoring, identity, automation, AI Workspace, Inference, and up to the documented Community resource limits |
-| Personal | Community plus managed databases, managed single-node Compose lifecycle, Pages, status pages, archive/migration operations, and unlimited documented core quotas |
+| Community | Core ingress, Docker, external Compose discovery, monitoring, identity, REST API, OAuth, and MCP automation, AI Workspace chat, Inference, and up to 25 managed Nodes, 3 users, and 1 custom permission group |
+| Personal | Community plus external database connections, storage connections, managed databases and object storage, database backup and restore, GitLab integration, AI Plan Mode, Scenarios, and Sandboxes, managed single-node Compose lifecycle, Pages, status pages, archive/migration operations, and unlimited documented core quotas |
 | Business | Personal plus multi-node Workload Availability (HA), Git push-to-deploy, isolated Build Workers, Secure Runtime, vulnerability admission, structured logging, audit export, and optional external registry access |
 | Enterprise | Business plus Internal PKI, SIEM audit export, enterprise identity roadmap capabilities, and dedicated commercial benefits |
 
-The exact feature matrix is release-specific. Product pages identify prerequisites and this page explains lifecycle behavior; pricing and contract terms belong to the applicable commercial agreement.
+The exact feature matrix is release-specific. Product pages identify prerequisites and this page explains lifecycle behavior; pricing and contract terms belong to the applicable commercial agreement. Current published prices are on the [Good Gateway website](https://goodgateway.dev/#pricing).
+
+**Guided Onboarding and Configuration Review** (Business and Enterprise) and **Assisted Deployment and Migration** (Enterprise) are plan benefits delivered by Square Labs, not runtime features; their scope is defined by the commercial agreement. On any plan, start a migration with the [adoption pilot](/en/getting-started/adoption-pilot/).
 
 ## Feature matrix
 
@@ -40,7 +46,6 @@ The exact feature matrix is release-specific. Product pages identify prerequisit
 | Private Gateway-Managed Internal Docker Registry | Ready | ✅ | ✅ | ✅ | ✅ |
 | SSL/TLS Certificate Management | Ready | ✅ | ✅ | ✅ | ✅ |
 | Domain and DNS Management | Ready | ✅ | ✅ | ✅ | ✅ |
-| External Database Connections and Explorers | Ready | ✅ | ✅ | ✅ | ✅ |
 | Infrastructure Monitoring | Ready | ✅ | ✅ | ✅ | ✅ |
 | Physical GPU Discovery, Attachment, and Monitoring | Ready | ✅ | ✅ | ✅ | ✅ |
 | Alerts and Webhook Notifications | Ready | ✅ | ✅ | ✅ | ✅ |
@@ -49,16 +54,18 @@ The exact feature matrix is release-specific. Product pages identify prerequisit
 | Audit Log | Ready | ✅ | ✅ | ✅ | ✅ |
 | REST API, OAuth, and MCP Automation | Ready | ✅ | ✅ | ✅ | ✅ |
 | General Gateway CLI | Expected in 2.13 | ✅ | ✅ | ✅ | ✅ |
-| GitLab Integration | Ready | ✅ | ✅ | ✅ | ✅ |
-| AI Workspace, Plan Mode, Scenarios, and AI Sandboxes | Ready, opt-in | ✅ | ✅ | ✅ | ✅ |
+| AI Workspace Chat | Ready, opt-in | ✅ | ✅ | ✅ | ✅ |
 | Gateway Inference | Ready, opt-in | ✅ | ✅ | ✅ | ✅ |
 | Automated Installation and Signed Updates | Ready | ✅ | ✅ | ✅ | ✅ |
-| Storage Connections: S3, R2, MinIO, FTP, FTPS, SFTP, and SMB | Expected in 2.11 | ✅ | ✅ | ✅ | ✅ |
 | Gateway Configuration Export for Transfer to Another Instance | Expected in 2.12 | ✅ | ✅ | ✅ | ✅ |
-| Managed Nodes | Plan limit | 100 | Unlimited | Unlimited | Unlimited |
-| Users | Plan limit | 10 | Unlimited | Unlimited | Unlimited |
-| Custom Permission Groups | Plan limit | 5 | Unlimited | Unlimited | Unlimited |
+| Managed Nodes | Plan limit | 25 | Unlimited | Unlimited | Unlimited |
+| Users | Plan limit | 3 | Unlimited | Unlimited | Unlimited |
+| Custom Permission Groups | Plan limit | 1 | Unlimited | Unlimited | Unlimited |
 | Support Level | Service level | Community | Standard | Priority | Priority + Dedicated |
+| External Database Connections and Explorers | Ready | — | ✅ | ✅ | ✅ |
+| Storage Connections: S3, R2, MinIO and Other S3-Compatible Services, FTP, FTPS, and SFTP | Ready | — | ✅ | ✅ | ✅ |
+| GitLab Integration | Ready | — | ✅ | ✅ | ✅ |
+| AI Workspace Plan Mode, Scenarios, and AI Sandboxes | Ready, opt-in | — | ✅ | ✅ | ✅ |
 | Container Export and Import | Ready | — | ✅ | ✅ | ✅ |
 | Blue/Green Deployments | Ready | — | ✅ | ✅ | ✅ |
 | Cross-Node Container and Deployment Migration | Ready | — | ✅ | ✅ | ✅ |
@@ -67,8 +74,8 @@ The exact feature matrix is release-specific. Product pages identify prerequisit
 | Public Status Pages | Ready, opt-in | — | ✅ | ✅ | ✅ |
 | Pages | Ready | — | ✅ | ✅ | ✅ |
 | Automatic GitLab Container Registry Discovery | Ready | — | ✅ | ✅ | ✅ |
-| Managed Database Backup and Restore | Expected in 2.12 | — | ✅ | ✅ | ✅ |
-| Managed Storages with Secure Links | Expected in 2.11 | — | ✅ | ✅ | ✅ |
+| Database Backup and Restore for Managed and External Databases | Ready | — | ✅ | ✅ | ✅ |
+| Managed Object Storage (MinIO) with Private Bindings and Secure Links | Ready | — | ✅ | ✅ | ✅ |
 | Docker Secure Runtime (`runsc`/gVisor) | Ready | — | — | ✅ | ✅ |
 | Git Repository Push-To-Deploy for Containers, Deployments, Compose, and Pages; Isolated Build Workers | Ready | — | — | ✅ | ✅ |
 | External Docker-Client Access to the Internal Registry | Ready, opt-in | — | — | ✅ | ✅ |
@@ -87,7 +94,7 @@ The exact feature matrix is release-specific. Product pages identify prerequisit
 | Dedicated Technical Contact | Plan benefit | — | — | — | ✅ |
 | Assisted Deployment and Migration | Plan benefit | — | — | — | ✅ |
 
-Workload Availability (HA) is available. Storage connections and managed storages are expected in 2.11; managed-database backup/restore and Gateway configuration export for transfer to another instance are expected in 2.12. External storage connections and configuration export are planned for all plans; managed storages and database backups follow managed databases on Personal and higher.
+Storage connections, managed object storage, and database backup and restore are new in 2.11; Workload Availability (HA) remains available on Business and Enterprise. Gateway configuration export for transfer to another instance is expected in 2.12 on every plan. SMB is not a supported storage connection type.
 
 The general Gateway CLI for terminals and CI/CD is expected in **2.13** on every plan; this is not the existing Gateway Inference CLI. The Bastion / SSH management daemon is expected in **2.14** on Business and Enterprise. The [plugin system](/en/concepts/plugin-system/) is unfinished Gateway core infrastructure, not a plan feature; its tentative timing is no earlier than 2.20, with no committed release date.
 
@@ -99,24 +106,81 @@ See [Workload Availability](/en/docker/availability/) for HA prerequisites and b
 
 Ready paid features are enforced in backend operation boundaries as well as the Console. REST, OAuth, MCP, AI Workspace, background workers, and public token endpoints do not bypass entitlement checks.
 
-Missing entitlement returns a permission-style failure without deleting existing resources. Reached plan quotas block creation while preserving current records. A protected policy inconsistency fails closed rather than guessing a more permissive plan.
+Missing entitlement fails without deleting existing resources. Checks in the public Gateway core return `LICENSE_ENTITLEMENT_REQUIRED` (HTTP 403). Areas implemented by the commercial core—for example databases, storage, backups, GitLab, Pages, and user-facing PKI—show a plan notice in the Console and are unavailable through the API until the required plan and core are active. Reached plan quotas return `LICENSE_QUOTA_EXCEEDED` (HTTP 409) while preserving current records. A protected policy inconsistency fails closed rather than guessing a more permissive plan.
+
+Community quotas for managed Nodes, users, and custom permission groups are checked only when you create one of them, when a user is provisioned on first sign-in through OIDC, or when a deleted user is restored. The Node count includes pending and offline Nodes. Nodes, users, and groups that already exceed a quota—for example after a downgrade or an upgrade from 2.10—keep working and are never deleted or disabled. Entitlement checks read the license state cached in the installation, so an individual operation never waits for the license service.
+
+## Commercial core
+
+Community and paid plans run the same Gateway images. Paid features are delivered as a separately signed commercial core that Gateway downloads from the license service for an installation that holds or held a paid activation, and verifies before use: the signature, the exact Gateway version, file sizes, and hashes must match. Gateway loads the core only when it starts.
+
+Activating a paid key in **Settings > General > License** prepares the matching core through the signed update mechanism while Gateway keeps serving requests, then restarts Gateway to load it. If preparation fails, the key remains activated and **Enable paid features** retries it. A key activated during the initial setup wizard does not prepare the core; open the license settings afterwards and select **Enable paid features**. When a valid key is present but the core is missing or rejected, the Console reports that paid features are not ready, which is different from an insufficient plan, and existing infrastructure keeps running.
+
+## Upgrading a Community installation from 2.10
+
+2.11 applies the new Community limits and feature list immediately after the upgrade:
+
+- Nodes, users, and groups above 25, 3, and 1 keep working, but you cannot add more.
+- Existing external database connections, GitLab connectors, and AI Plan Mode data are kept in the database, but they cannot be opened on Community. Database monitoring and GitLab synchronization stop.
+- Other Community features, including Docker, ingress, TLS, monitoring, identity, API and MCP automation, AI Workspace chat, and Gateway Inference, continue unchanged.
+
+Applying a Personal or higher key restores access to the retained records.
+
+Paid keys issued before 2.11 keep their plan. Personal, Business, and Enterprise keys with an older entitlement format include the new storage connection, external database connection, managed storage, and AI Plan Mode, Scenarios, and Sandboxes capabilities.
+
+## License service communication
+
+Gateway contacts `https://license.thesqlabs.com` for these purposes only:
+
+| Request | When | Data sent |
+| --- | --- | --- |
+| Register the installation | First start, or when the stored installation token is no longer valid | Installation ID, a locally generated registration nonce, installation name, Gateway version, and entitlements schema version |
+| Heartbeat | Shortly after start, then every 15 minutes with a paid key or every 30 minutes on Community, and when an administrator selects a manual check | Installation token, installation name, Gateway version, and entitlements schema version |
+| Activate or deactivate a key | When an administrator applies or removes a paid key | Installation token and entitlements schema version, plus the paid key on activation |
+| Authorize a release | Before every Gateway update, on every plan, and when paid features are enabled | Installation token, target Gateway version, and entitlements schema version |
+| Download the commercial core | During an update or paid-feature activation of an installation that holds or held a paid activation | Installation token, target Gateway version, release ID, file path, and entitlements schema version |
+
+Every request also carries a random request nonce and the IDs of the signing keys that the Gateway release pins. The installation ID is a random identifier generated by the installation. The installation name is the host name of Gateway's configured public URL, or the server host name when no public URL is saved. Gateway does not send infrastructure configuration, resource contents, secrets, logs, user or resource counts, prompts, or model responses. The license key, installation token, and registration nonce are stored encrypted in the installation. Community installations remain usable while registration is pending or the service is unreachable. Activating a paid key and updating Gateway on any plan require the service to be reachable; a refused or failed update leaves the current version running. See [Updates, backups, and restore](/en/operations/updates-backups/#update-prerequisites-in-211).
+
+### Signed license states
+
+The license service signs every license state it returns—for registration, heartbeats, activation, deactivation, and release authorization—with Ed25519. The signature covers the installation ID, the request purpose, the request nonce, the issue time, and the complete state, including plan, entitlements, expiry, and grace deadline. Gateway releases pin the service's public keys and apply a state only when:
+
+- the signature is valid for a pinned key;
+- the state was signed for this installation and for this request's purpose and nonce, so a captured response cannot be replayed or used by another installation;
+- the issue time is within 15 minutes of the local clock.
+
+An unsigned, forged, replayed, foreign, or stale response is treated like an unreachable service: the last valid signed state stays in force and the offline grace continues from its issue time. Registration and activation fail rather than store credentials from an unsigned response, and a commercial-core download is authorized only by a signed state for that request. Gateway stores the signed states and verifies them again whenever it reads the license, so editing the cached license in the database cannot raise the plan. Keep the Gateway host clock synchronized; a clock that is more than 15 minutes off makes every response look stale.
 
 ## Downgrade and expiry
 
-After an ordinary key expiry, Gateway preserves existing premium resources, running services, data, published Pages deployments, and enabled runtime modules. It does not stop workloads, remove Routes, or switch off Internal PKI, SIEM, structured logging, or an already configured registry entry point merely because renewal was late. New premium resources, paid-feature expansion, and one-shot premium operations are blocked after the plan-specific grace period.
+A paid plan can end through expiry, a downgrade to a lower plan, an unreachable license service, revocation, transfer of the key to another installation, or explicit deactivation. Until the matching grace period ends, everything keeps working as before, including SIEM forwarding and external Docker-client access to the internal registry.
 
-Existing Git-delivered workloads, source settings, build history, and internal-registry artifacts remain in place. New source builds and other paid-only automation stop until the required plan returns. Renewing the key restores full operations without rebuilding existing resources.
+| Cause | Grace period | Counted from |
+| --- | --- | --- |
+| Expiry | 24 hours on Personal, 3 days on Business, 7 days on Enterprise | The expiry date |
+| License service unreachable | 100 days, never beyond the expiry grace | The issue time of the last valid signed license state |
+| Downgrade to a lower paid plan | The higher plan's grace: 24 hours, 3 days, or 7 days | The last signed state that still reported the higher plan |
+| Revocation, transfer to another installation, deactivation, invalid key | None | — |
 
-If the licensing service is unreachable, a previously valid paid installation uses its cached state for a 100-day technical offline-validation grace period measured from the last valid check. This connectivity grace does not extend a known subscription expiration deadline. After connectivity grace ends, new paid-only operations are blocked while existing configured infrastructure remains in place.
+During expiry grace the license status is **Expired — grace period** and the Dashboard shows a warning; while the service is unreachable it is **Licensed with warning**. Gateway evaluates the deadlines locally and does not wait for another heartbeat.
 
-An authoritative loss is different from ordinary expiry. Explicit deactivation, transfer to another installation, revocation, an invalid key, or a policy violation may disable protected entry points and switchable modules while retaining stored configuration and resource data. This distinction prevents accidental renewal delays or a license-service outage from becoming a customer data-plane outage without weakening deliberate revocation.
+After the grace period—or immediately after revocation, transfer, or deactivation—new actions use Community entitlements, while existing paid resources keep a continuity entitlement for the highest paid plan the installation held, as proven by a stored signed license state:
+
+- **Keeps working:** all existing workloads and the data plane—Containers, Deployments, Compose Projects, Routes, Secure Links, managed database and storage bindings, Relays, published Pages deployments, Internal PKI certificate revocation lists, and structured-log ingestion. Existing scheduled backups, their retention, **Run now**, cancellation, and restores into existing databases continue. Workload Availability keeps healing and can start, stop, and restart existing workloads, and existing GitLab connectors keep synchronizing. For existing paid resources you can still view them, read logs and monitoring, test connections, reveal and rotate credentials, revoke and export certificates, and delete them.
+- **Pauses:** SIEM forwarding and token issuance for external Docker-client access to the internal registry. Their settings, the registry's external entry point, and SIEM delivery history are kept, and records already queued for SIEM are delivered after renewal; audit events that occur while forwarding is paused are not queued. Both resume on renewal without reconfiguration.
+- **Blocked:** creating paid resources, changing the configuration of existing paid resources, writing data through the database and object-storage explorers (deleting rows, keys, objects, and buckets remains possible), restoring a backup into a new managed database, and paid-only operations such as archive export and import, migration, audit export, and Git source builds. Creations above the Community node, user, and group limits are refused. These return `LICENSE_ENTITLEMENT_REQUIRED` or `LICENSE_QUOTA_EXCEEDED`.
+
+Gateway never changes stored configuration, disables modules, or deletes managed resources because a plan ended. Renewing or reactivating a key restores full paid operations without rebuilding existing infrastructure. The [Paid Key Terms](https://github.com/the-square-labs/gateway/blob/main/COMMERCIAL-LICENSE.md) govern whether you may keep operating paid resources after revocation; Gateway itself does not stop them.
+
+An installation keeps receiving updates after its paid plan ends. An installation that holds or held a paid activation—including an expired, revoked, transferred, or deactivated one—receives the matching commercial core with each update, so its existing paid resources keep running under these rules. An installation that never held a paid plan updates as Community.
 
 ## Operational checks
 
 - Verify the installation ID and intended active instance before applying a key.
 - Monitor expiry and local grace deadline.
 - Test required premium operations before a production launch.
-- Record which services will stop accepting new work after downgrade.
+- Record which operations will be blocked after grace, and that SIEM forwarding and external registry tokens pause.
 - Restore entitlement before manually replacing preserved resources.
 
 Do not use old `homelab` terminology or infer feature availability from pricing copy, screenshots, or a different Gateway release.
@@ -129,9 +193,9 @@ Before downgrade, expiry, or transfer to another installation:
 
 1. identify premium resources and automation that will stop accepting new work;
 2. preserve source settings, build artifacts, PKI, logging, and SIEM configuration;
-3. confirm which running resources remain operational and whether the state is ordinary expiry or authoritative loss;
+3. confirm which running resources remain operational and which grace period applies;
 4. communicate the operational deadline and owner;
-5. restore entitlement and explicitly re-enable switchable services where required;
+5. restore entitlement and confirm that paused SIEM forwarding and external registry access resumed;
 6. verify customer paths rather than assuming the previous configuration resumed.
 
 Do not delete preserved resources to “clean up” an entitlement warning. Their retained state is the recovery path after the correct plan returns.
