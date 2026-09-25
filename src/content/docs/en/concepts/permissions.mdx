@@ -5,7 +5,7 @@ section: Concepts
 order: 3
 audience: [security-admin, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 Gateway uses explicit scopes. A scope has a capability base and may include a resource suffix.
@@ -37,7 +37,35 @@ Do not grant a global management scope merely because the workflow crosses sever
 
 Global scopes apply across the permitted product area. Node-scoped grants restrict operations to resources on a specific managed Node when the resource contract supports that scope. Resource-scoped grants identify one durable Gateway resource. Folders can group supported resources and participate in access design, but moving a resource into a folder does not change its runtime ownership or network path.
 
+Any action scope implies view of the same resources: `proxy:edit:<route-id>` shows that Route, and `docker:containers:manage:<node-id>` shows the containers on that Node. Creation scopes are the exception: they imply no view at all, whether they are broad or restricted to a folder or Node. See [Implied view access](/en/identity/scopes-reference/#implied-view-access).
+
 Resource visibility and host visibility are intentionally distinct. A user can operate an assigned workload without learning unrelated host inventory. Search, navigation, REST, MCP discovery, realtime subscriptions, and direct resource requests must all apply the same effective access rules. A hidden navigation item is not proof of denial; verify a direct request as well.
+
+## Restrict access to a folder
+
+A folder grant limits a user, group, API token, or OAuth grant to the resources inside one folder and its subfolders. It suits a project team that should see and operate only its own resources, for example everything that belongs to **MyProject**.
+
+1. Create a **MyProject** folder in each area the team uses, for example Routes, Docker containers, and Databases. Each resource type has its own folder tree, so a Routes folder does not cover containers. See [Folder support by resource type](/en/identity/scopes-reference/#folder-support-by-resource-type).
+2. Move the project's existing resources into those folders. Moving a resource needs the area's folder-management scope and edit access to the resource.
+3. In the group editor or the user's additional permissions, select the scopes the team needs, open each scope's restriction, and choose the **MyProject** folder. The saved grant has the form `<scope>:folder/<folder-id>`.
+
+| Goal | Scopes restricted to the folder |
+| --- | --- |
+| See and operate the project's containers and Deployments | `docker:containers:view`, `docker:containers:manage`; add `docker:containers:environment`, `docker:containers:secrets`, or `docker:containers:console` only when needed |
+| Create new containers and Deployments in the folder, including pulling their images | `docker:containers:create` |
+| Manage the project's Routes | `proxy:view`, `proxy:edit`, `proxy:create` |
+| Query the project's databases | `databases:view`, `databases:query:read` |
+
+What the user sees:
+
+- Every resource in the folder and its subfolders, including resources created in or moved into it later. Gateway resolves folder grants on every request, and open pages pick up newly visible resources without signing in again.
+- Nothing else: lists show only the granted resources, a granted folder that is still empty shows an empty list, and direct requests for other resources are denied. A resource moved out of the folder stops being visible unless the user has a separate grant for it.
+- Create dialogs offer only the folders the user may create in. **No folder** is hidden when the user cannot create at the top level, and the only allowed folder is preselected. Through the API or MCP, pass the folder as `folderId`; creating elsewhere returns `403`. Where a resource runs on a Node, the dialog lists only Nodes the user may deploy to, without granting Node administration.
+- A creation scope alone shows the folder as a destination but none of its contents. Grant a view scope on the folder as well when the team should see what is already there.
+
+**Settings > Advanced > Auto-assign permissions for created resources** is on by default. It adds grants for each new resource to its creator's additional permissions: view of the new resource always, and other per-resource scopes only when the creator already holds them broadly or on the destination folder or Node. A user with only a creation scope therefore sees exactly the resources they created. A folder-limited creator therefore keeps the same access if the resource is later moved out of the folder, but gains nothing new: view and create on a folder do not turn into console or secret access. Turning the setting off affects new resources only; existing grants stay and can be changed in **Assign permissions**.
+
+API tokens and OAuth grants accept the same folder restrictions. Their folders are resolved first and the result is then limited by the owner's own access, so a token never sees more than its owner; see [Restrict tokens and OAuth grants](/en/identity/scopes-tokens-oauth/#restrict-tokens-and-oauth-grants).
 
 ## Operate workloads without adopting them
 

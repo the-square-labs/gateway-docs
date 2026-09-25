@@ -5,7 +5,7 @@ section: Automation
 order: 3
 audience: [developer, platform-engineer]
 status: ready
-lastReviewed: 2026-09-02
+lastReviewed: 2026-09-25
 ---
 
 
@@ -92,7 +92,7 @@ You do not need to register an OAuth client manually for Codex or Claude Code:
 1. the client contacts `/api/mcp` and receives Gateway's OAuth discovery information;
 2. the client registers itself and starts Authorization Code with PKCE;
 3. Gateway opens a browser sign-in and consent screen;
-4. the user approves access bounded by their current Gateway scopes;
+4. the user approves access bounded by their current Gateway scopes and can limit it to folders or resources, for example with **Limit selected scopes to folder…**; see [Restrict tokens and OAuth grants](/en/identity/scopes-tokens-oauth/#restrict-tokens-and-oauth-grants);
 5. Gateway issues an OAuth access token for the MCP resource;
 6. the client stores that credential and sends it to `/api/mcp` on later requests.
 
@@ -112,7 +112,8 @@ Confirm that the client reports `good-gateway` as connected, only expected resou
 
 - **The endpoint returns 404:** enable **Settings → Features → OAuth and MCP access → MCP server** and verify that the URL ends in `/api/mcp`.
 - **The client requires authentication:** run `codex mcp login good-gateway` or `claude mcp login good-gateway`. In an interactive client, use `/mcp`.
-- **Login succeeds but Gateway returns 403:** the account needs `mcp:use` and at least one effective resource scope.
+- **Login succeeds but Gateway returns 403:** the account needs `mcp:use` and at least one effective resource scope. A grant limited to a folder sees only that folder's resources; creating elsewhere is denied.
+- **A client sends a scope name that no longer exists:** Gateway 2.11 still accepts the [retired scope names](/en/identity/scopes-reference/#retired-scope-names) for two releases and grants their replacements.
 - **The client exhausts its context with too many tools:** disable **Extended MCP compatibility** to use the compact initial catalog and category discovery.
 - **Gateway rejects the OAuth callback:** update the client and retry first. Normal Codex and Claude Code loopback callbacks do not require **OAuth extended callback compatibility**.
 - **A saved connection stopped working:** check whether the OAuth authorization, `mcp:use`, resource scopes, or canonical Gateway URL changed. Re-authenticate instead of substituting a normal API token.

@@ -49,6 +49,11 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   relay:
     image: ${GATEWAY_RELAY_IMAGE_REF}
@@ -73,6 +78,11 @@ services:
       timeout: 3s
       retries: 2
       start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   registry:
     image: ${GATEWAY_REGISTRY_IMAGE_REF}
@@ -104,6 +114,11 @@ services:
       timeout: 5s
       retries: 6
       start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   postgres:
     image: postgres:16-alpine
@@ -119,6 +134,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   redis:
     image: redis:7-alpine
@@ -131,6 +151,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
   gateway_data:

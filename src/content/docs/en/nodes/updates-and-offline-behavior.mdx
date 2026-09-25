@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 3
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-05
+lastReviewed: 2026-09-25
 ---
 
 
@@ -38,9 +38,13 @@ Gateway renews its internal certificates while it runs, without a restart, and r
 | Gateway listeners and the local Relay's service and client certificates | 365 days | Checked hourly and renewed 30 days before expiry; existing connections keep the old certificate until they reconnect. While unused enrollment tokens exist, renewal waits until the last 7 days, because installer commands pin the Gateway certificate fingerprint; commands generated before a renewal must then be generated again |
 | A certificate supplied through `GRPC_TLS_CERT` | Set by you | Never renewed by Gateway; a daily warning is logged |
 | Remote Relay server certificates | 365 days | Checked hourly while the Relay supervisor is connected and renewed 60 days before expiry, at most once a day |
-| Daemon client certificates on every Node | 365 days | Checked daily by the daemon and renewed 7 days before expiry; the new certificate takes effect when the daemon reconnects with it |
+| Daemon client certificates on every Node | 365 days | Checked hourly by the daemon and renewed once a third of the lifetime remains, about 120 days before expiry. A failed attempt is retried after 5, 10, 20, and 40 minutes, then hourly. The daemon reconnects to present the new certificate |
+| Registry proxy certificate on Docker Nodes | 2 years | Checked when the daemon starts and every 12 hours, and reissued from the same CA once a third of the lifetime or 30 days remain; served without a restart |
+| Managed storage and managed database TLS certificates | Set by Gateway | Checked hourly and reloaded in place without a restart; see [managed storage](/en/storage/overview/#tls-certificate-renewal) and [managed databases](/en/databases/managed-databases/#operator-details-storage-and-direct-tls) |
 
-A Node must stay connected to renew its certificate. Keep Nodes online, and investigate a Node that has been offline for a long time before its certificate expires.
+A Node must stay connected to renew its certificate. Because renewal starts months before expiry, a Node certificate with less than 30 days left means renewal is failing: Gateway raises a warning alert at 30 days and a critical alert at 7 days. Make sure the Node can reach Gateway and runs a current daemon; after its certificate expires, a Node must be enrolled again.
+
+The system CAs that issue these certificates are valid for 10 years and have no automatic rollover in 2.11. Certificates they issue end with the CA, and Gateway alerts 730, 365, 180, 60, 30, and 7 days before a system CA expires. See [Internal PKI](/en/certificates/internal-pki/#validity-expiry-alerts-and-automatic-reissue).
 
 ## Enrollment tokens
 

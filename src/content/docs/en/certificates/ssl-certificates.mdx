@@ -5,11 +5,11 @@ section: Certificates and PKI
 order: 1
 audience: [operator, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 
-Gateway supports ACME certificates and uploaded certificates. ACME can use HTTP-01 or DNS-01. Uploaded material should include the complete chain and matching private key.
+Gateway supports ACME certificates, uploaded certificates, and certificates linked from [Internal PKI](/en/certificates/internal-pki/). ACME can use HTTP-01 or DNS-01. Uploaded material should include the complete chain and matching private key.
 
 The business outcome is predictable HTTPS ownership: every public Route has an identified certificate owner, a renewal method, enough warning before expiry, and a tested replacement path. Gateway owns issuance workflow, relationship tracking, and distribution to the required Ingress Nodes. Your team still owns Domain control, external DNS correctness, approval of certificate names, and the response to a compromised key.
 
@@ -26,6 +26,7 @@ For HTTP-01 failures, verify Domain placement, public port 80, DNS, and challeng
 - Use **HTTP-01** when the hostname already resolves to the assigned Ingress node and public port 80 is reachable.
 - Use **DNS-01** when wildcard names are required or HTTP validation is not practical. Configure a supported DNS connector with the smallest zone scope.
 - Use **Upload** for certificates issued outside Gateway. Upload the private key, leaf certificate, and required intermediates as one coherent chain.
+- Use **Internal CA** to link a certificate issued by Gateway's Internal PKI, for services whose clients trust your private CA.
 
 Before issuing, confirm the Domain exists, its placement is final, and the requested names exactly match the intended Routes. Certificate issuance does not repair incorrect DNS or Route placement.
 
@@ -54,6 +55,15 @@ Monitor remaining lifetime and the most recent renewal attempt. Test DNS connect
 Changing a certificate can affect multiple Routes. Review relationships before rotation, preserve the previous material until external verification succeeds, and avoid combining certificate replacement with unrelated ingress changes.
 
 The success criteria for renewal are: the new validity window is visible, Gateway reports successful distribution to every required Ingress Node, public clients receive the new chain, and no Route falls back to a default or stale certificate. Retain the previous certificate only as long as policy and incident rollback require; do not leave expired private-key material broadly accessible.
+
+### Internal PKI certificates
+
+A linked Internal PKI certificate is reissued automatically, checked daily, when two thirds of its lifetime have passed or 30 days or fewer remain. The new certificate comes from the same CA and template with the same subject, names, key algorithm, and lifetime—ending with the CA if needed—and Gateway distributes it to every Route that uses it. This covers certificates referenced directly by a Route as well.
+
+- Automatic reissue works only when Gateway holds the private key. Linking such a certificate turns it on; certificates signed from a CSR are never reissued, and their expiry alert says so.
+- The previous certificate is not revoked, because an exported copy may still be in use; its expiry alert notes that a newer certificate exists.
+- The **Auto-Renew** column shows **Reissue** for certificates with automatic reissue. **Renew** in the row menu reissues immediately; it needs `ssl:cert:issue` on the SSL certificate and `pki:cert:issue` on the CA. **Disable Auto-Renew** turns automatic reissue off, and the certificate then keeps its current material; **Enable Automatic Reissue** turns it back on.
+- A failed reissue is shown on the certificate and raises one alert per day.
 
 ## Operator details: failure handling
 

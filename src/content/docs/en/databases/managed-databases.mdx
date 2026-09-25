@@ -5,7 +5,7 @@ section: Databases
 order: 2
 audience: [database-operator, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 
@@ -56,7 +56,7 @@ Provisioning failures commonly result from unavailable nodes, capacity limits, s
 
 Pause and unpause control compute while retaining the database data. Expect normal health, metrics, Explorer, and Console actions to be unavailable while the instance is paused. Restart creates a brief service interruption and should be announced to dependent applications when they cannot reconnect automatically.
 
-Resize only within the engine and storage constraints. Storage can grow but cannot shrink, and resize and settings changes are unavailable while the instance is paused. Back up before a substantial capacity change, follow the resize operation, then verify storage reporting and application behavior. Certificate rotation can briefly recreate the database service, so clients must continue trusting the Gateway Database CA.
+Resize only within the engine and storage constraints. Storage can grow but cannot shrink, and resize and settings changes are unavailable while the instance is paused. Back up before a substantial capacity change, follow the resize operation, then verify storage reporting and application behavior.
 
 Gateway keeps the engine owner credential internal and never returns it to users. **Reveal credentials** and credential rotation apply to a separate direct-access user that exists while TCP publication is enabled; rotation affects direct clients that use it. Application bindings retain their own engine identities and are not affected.
 
@@ -73,6 +73,10 @@ Deletion is destructive. First remove or migrate dependent bindings—Gateway re
 The Storage Node must pass the same storage preflight used by the runtime. Gateway-managed databases use fixed-size preallocated ext4 images rather than an unbounded Docker volume. VM and bare-metal hosts normally provide the required loop and mount capabilities. Containerized hosts require explicit loop-device and mount support; an unsupported host is rejected instead of silently falling back to weaker storage isolation.
 
 Direct publication uses native TLS. Gateway issues the server certificate from its separate Database CA and keeps the private key in daemon-owned storage outside the database image. PostgreSQL and Redis expose one TLS endpoint; ClickHouse exposes HTTPS and its native TLS endpoint. Clients must trust the displayed Database CA and should follow the documented hostname or certificate-fingerprint policy rather than disabling verification.
+
+Gateway renews the server certificate automatically, checking hourly: when two thirds of its lifetime have passed, 30 days or fewer remain, a configured service address is missing, or the certificate comes from another CA. The engine reloads the new certificate in place—PostgreSQL, Redis, and ClickHouse keep serving—and Gateway switches to it only after the instance serves it. The Database CA does not change, so clients that trust it keep working. The database detail page shows the certificate's expiry, renewal state, and last error.
+
+**Rotate TLS certificate** renews it immediately with the same in-place reload. A restart is used only when you allow it, when 7 days or fewer remain, or when the Node daemon cannot reload certificates yet. While renewal keeps failing, Gateway raises the **Managed Service Certificate Renewal Failed** notification event. API: `GET /api/databases/managed/{id}/certificate` and `POST /api/databases/managed/{id}/rotate-certificate` with optional `allowRestart`; MCP and assistant: `manage_managed_database` actions `certificate_status` and `rotate_certificate`.
 
 Gateway's own connections for Explorer, Console, monitoring, and backups reach a managed instance through the mutually authenticated Relay tunnel. For PostgreSQL with TLS, Gateway additionally verifies the server certificate against the Gateway Database CA and the identity issued to that instance. Redis and ClickHouse use plaintext inside the tunnel.
 

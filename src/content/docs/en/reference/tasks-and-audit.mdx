@@ -5,7 +5,7 @@ section: Reference
 order: 4
 audience: [operator, security-admin, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 
@@ -65,6 +65,19 @@ A succeeded Task means the owning workflow reached its documented terminal state
 A failed or interrupted Task does not prove that no side effect occurred. The owner may have created a container, written a file, changed a provider, or completed a runtime action before acknowledgement was lost. Read current owner state and operation history before cleanup or retry.
 
 Waiting states should identify the dependency or required input. If a Task remains waiting without a clear owner, preserve its IDs and escalate rather than using Force Cancel as routine cleanup.
+
+## Housekeeping and retention
+
+Housekeeping removes data that Gateway no longer needs, daily at 02:00 by default. Configure it under **Settings > Features > Housekeeping**: `housekeeping:view` shows the configuration, statistics, and run history, `housekeeping:run` starts a run, and `housekeeping:configure` changes categories and the schedule. Each category can be turned off. The **Audit Log** category keeps 90 days by default; export audit records to a SIEM when policy requires longer retention.
+
+Two categories added in 2.11 are on by default:
+
+| Category | What it removes |
+| --- | --- |
+| **Operation History** | Finished Docker container Tasks after one day. After the retention period, 90 days by default: finished builds with their logs, empty build batches, finished Compose, Workload Availability, and hosting operations, and Git source webhook deliveries. Each resource keeps its 10 most recent runs, and records that something still uses—a build artifact, an Availability placement, a snapshot, or a hosted Node's origin—are kept |
+| **Expired OAuth Grants** | Expired OAuth authorization codes and access and refresh tokens, and OAuth clients that have had no grant for 90 days. A refresh token is kept until it expires, so that its reuse is still detected |
+
+Other categories cover nginx logs, dismissed alerts, notification deliveries, structured logs, ClickHouse system tables, orphaned AI artifacts, the internal registry, orphaned volumes, retired system PKI keys, ACME challenge files, and old Gateway images.
 
 ## Retention and external evidence
 

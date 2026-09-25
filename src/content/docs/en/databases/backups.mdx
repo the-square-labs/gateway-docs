@@ -16,7 +16,8 @@ A backup protects application data. It does not replace the Gateway control-plan
 
 - A storage connection with an existing destination bucket. Gateway writes into the bucket and prefix you select; it does not create the bucket. Bucket names must follow S3 naming rules even for FTP, FTPS, and SFTP destinations, where buckets are directories below the base path.
 - A Storage Node that runs an up-to-date daemon and can reach both the database and the storage endpoint. For private managed databases and managed object storage, Gateway opens temporary private routes for the duration of the run.
-- A managed storage destination with TLS must have a certificate that includes `localhost` and `127.0.0.1`. Clusters created with an earlier release receive one the next time their settings are saved; until then, runs fail with `BACKUP_STORAGE_CERTIFICATE_OUTDATED`.
+- A managed storage destination with TLS must serve a certificate that includes `localhost` and `127.0.0.1`. Gateway adds those names automatically to clusters created with an earlier release; until the new certificate is served, runs wait in the queue with the reason shown and retry on their own, and fail with `BACKUP_STORAGE_CERTIFICATE_OUTDATED` after 7 hours. See [TLS certificate renewal](/en/storage/overview/#tls-certificate-renewal).
+- While a managed storage destination has its writes frozen for a [migration](/en/storage/overview/#migrating-from-minio), backups and restores that would write to it are refused with `STORAGE_WRITES_FROZEN`; move or pause their policies first.
 - For an external database that uses TLS, the backup and restore jobs apply the connection's [certificate verification setting](/en/databases/overview/#tls-certificate-verification-for-external-connections) and its custom CA. An executor whose Docker daemon is older than 2.11 cannot verify certificates, so a run for a verified connection fails with `BACKUP_EXECUTOR_TLS_VERIFICATION_UNSUPPORTED`; update the Storage Node, or turn verification off for that connection.
 - The Storage Node must be able to pull the backup runner image from GitHub Container Registry. The runner is started only for a backup or restore and, like other Gateway-internal containers, is hidden from container lists and user lifecycle actions. It contains fixed native tools; API clients cannot supply commands, scripts, SQL, or other images.
 - Permission to manage backup policies on the database, `nodes:backups:execute` for the executor Node, and the storage permissions listed in [Permissions](#permissions). The built-in **operator** group does not include them all.
@@ -65,10 +66,10 @@ Scheduled runs and retention act as the policy owner—the user who last saved t
 ## Restore a backup
 
 1. In the **Backups** tab, open **Backup history** and choose **Restore** on a completed run.
-2. Choose the **Storage node** that runs the restore and enter a name for the new managed database. Where the engine uses a database name, you can change the target database name.
+2. Choose the **Storage node** that runs the restore, enter a name for the new managed database, and optionally choose a database folder for it. Where the engine uses a database name, you can change the target database name.
 3. Follow the restore run to completion, then verify the new database with application queries before switching clients to it.
 
-Restore from the Console creates a new managed database on the executor Storage Node and never overwrites existing databases. It requires permission to create databases on that Node. Gateway uses the newest catalog version with the backup's major engine version and fails if none exists. The new database gets 1 CPU, 1024 MB of memory (2048 MB for ClickHouse), no swap, no TCP publication, TLS enabled, and storage of 20 GB or three times the backup size, whichever is larger; resize it afterwards if needed. The restore job itself uses the default resource limits—20 GiB of workspace and a one-hour timeout—rather than the policy's limits; the API can override them.
+Restore from the Console creates a new managed database on the executor Storage Node and never overwrites existing databases. It requires permission to create databases on that Node or in the chosen folder. Gateway uses the newest catalog version with the backup's major engine version and fails if none exists. The new database gets 1 CPU, 1024 MB of memory (2048 MB for ClickHouse), no swap, no TCP publication, TLS enabled, and storage of 20 GB or three times the backup size, whichever is larger; resize it afterwards if needed. The restore job itself uses the default resource limits—20 GiB of workspace and a one-hour timeout—rather than the policy's limits; the API can override them.
 
 Through the API you can also restore a managed or external backup into an existing, empty database connection of the same engine that is not the source. This requires restore permission on the backup's database and edit permission on the target. A native preflight check confirms that the target is empty, and Gateway checks again immediately before restoring.
 
@@ -82,10 +83,7 @@ Through the API you can also restore a managed or external backup into an existi
 | `databases:backups:restore` | Restore a completed backup |
 | `nodes:backups:execute` | Use a Storage Node as the executor |
 
-The destination and staging storage are checked separately. `storage:credentials:use` lets the backup runner receive the saved storage credentials without showing them to the user; `storage:credentials:reveal` includes it.
-
-- creating or changing a policy, starting or cancelling a run, retention, and deleting backup files require `storage:objects:write` and `storage:credentials:use` on the destination;
-- restoring requires `storage:objects:read` and `storage:credentials:use` on the destination, plus `storage:objects:write` and `storage:credentials:use` on staging storage when it is used.
+The destination and staging storage are checked separately. Creating or changing a policy, starting or cancelling a run, retention, deleting backup files, and restoring need only `storage:credentials:use` on the destination, and on staging storage when it is used. It lets the backup runner receive the saved storage credentials without showing them to the user, and it does not open the object browser; `storage:credentials:reveal` includes it. No `storage:objects:*` scope is needed.
 
 The built-in **admin** and **operator** groups include `storage:credentials:use`. The operator group can create policies and run backups, but it does not include `databases:backups:restore`. Scoped API tokens and OAuth grants keep their own narrower authority. See the [scope reference](/en/identity/scopes-reference/#database-backups).
 
@@ -94,7 +92,7 @@ The built-in **admin** and **operator** groups include `storage:credentials:use`
 Deleting a policy stops future runs. To remove a finished run from **Backup history**, choose what happens to its files in storage:
 
 - A run without remaining files, for example after retention removed them, is removed directly.
-- **Delete backup and files** deletes the backup files and then the history entry; the backup can no longer be restored. This needs `storage:objects:write` and `storage:credentials:use` on the destination. If the storage refuses the deletion, the entry is kept, the reason is shown, and you can retry or forget the entry instead.
+- **Delete backup and files** deletes the backup files and then the history entry; the backup can no longer be restored. This needs `storage:credentials:use` on the destination. If the storage refuses the deletion, the entry is kept, the reason is shown, and you can retry or forget the entry instead.
 - **Forget entry** removes only the history entry and leaves the files in storage; the audit log records their bucket and prefix.
 
 Through the API, `DELETE /api/databases/{id}/backups/runs/{runId}` takes `artifacts=delete` or `artifacts=forget`. Without it, a run whose files still exist is refused with `BACKUP_HISTORY_HAS_ARTIFACTS` (409); a failed file deletion returns `BACKUP_ARTIFACT_DELETE_FAILED` (502) and keeps the entry; a run whose files a restore is still reading returns `BACKUP_ARTIFACT_IN_USE`. The AI Workspace and MCP backup tool accepts the same choice as `config.artifacts`. Queued and running runs cannot be removed.

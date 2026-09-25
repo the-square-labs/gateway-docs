@@ -5,7 +5,7 @@ section: Integrations
 order: 3
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-25
 ---
 
 
@@ -85,11 +85,11 @@ This connector uses HTTPS credentials, not a private key imported from External 
 
 ### Who can build and view results?
 
-Repository discovery and direct source operations use provider integration scopes. Attaching or changing a source binding must pass the applicable connector and repository checks. GitLab's interactive source tools may also require the user's own GitLab authorization unless system credentials are explicitly permitted.
+Repository discovery and direct source operations use provider integration scopes. GitLab, GitHub, and generic Git share the same verbs: `integrations:<provider>:view` lists connectors, `:manage` configures, tests, and synchronizes them, `:use` uses the connector's own credential, and `:repo:read` and `:repo:write` read or change repository content. Listing and reading GitLab's synced projects needs `integrations:gitlab:view`. GitLab `repo:read` covers repository files, CI pipelines and job logs, and CI/CD variable keys, never values; changing variables needs `repo:write`, and reading GitHub Actions variable values needs `integrations:github:repo:write`. The built-in viewer and operator groups get `integrations:gitlab:view` only. See the [scope reference](/en/identity/scopes-reference/#integrations-gitlab). Attaching or changing a source binding must pass the applicable connector and repository checks. GitLab's interactive source tools may also require the user's own GitLab authorization unless system credentials are explicitly permitted.
 
 Starting a build from an already saved Docker source is a resource action: `docker:containers:manage` for containers/deployments or `docker:compose:manage` for Compose. It does not require giving the operator separate `integrations:gitlab:repo:read` access just to run that saved build. Gateway still checks the saved connector, allowed repository, and source credentials. Pages uses `pages:deploy` for deployment actions.
 
-Build history and logs require view access to the target: `docker:containers:view`, `docker:compose:view`, or `pages:view`. Resource and inherited folder restrictions apply; manage permission alone is not a substitute for view. Do not grant account-wide repository or node access to work around a missing target grant. See [Permissions](/en/concepts/permissions/).
+Build history and logs require view access to the target: `docker:containers:view`, `docker:compose:view`, or `pages:view`. Resource and inherited folder restrictions apply. Since 2.11, any action scope on the same target, such as `docker:containers:manage`, also grants view of it. Do not grant account-wide repository or node access to work around a missing target grant. See [Permissions](/en/concepts/permissions/).
 
 ### Saved source bindings
 
@@ -108,6 +108,16 @@ Separate authentication failure, allowlist denial, repository-not-found, revisio
 Pin the production source to a reviewed branch policy and an exact resolved commit. A branch name is selection input; the commit digest is the immutable evidence of what was built. Confirm the application root, package manager, build script, artifact directory, runtime platform, and publish/deploy policy before enabling automatic actions. Keep Build Secrets separate from ordinary runtime Variables and expose only the values required during the build stage.
 
 For Pages and managed Git builds, verify the complete chain: provider access, repository discovery, commit resolution, Build Worker admission, dependency fetch, artifact creation, vulnerability policy where enabled, immutable artifact identity, publication Tag or workload revision, and customer-facing health. A successful provider webhook or source clone is only the beginning of that chain.
+
+## Token expiry and rotation
+
+Gateway records when GitLab connector tokens and users' personal GitLab tokens expire and checks them daily.
+
+- **Alerts:** Gateway alerts 30 and 7 days before a connector token, a personal GitLab token, or the authorization of an OAuth-connected integration expires, whenever the expiry is known. GitLab reports the expiry of its tokens; GitHub and generic Git tokens are covered when they are connected through OAuth.
+- **GitLab self-rotation:** 14 days before expiry, Gateway rotates GitLab connector tokens and personal GitLab tokens that have the `api` or `self_rotate` scope. The new token keeps the previous lifetime, between 30 days and one year, and replaces the stored secret; the rotation is audited. Project and group access tokens cannot rotate themselves through this path and receive alerts only.
+- **Expired tokens:** Gateway stops using a token once it has expired. An expired personal GitLab token fails with `GIT_CREDENTIAL_EXPIRED` (HTTP 428), so the user must authorize a new one; an expired GitLab connector token fails with `CONNECTOR_TOKEN_EXPIRED` (HTTP 409). Replacing an expired connector token does not require the old one.
+
+Syncs, Docker sources, and Pages builds that depend on an expired token stop working until it is replaced, so treat the 30-day alert as the rotation deadline for tokens Gateway cannot rotate itself.
 
 ## Rotation, migration, and removal
 

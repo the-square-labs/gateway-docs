@@ -5,7 +5,7 @@ section: Databases
 order: 3
 audience: [platform-engineer, developer, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 
@@ -35,7 +35,7 @@ The nginx/workload Secure Link connector is a separate real component. It serves
 
 ## Create a binding
 
-Before creating a binding, confirm that the managed database is **Ready**, the target Docker node is online, the workload is eligible, and you have access to both resources. Review the intended database or role permissions and make sure the workload can consume the delivered connection settings without placing them in source control.
+Before creating a binding, confirm that the managed database is **Ready**, the target Docker node is online, the workload is eligible, and you have access to both resources: `databases:edit` on the database, and on the workload `docker:containers:environment` and `docker:containers:secrets` for a Container or Deployment, or `docker:compose:manage` for a Compose service. Any binding change on a Deployment rolls it out, so it also needs `docker:containers:manage` on that Deployment, plus `docker:containers:edit` when it changes the Deployment's environment. Review the intended database or role permissions and make sure the workload can consume the delivered connection settings without placing them in source control.
 
 1. Select the managed database and the target workload.
 2. Choose which connection values to deliver and the environment variable name for each.

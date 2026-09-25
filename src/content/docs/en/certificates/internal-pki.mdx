@@ -5,7 +5,7 @@ section: Certificates and PKI
 order: 2
 audience: [security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 
@@ -46,6 +46,16 @@ Use separate intermediate authorities for materially different environments or a
 Record the owner, purpose, template, subject, validity, renewal expectation, and revocation contact for every certificate. Grant private-key export only to identities that need the key material. A user who can inspect certificate metadata does not automatically need authority or key-export permissions.
 
 Before renewal, verify that the subject and intended use are still valid. Revoke compromised or retired certificates, publish the updated CRL, and confirm relying systems consume it. Deleting a UI record is not a substitute for revocation when a certificate may still be trusted externally.
+
+### Validity, expiry alerts, and automatic reissue
+
+A certificate cannot outlive the CA that issues it. By default, a request whose validity would end after the CA is refused with `VALIDITY_EXCEEDS_CA`. Set `clampToCaValidity` in the REST API, MCP, or assistant to end the certificate with its CA instead; the issue dialog shows a notice and applies it automatically. Certificates signed from a CSR follow the same rule. Leaf certificates from Gateway's system CAs always end with their CA.
+
+Gateway raises expiry alerts for user CAs 180, 60, 30, and 7 days before they expire (the last two follow the PKI expiry warning and critical settings) and for system CAs 730, 365, 180, 60, 30, and 7 days ahead. System CAs have no automatic rollover in 2.11, and every Node, Relay, managed storage, and managed database certificate they issued stops working when they expire, so plan their replacement when the first alert appears. Alerts name the owning resource, such as a managed storage cluster, a managed database, a Relay, a Gateway listener, or a Node. Each threshold alerts once: dismissing an alert holds until the next threshold, and a renewed certificate alerts again in its new lifetime.
+
+An Internal PKI certificate linked as an [SSL certificate](/en/certificates/ssl-certificates/#internal-pki-certificates) or referenced directly by a Route is reissued automatically when Gateway holds its private key; certificates signed from a CSR are never reissued. Reissuing requires `pki:cert:issue` on the CA, like a manual issue.
+
+Grant `pki:ca:edit` to change a CA's CRL and issuer URLs, maximum validity, and OCSP responder, and `pki:ca:export` to export a CA with its private key; both can be restricted to one CA. `pki:ca:view` covers root and intermediate CAs and can also be restricted to one CA.
 
 Measure operational success through expiry coverage, revocation publication, audit completeness, and restore testing. Review certificates without owners, overly broad templates, unexpected private-key exports, unused intermediates, and CRLs that relying systems cannot reach. Private-key reveal or export should be rare, separately authorized, and followed by secure custody outside Gateway.
 

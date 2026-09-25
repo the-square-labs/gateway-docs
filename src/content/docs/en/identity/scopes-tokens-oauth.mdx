@@ -5,7 +5,7 @@ section: Identity and access
 order: 2
 audience: [security-admin, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 See the [scope reference](/en/identity/scopes-reference/) for every permission, its description, supported restrictions, and token delegation.
@@ -61,9 +61,20 @@ Some actions stay tied to an interactive browser session:
 
 Because tokens can now hold administrative scopes, treat an administrator-scoped token like an administrator account: give it an owner, an expiry, and a narrow resource scope where possible.
 
+Gateway 2.11 renamed several scopes. Token creation, OAuth `scope` parameters, and OAuth authorization edits still accept the old names for two releases and store the new ones; existing tokens and grants were converted during the update. A new token or OAuth request for a scope such as `integrations:github:manage` also receives the scopes that the update added for it (here `repo:read`) when you hold them; the consent screen shows them and you can untick them. Scopes that need manual approval, such as `repo:write` or `pki:ca:export`, are never added this way. See [Retired scope names](/en/identity/scopes-reference/#retired-scope-names).
+
+## Restrict tokens and OAuth grants
+
+A token or OAuth grant can be limited to folders, Nodes, or individual resources in the same way as a user's permissions. A folder restriction covers the folder, its subfolders, and resources created in or moved into it later. See [Restrict access to a folder](/en/concepts/permissions/#restrict-access-to-a-folder).
+
+- **API tokens:** in **Profile > Authorizations > API Tokens**, each selected scope that supports restrictions has its own picker for folders, Nodes, and resources. The picker offers only what you can use yourself.
+- **OAuth and MCP consent:** restrictions start collapsed. A scope you hold broadly shows **All resources · Restrict…**; a scope you hold only for some resources shows **No resources selected** until you choose them. **Limit selected scopes to folder…** applies one folder to every selected scope of that folder's resource type at once. You can change the scopes and restrictions of an existing OAuth authorization later under **Profile > Authorizations**.
+
+Gateway expands a token's own folder and Node restrictions first and then limits the result by your current access, so a token never sees more than you do. A creation grant never counts as a view grant when you delegate it. If a client requests a broad scope that you hold only for some resources, Gateway narrows the grant to those resources.
+
 ## OAuth and MCP
 
-Register exact redirect URIs and reject wildcard redirect behavior. Review requested scopes during consent and separate development clients from production clients. Consent leaves high-risk scopes unchecked by default so that they must be selected explicitly—for example `admin:system`, `admin:users`, `admin:groups`, `settings:gateway:edit`, `nodes:config:edit`, `proxy:raw:write`, connector system credentials, `integrations:ssh:use`, paid or destructive hosting actions, `storage:credentials:reveal`, `storage:iam`, `databases:backups:restore`, and `feat:ai:use`. Remote MCP tools use the same authorization checks and resource visibility as REST and the Console; tool discovery does not grant permission to execute a tool.
+Register exact redirect URIs and reject wildcard redirect behavior. Review requested scopes during consent and separate development clients from production clients. Consent leaves high-risk scopes unchecked by default so that they must be selected explicitly—for example `admin:system`, `admin:users`, `admin:groups`, `settings:gateway:edit`, `nodes:manage`, `proxy:raw:write`, `proxy:unrestricted`, `proxy:templates:manage`, `pki:ca:export`, connector system credentials (`integrations:*:use`), `integrations:ssh:use`, paid or destructive hosting actions, `storage:credentials:reveal`, `storage:iam`, `databases:backups:restore`, and `feat:ai:use`. Remote MCP tools use the same authorization checks and resource visibility as REST and the Console; tool discovery does not grant permission to execute a tool.
 
 Handle authorization failures distinctly:
 
@@ -71,6 +82,8 @@ Handle authorization failures distinctly:
 - `403`: authenticated identity lacks the required scope or entitlement;
 - `409`: current resource state or quota conflicts with the operation;
 - `422`: request validation failed.
+
+Expired OAuth authorization codes and tokens, and OAuth clients that have had no grant for 90 days, are removed by the **Expired OAuth Grants** housekeeping category; a refresh token is kept until it expires so that its reuse is still detected. See [Housekeeping and retention](/en/reference/tasks-and-audit/#housekeeping-and-retention).
 
 ## Rotation and incident response
 

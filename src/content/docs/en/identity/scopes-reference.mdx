@@ -1,14 +1,14 @@
 ---
 title: Scope reference
-description: All Gateway permission scopes, their purpose, supported restrictions, and token delegation.
+description: All Gateway permission scopes, implied view access, folder support, retired names, and token delegation.
 section: Identity and access
 order: 3
 audience: [security-admin, developer]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-25
 ---
 
-Gateway defines 245 permission scopes. The tables below list their exact names and the actions they authorize. Assign permissions through groups or a user's additional permissions; see [users and groups](/en/identity/auth-users-groups/) and [API tokens, OAuth, and MCP](/en/identity/scopes-tokens-oauth/) for setup.
+Gateway 2.11 defines 225 permission scopes. The tables below list their exact names and the actions they authorize. Assign permissions through groups or a user's additional permissions; see [users and groups](/en/identity/auth-users-groups/), [Restrict access to a folder](/en/concepts/permissions/#restrict-access-to-a-folder), and [API tokens, OAuth, and MCP](/en/identity/scopes-tokens-oauth/) for setup. Scopes renamed or removed in 2.11 are listed under [Retired scope names](#retired-scope-names).
 
 ## How to read this reference
 
@@ -21,13 +21,86 @@ Gateway defines 245 permission scopes. The tables below list their exact names a
 
 ## Resource and folder restrictions
 
-A base permission such as `proxy:view` covers all routes. A qualified permission such as `proxy:view:<routeId>` covers one route; `proxy:view:folder/<folderId>` covers routes in the selected folder.
+A base permission such as `proxy:view` covers all routes. A qualified permission such as `proxy:view:<routeId>` covers one route; `proxy:view:folder/<folderId>` covers the routes in the selected folder and its subfolders. Routes, Pages, storage, databases, and Docker scopes, and every creation scope, also accept `node/<nodeId>` for the resources on one Node.
 
-The qualifier depends on the resource type. Docker container scopes use `<nodeId>` for a node or `<nodeId>/<stableResourceId>` for a specific container or deployment. Qualified Pages permissions use the project ID, including operations on its deployments, tags, and deployment tokens. Select the target in the permissions editor rather than using an ID from another resource type.
+The qualifier depends on the resource type. Docker container scopes use `<nodeId>` for a node or `<nodeId>/<stableResourceId>` for a specific container or deployment. Qualified Pages permissions use the project ID, including operations on its deployments, tags, and deployment tokens. Internal PKI scopes use the CA ID. Select the target in the permissions editor rather than using an ID from another resource type.
 
-For creation permissions, a folder restriction selects the destination folder, not a resource that has not been created yet. Folder management and resource operations are separate permissions: managing a folder does not itself grant access to every item in it.
+Gateway resolves a folder grant on every request: it covers the resources in the folder now, resources created in or moved into it later, and nothing that has been moved out. For creation permissions, a folder restriction selects the destination folder, not a resource that has not been created yet. Folder management and resource operations are separate permissions: managing a folder does not itself grant access to every item in it, and moving an item still needs the item's own edit or manage scope.
 
-Create-only and delete-only permissions do not grant list visibility by themselves. Matching write permissions can imply read access while preserving their resource boundary.
+API tokens and OAuth grants are resolved in two steps: their own folder and Node restrictions are expanded first, and the result is then limited by the owner's current access. A token therefore never reaches a resource its owner cannot, and a creation grant never counts as a view grant when it is delegated. When a token requests a broad scope that the owner holds only for some resources, Gateway narrows the token to those resources.
+
+## Implied view access
+
+Every scope belongs to a family named by its longest prefix that has a view scope: `proxy:*` belongs to `proxy:view`, `docker:containers:*` to `docker:containers:view`, `nodes:*` to `nodes:details`, and `docker:tasks:manage` to `docker:tasks`. **Any action scope implies its family's view scope with the same qualifier**, including delete scopes. For example, `proxy:edit:<routeId>` lets the holder see that route, `docker:containers:manage:<nodeId>` lets the holder see every container on that Node, and `databases:query:read:<databaseId>` shows that database in the database list without granting global `databases:view`.
+
+**Creation scopes imply no view at all**: every scope with a `create` part, such as `proxy:create`, `docker:containers:create`, or `pki:templates:create`, plus `docker:images:pull`, `ssl:cert:issue` and `pki:cert:issue`. This holds whatever the qualifier—broad, a folder, or a Node—so a user with only `proxy:create:folder/<folderId>` can create routes in that folder but does not see the routes already in it. Create dialogs still show the destination folders and Nodes such a user may choose. With **Auto-assign permissions for created resources** on, which is the default, the creator keeps view of each resource they create; see [Restrict access to a folder](/en/concepts/permissions/#restrict-access-to-a-folder). The one exception is `hosting:snapshots:create:<vmId>`, which keeps view of that VM's snapshots.
+
+A few explicit rules complete the picture:
+
+- Access tiers: `storage:objects:admin` includes `write`, which includes `read`; `databases:query:admin` includes `write`, which includes `read`; `storage:credentials:reveal` includes `storage:credentials:use`.
+- `logs:read` and `logs:tokens:view` (and therefore `logs:tokens:delete`) imply `logs:environments:view`; `nodes:manage` implies `nodes:config:view`, which implies `nodes:details`; `inference:models:manage` implies `inference:providers:view`; `docker:availability:manage` implies `docker:containers:view`.
+- Folder-tree scopes (`*:folders:manage`), `nodes:backups:execute`, `proxy:maintenance:bypass`, and the internal registry credentials `docker:registries:internal:pull` and `:push` imply no view.
+- A view scope never implies another family's view; `proxy:templates:view` does not grant `proxy:view`.
+
+## Folder support by resource type
+
+Each resource type has its own folder tree. A folder in **Routes** does not cover containers, even when a Docker folder has the same name.
+
+| Resources | Folder restriction | Folder tree managed with |
+| --- | --- | --- |
+| Routes | Yes | `proxy:folders:manage` |
+| Domains | Yes | `domains:folders:manage` |
+| SSL certificates | Yes | `ssl:cert:folders:manage` |
+| Pages Projects | Yes | `pages:folders:manage` |
+| Nodes | Yes | `nodes:folders:manage` |
+| Docker containers and Deployments | Yes | `docker:folders:manage` |
+| Compose Projects, Docker networks, Docker volumes, Docker images | Yes; each type has a separate tree | `docker:folders:manage` |
+| Databases: external connections and managed databases | Yes | `databases:folders:manage` |
+| Storage: storage connections and managed storage | Yes | `storage:folders:manage` |
+| Logging environments; logging schemas | Yes | `logs:environments:folders:manage`; `logs:schemas:folders:manage` |
+| Users; permission groups | Yes | `admin:users:folders:manage`; `admin:groups:folders:manage` |
+| Database backups | Through the database's folder | — |
+| Logging ingest tokens and log search | Through the logging environment's folder | — |
+| Workload Availability | Through the container or Compose folder | — |
+| Backup executors (`nodes:backups:execute`) | Through the Node's folder | — |
+| Internal PKI, access lists, nginx templates, Docker registries, Docker tasks, notifications, status page, SIEM, integrations, hosting accounts and VMs, inference, housekeeping, license, and settings | No | — |
+
+Scopes without folder support are global or, where the catalogue shows **Resource**, restricted to one resource. Hosting snapshot folders only organize snapshots; they are not an access boundary.
+
+## Retired scope names
+
+Gateway 2.11 renamed, merged, or removed the scopes below. The update rewrote every stored grant—groups, users' additional permissions, API tokens, and OAuth grants—and kept each qualifier, so `nodes:config:edit:<nodeId>` became `nodes:manage:<nodeId>`. So that nobody lost access, holders of `pki:ca:create:root` also received `pki:ca:edit` and `pki:ca:export`; holders of `integrations:github:view` or `integrations:git:view` received `:repo:read`; holders of `integrations:github:manage` or `integrations:git:manage` received `:repo:read` and `:repo:write`; and holders of broad or Node-level `docker:volumes:create` (for example `docker:volumes:create:<nodeId>`) received `docker:volumes:edit` with the same qualifier; folder-level create grants and delete-only grants did not.
+
+For two releases, Gateway still accepts the old names on input and rewrites them the same way: the OAuth `scope` parameter, API token creation and updates, permission group creation and updates, users' additional permissions, and OAuth authorization edits. A request whose scopes were all removed is rejected. New API tokens and OAuth requests also receive the additions above when the requester holds them—for example, a token requested with `integrations:github:manage` also gets `repo:read`—and the consent screen shows them so they can be unticked. Scopes that need manual approval, such as `repo:write` or `pki:ca:export`, are never added on input. Permission checks use only the current names, so update scripts, OAuth clients, and infrastructure-as-code definitions before the aliases are removed.
+
+| Retired | Replacement |
+| --- | --- |
+| `ssl:cert:revoke`, `ssl:cert:export` | Removed; they were never enforced |
+| `notifications:view` | `notifications:alerts:view` and `notifications:webhooks:view` |
+| `notifications:manage` | `notifications:alerts:manage` and `notifications:webhooks:manage` |
+| `notifications:alerts:create`, `:edit`, `:delete` | `notifications:alerts:manage` |
+| `notifications:webhooks:create`, `:edit`, `:delete` | `notifications:webhooks:manage` |
+| `notifications:deliveries:view` | `notifications:webhooks:view` |
+| `logs:manage` | Every `logs:*` scope |
+| `docker:containers:config` | Removed. Duplicate and recreate need `docker:containers:environment` and `docker:containers:secrets`; a Docker Node's service address needs `nodes:manage` |
+| `nodes:config:edit` | `nodes:manage` |
+| `pki:ca:view:root`, `pki:ca:view:intermediate` | `pki:ca:view` |
+| `integrations:gitlab:sync`, `integrations:github:sync`, `integrations:git:sync` | `integrations:<provider>:manage` |
+| `integrations:gitlab:system`, `integrations:github:system`, `integrations:git:system` | `integrations:<provider>:use` |
+| `integrations:gitlab:projects:view` | `integrations:gitlab:view` |
+| `integrations:gitlab:ci:view`, `:variables:view` | `integrations:gitlab:repo:read` |
+| `integrations:gitlab:ci:edit`, `:variables:edit`, `:variables:delete`, `:webhooks:manage`, `:registry:manage` | `integrations:gitlab:repo:write` |
+| `proxy:raw:toggle` | Removed; switching raw mode needs `proxy:raw:write` |
+| `proxy:advanced:bypass`, `proxy:raw:bypass` | `proxy:unrestricted` |
+| `proxy:templates:create`, `:edit`, `:delete` | `proxy:templates:manage` |
+| `docker:containers:folders:manage` | `docker:folders:manage` |
+
+Other permission changes in 2.11:
+
+- **New scopes:** `pki:ca:edit` (CA URLs, maximum validity, and the OCSP responder) and `pki:ca:export` (CA private-key export), both restrictable to one CA; `docker:volumes:edit` (rename, relabel, resize, and adopt volumes); `integrations:github:repo:read`, `:repo:write`, `integrations:git:repo:read`, and `:repo:write`.
+- **Git providers** share the same verbs: `view` lists connectors, `manage` configures, tests, and synchronizes them, `use` uses the connector's own credential, and `repo:read` and `repo:write` read or change repository content. Listing and reading GitLab's synced projects needs `integrations:gitlab:view`. GitLab `repo:read` covers repository files, CI pipelines and job logs, and CI/CD variable keys, never values; changing variables needs `repo:write`. Reading GitHub Actions variable values needs `integrations:github:repo:write`. The built-in viewer and operator groups get `integrations:gitlab:view` only.
+- **Templates:** writing nginx template content needs `proxy:templates:manage` and no longer `proxy:raw:write`. The built-in operator group keeps only `proxy:templates:view`, because template content is raw nginx configuration.
+- **Folder grants** now resolve for `logs:tokens:*` (through the logging environment's folder) and `docker:availability:manage` (through the container or Compose folder).
 
 ## Permission catalogue
 
@@ -35,10 +108,11 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
-| `pki:ca:view:root` | View root certificate authorities | — | API, MCP |
-| `pki:ca:view:intermediate` | View intermediate certificate authorities | — | API, MCP |
+| `pki:ca:view` | View root and intermediate certificate authorities | Resource | API, MCP |
 | `pki:ca:create:root` | Create new root certificate authorities | — | API, MCP |
 | `pki:ca:create:intermediate` | Create intermediate CAs under a root | Resource | API, MCP |
+| `pki:ca:edit` | Edit CA URLs, maximum validity, and the OCSP responder | Resource | API, MCP |
+| `pki:ca:export` | Export a certificate authority with its private key | Resource | API, MCP |
 | `pki:ca:revoke:root` | Revoke root certificate authorities | — | API, MCP |
 | `pki:ca:revoke:intermediate` | Revoke intermediate certificate authorities | — | API, MCP |
 
@@ -79,11 +153,9 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | `proxy:edit` | Edit ingress route configuration | Resource, Folder | API, MCP |
 | `proxy:delete` | Delete ingress routes | Resource, Folder | API, MCP |
 | `proxy:raw:read` | View raw nginx configuration | Resource, Folder | API, MCP |
-| `proxy:raw:write` | Edit raw nginx configuration | Resource, Folder | API, MCP |
-| `proxy:raw:toggle` | Switch between managed and raw config mode | Resource, Folder | API, MCP |
-| `proxy:raw:bypass` | Save raw nginx config without dangerous directive restrictions | Resource, Folder | API, MCP |
+| `proxy:raw:write` | Edit raw nginx configuration and switch routes between managed and raw mode | Resource, Folder | API, MCP |
 | `proxy:advanced` | Use advanced proxy configuration | Resource, Folder | API, MCP |
-| `proxy:advanced:bypass` | Save unrestricted advanced nginx snippets | Resource, Folder | API, MCP |
+| `proxy:unrestricted` | Save advanced snippets and raw nginx config without dangerous directive restrictions | Resource, Folder | API, MCP |
 | `proxy:maintenance:bypass` | Create temporary access codes for maintained routes | Resource, Folder | API, MCP |
 | `proxy:folders:manage` | Create, reorder, and remove route folders | — | API, MCP |
 
@@ -108,9 +180,7 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
 | `proxy:templates:view` | View nginx templates | Resource | API, MCP |
-| `proxy:templates:create` | Create nginx templates | — | API, MCP |
-| `proxy:templates:edit` | Edit nginx templates | Resource | API, MCP |
-| `proxy:templates:delete` | Delete nginx templates | Resource | API, MCP |
+| `proxy:templates:manage` | Create, edit, and delete nginx templates, including template content | Resource | API, MCP |
 
 ### SSL Certificates
 
@@ -120,8 +190,6 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | `ssl:cert:issue` | Provision ACME or upload SSL certificates | Resource, Folder | API, MCP |
 | `ssl:cert:folders:manage` | Organize SSL certificates into folders | — | API, MCP |
 | `ssl:cert:delete` | Delete SSL certificates | Resource, Folder | API, MCP |
-| `ssl:cert:revoke` | Revoke SSL certificates | Resource, Folder | API, MCP |
-| `ssl:cert:export` | Export SSL certificates | Resource, Folder | API, MCP |
 
 ### Access Control
 
@@ -141,7 +209,7 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | `nodes:rename` | Rename nodes | Resource, Folder | API, MCP |
 | `nodes:delete` | Remove nodes | Resource, Folder | API, MCP |
 | `nodes:config:view` | View node nginx configuration | Resource, Folder | API, MCP |
-| `nodes:config:edit` | Edit node nginx configuration | Resource, Folder | API, MCP |
+| `nodes:manage` | Edit node nginx config, install the Docker secure runtime, change service addresses, and control hosted VMs | Resource, Folder | API, MCP |
 | `nodes:logs` | View node daemon and nginx logs | Resource, Folder | API, MCP |
 | `nodes:console` | Open interactive shell on nodes | Resource, Folder | API, MCP |
 | `nodes:files:read` | Browse, open, copy, and download node files | Resource, Folder | API, MCP |
@@ -177,20 +245,11 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
-| `integrations:gitlab:view` | View configured GitLab connectors and sync status | — | API, MCP |
-| `integrations:gitlab:manage` | Create, edit, rotate, and delete GitLab connectors | — | API, MCP |
-| `integrations:gitlab:sync` | Refresh projects and registries using the connector credential | — | API, MCP |
-| `integrations:gitlab:system` | Use the connector credential for otherwise permitted GitLab operations | — | API, MCP |
-| `integrations:gitlab:projects:view` | Discover allowed GitLab groups and projects | — | API, MCP |
-| `integrations:gitlab:repo:read` | Read repository trees and files through GitLab connectors | — | API, MCP |
-| `integrations:gitlab:repo:write` | Commit file changes through GitLab connectors | — | API, MCP |
-| `integrations:gitlab:ci:view` | View GitLab CI pipelines and configuration | — | API, MCP |
-| `integrations:gitlab:ci:edit` | Lint and update GitLab CI configuration | — | API, MCP |
-| `integrations:gitlab:variables:view` | View GitLab variable metadata without secret values | — | API, MCP |
-| `integrations:gitlab:variables:edit` | Create and update GitLab project variables | — | API, MCP |
-| `integrations:gitlab:variables:delete` | Delete GitLab project variables | — | API, MCP |
-| `integrations:gitlab:webhooks:manage` | Create, update, and delete GitLab project webhooks | — | API, MCP |
-| `integrations:gitlab:registry:manage` | Manage GitLab registry integration records and deploy credentials | — | API, MCP |
+| `integrations:gitlab:view` | View configured GitLab connectors, sync status, and synced projects | — | API, MCP |
+| `integrations:gitlab:manage` | Create, edit, rotate, sync, and delete GitLab connectors | — | API, MCP |
+| `integrations:gitlab:use` | Use the connector credential for otherwise permitted GitLab operations | — | API, MCP |
+| `integrations:gitlab:repo:read` | Read repository files, CI pipelines and job logs, and CI/CD variable keys (never values) through GitLab connectors | — | API, MCP |
+| `integrations:gitlab:repo:write` | Change repository files, CI configuration, CI/CD variables, webhooks, and registry records through GitLab connectors | — | API, MCP |
 | `integrations:gitlab:sandbox:clone` | Clone allowed GitLab repositories into AI sandboxes | — | — |
 
 ### Integrations: GitHub
@@ -198,18 +257,20 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
 | `integrations:github:view` | View configured GitHub token connectors | — | API, MCP |
-| `integrations:github:sync` | Re-validate GitHub connectors and their repository allowlist using the connector credential | — | API, MCP |
-| `integrations:github:manage` | Create, edit, rotate, and delete GitHub token connectors | — | API, MCP |
-| `integrations:github:system` | Use the connector credential instead of a personal GitHub authorization | — | API, MCP |
+| `integrations:github:manage` | Create, edit, rotate, sync, and delete GitHub token connectors | — | API, MCP |
+| `integrations:github:use` | Use the connector credential instead of a personal GitHub authorization | — | API, MCP |
+| `integrations:github:repo:read` | List repositories and read files through GitHub connectors (no Actions variable values) | — | API, MCP |
+| `integrations:github:repo:write` | Change repository files and secrets, and read or change Actions variables, through GitHub connectors | — | API, MCP |
 
 ### Integrations: Git
 
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
 | `integrations:git:view` | View configured generic Git connectors | — | API, MCP |
-| `integrations:git:sync` | Re-validate generic Git connectors and their repository allowlist using the connector credential | — | API, MCP |
-| `integrations:git:manage` | Create, edit, rotate, and delete generic Git connectors | — | API, MCP |
-| `integrations:git:system` | Use the connector credential instead of a personal Git authorization | — | API, MCP |
+| `integrations:git:manage` | Create, edit, rotate, sync, and delete generic Git connectors | — | API, MCP |
+| `integrations:git:use` | Use the connector credential instead of a personal Git authorization | — | API, MCP |
+| `integrations:git:repo:read` | List repositories and read files through generic Git connectors | — | API, MCP |
+| `integrations:git:repo:write` | Change repository files through generic Git connectors | — | API, MCP |
 
 ### Integrations: SSH
 
@@ -294,7 +355,6 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | `docker:containers:view` | View Docker containers | Resource, Folder | API, MCP |
 | `docker:containers:create` | Create and duplicate containers | Resource, Folder | API, MCP |
 | `docker:containers:edit` | Edit container settings and configuration | Resource, Folder | API, MCP |
-| `docker:containers:config` | View container recreate/configuration fields | Resource, Folder | API, MCP |
 | `docker:containers:manage` | Start, stop, restart, kill, and recreate containers | Resource, Folder | API, MCP |
 | `docker:containers:environment` | Modify container environment variables | Resource, Folder | API, MCP |
 | `docker:containers:delete` | Remove containers | Resource, Folder | API, MCP |
@@ -307,9 +367,9 @@ Create-only and delete-only permissions do not grant list visibility by themselv
 | `docker:containers:mounts` | Add, remove, or change container and deployment mounts | Resource, Folder | API, MCP |
 | `docker:containers:migrate` | Migrate containers and deployments between Docker nodes | Resource, Folder | API, MCP |
 | `docker:availability:manage` | Enable, scale, heal, and disable multi-node workload Availability | Resource, Folder | API, MCP |
-| `docker:containers:folders:manage` | Create, reorder, and remove Docker resource folders | — | API, MCP |
+| `docker:folders:manage` | Organize containers, deployments, Compose projects, networks, volumes, and images into folders | — | API, MCP |
 
-Container logs, statistics, processes, and inspection are covered by `docker:containers:view`; there is no separate logs scope. `docker:containers:manage` authorizes start, stop, restart, kill, and recreate together; there is no restart-only scope. These scopes also apply to standalone containers that Gateway discovered but did not create. See [Operate workloads without adopting them](/en/concepts/permissions/#operate-workloads-without-adopting-them).
+Container logs, statistics, processes, and inspection are covered by `docker:containers:view`; there is no separate logs scope. Duplicating a container, and recreating it with changed settings, need `docker:containers:environment` and `docker:containers:secrets` in addition to create or manage access. Pulling the image while creating a container or Deployment is covered by `docker:containers:create` at the destination; `docker:images:pull` is needed only to pull images on their own. A database or storage link on a Deployment also needs `docker:containers:manage` on it, because every link change rolls it out, plus `docker:containers:edit` when the link changes its environment. `docker:containers:manage` authorizes start, stop, restart, kill, and recreate together; there is no restart-only scope. These scopes also apply to standalone containers that Gateway discovered but did not create. See [Operate workloads without adopting them](/en/concepts/permissions/#operate-workloads-without-adopting-them).
 
 ### Docker: Compose
 
@@ -336,6 +396,7 @@ External Compose projects are read-only: `docker:compose:view` covers their inve
 | --- | --- | --- | --- |
 | `docker:volumes:view` | View Docker volumes | Resource, Folder | API, MCP |
 | `docker:volumes:create` | Create Docker volumes | Resource, Folder | API, MCP |
+| `docker:volumes:edit` | Rename, relabel, resize, and adopt Docker volumes | Resource, Folder | API, MCP |
 | `docker:volumes:delete` | Remove Docker volumes | Resource, Folder | API, MCP |
 | `docker:volumes:export` | Export portable Docker volume archives | Resource, Folder | API, MCP |
 | `docker:volumes:files:read` | Browse, open, and download Docker volume files | Resource, Folder | API, MCP |
@@ -401,8 +462,8 @@ External Compose projects are read-only: `docker:compose:view` covers their inve
 | `storage:edit` | Edit storage connections and managed storage, restart or retry provisioning | Resource, Folder | API, MCP |
 | `storage:delete` | Delete storage connections and managed storage | Resource, Folder | API, MCP |
 | `storage:credentials:reveal` | Reveal saved storage credentials | Resource, Folder | API, MCP |
-| `storage:credentials:use` | Let backups use saved storage credentials without revealing them | Resource, Folder | API, MCP |
-| `storage:iam` | Create and revoke managed storage access keys and workload bindings | Resource, Folder | API, MCP |
+| `storage:credentials:use` | Let backups and storage copy jobs use saved storage credentials without revealing them | Resource, Folder | API, MCP |
+| `storage:iam` | Create, revoke, import, and freeze managed storage access keys, and create and move workload bindings | Resource, Folder | API, MCP |
 | `storage:objects:read` | List buckets and objects, read metadata, download objects, and create download links | Resource, Folder | API, MCP |
 | `storage:objects:write` | Upload objects, create prefixes, and delete objects | Resource, Folder | API, MCP |
 | `storage:objects:admin` | Create and delete buckets | Resource, Folder | API, MCP |
@@ -413,16 +474,9 @@ External Compose projects are read-only: `docker:compose:view` covers their inve
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
 | `notifications:alerts:view` | View notification alert rules | — | API, MCP |
-| `notifications:alerts:create` | Create notification alert rules | — | API, MCP |
-| `notifications:alerts:edit` | Edit notification alert rules | — | API, MCP |
-| `notifications:alerts:delete` | Delete notification alert rules | — | API, MCP |
-| `notifications:webhooks:view` | View notification webhooks | — | API, MCP |
-| `notifications:webhooks:create` | Create notification webhooks | — | API, MCP |
-| `notifications:webhooks:edit` | Edit notification webhooks | — | API, MCP |
-| `notifications:webhooks:delete` | Delete notification webhooks | — | API, MCP |
-| `notifications:deliveries:view` | View webhook delivery attempts | — | API, MCP |
-| `notifications:view` | Read notification resources across alerts, webhooks, and deliveries | — | API, MCP |
-| `notifications:manage` | Full management access to alerts, webhooks, and deliveries | — | API, MCP |
+| `notifications:alerts:manage` | Create, edit, and delete notification alert rules | — | API, MCP |
+| `notifications:webhooks:view` | View notification webhooks and their delivery attempts | — | API, MCP |
+| `notifications:webhooks:manage` | Create, edit, test, and delete notification webhooks | — | API, MCP |
 
 ### Logging
 
@@ -433,16 +487,17 @@ External Compose projects are read-only: `docker:compose:view` covers their inve
 | `logs:environments:edit` | Edit logging environments and schemas | Resource, Folder | API, MCP |
 | `logs:environments:delete` | Delete logging environments | Resource, Folder | API, MCP |
 | `logs:environments:folders:manage` | Create, reorder, and remove logging environment folders | — | API, MCP |
-| `logs:tokens:view` | View logging ingest tokens | Resource | API, MCP |
-| `logs:tokens:create` | Create logging ingest tokens | Resource | API, MCP |
-| `logs:tokens:delete` | Revoke logging ingest tokens | Resource | API, MCP |
+| `logs:tokens:view` | View logging ingest tokens | Resource, Folder | API, MCP |
+| `logs:tokens:create` | Create logging ingest tokens | Resource, Folder | API, MCP |
+| `logs:tokens:delete` | Revoke logging ingest tokens | Resource, Folder | API, MCP |
 | `logs:schemas:view` | View reusable logging schemas | Resource, Folder | API, MCP |
 | `logs:schemas:create` | Create reusable logging schemas | Resource, Folder | API, MCP |
 | `logs:schemas:edit` | Edit reusable logging schemas | Resource, Folder | API, MCP |
 | `logs:schemas:delete` | Delete reusable logging schemas | Resource, Folder | API, MCP |
 | `logs:schemas:folders:manage` | Create, reorder, and remove logging schema folders | — | API, MCP |
 | `logs:read` | Search and inspect external logs | Resource, Folder | API, MCP |
-| `logs:manage` | Full access to external logging | — | API, MCP |
+
+Logging token and log-search scopes are qualified by the logging environment ID; their folder grants resolve through logging environment folders.
 
 ### Status Page
 

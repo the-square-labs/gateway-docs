@@ -5,7 +5,7 @@ section: Start here
 order: 4
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 Plan the control plane separately from the hosts that run customer workloads. Gateway coordinates identity, desired state, certificates, operations, and audit history; it does not remove the need to size, patch, back up, and monitor the underlying Linux hosts.
@@ -42,7 +42,7 @@ Use these base sizing profiles for the control plane:
 
 The disk figures are free capacity after the operating system is installed. Gateway-managed local ClickHouse logging needs an additional 32 GB minimum or 128 GB recommended; actual usage depends on ingest volume and retention. External ClickHouse does not add local logging storage to the Gateway host.
 
-Reserve persistent storage for Gateway PostgreSQL data, Redis persistence where configured, uploaded artifacts, certificates, configuration, the internal registry, and optional structured logs. Git-source builds need additional registry capacity because successful, active, rollback, in-progress, and manually pinned artifacts are retained.
+Reserve persistent storage for Gateway PostgreSQL data, Redis persistence where configured, uploaded artifacts, certificates, configuration, the internal registry, and optional structured logs. Git-source builds need additional registry capacity because successful, active, rollback, in-progress, and manually pinned artifacts are retained. Gateway's own containers—the application, Relay, registry, PostgreSQL, and Redis—keep at most three 50 MB log files each; an update adds this limit to existing installations unless a service already has its own logging configuration.
 
 At minimum, ensure that the host also has:
 

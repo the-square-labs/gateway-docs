@@ -26,7 +26,7 @@ Start with the boundaries that can compromise the entire installation: Gateway h
 - Monitor automatic renewal of Gateway, Relay, and daemon certificates, and preserve the system PKI used for internal transport; see [Nodes: certificate renewal](/en/nodes/updates-and-offline-behavior/#certificate-renewal).
 - Send audit events to an independently controlled SIEM where required.
 - Review source integrations, registry credentials, OAuth clients, tokens, and active sessions regularly.
-- Treat API tokens and OAuth grants that hold administrative scopes, such as `admin:system`, `admin:users`, `settings:gateway:edit`, or `nodes:config:edit`, as administrator credentials: since 2.11 programmatic access can carry them. Give each an owner, an expiry, and the narrowest resource scope.
+- Treat API tokens and OAuth grants that hold administrative scopes, such as `admin:system`, `admin:users`, `settings:gateway:edit`, or `nodes:manage`, as administrator credentials: since 2.11 programmatic access can carry them. Give each an owner, an expiry, and the narrowest resource scope.
 - Remove temporary maintenance, debug exposure, and manual host changes after incidents.
 
 Do not publish screenshots, support bundles, or logs until secrets, internal addresses, customer names, and repository URLs have been redacted.

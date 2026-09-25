@@ -5,7 +5,7 @@ section: Observe and notify
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-25
 ---
 
 [Hosting integrations](/en/integrations/hosting-providers/) also expose VM power changes, operation failures, synchronization, and supported account-balance thresholds. Billing alerts require billing access and a currency; a running VM is not proof that its Gateway daemon is online.
@@ -37,6 +37,10 @@ Agree on severity, acknowledgement time, update cadence, and closure criteria be
 6. Trigger the condition in a safe environment and verify both open and recovery messages.
 
 Avoid alerts that operators cannot act on. Every urgent notification should identify the affected resource, customer impact, start time, current state, and the first safe diagnostic action.
+
+Alert rules need `notifications:alerts:view` to read and `notifications:alerts:manage` to create, change, or delete them. Webhooks and their delivery history need `notifications:webhooks:view`, and creating, testing, changing, or deleting webhooks needs `notifications:webhooks:manage`.
+
+Gateway also raises built-in expiry alerts, naming the owning resource: SSL and Internal PKI certificates at the PKI warning and critical thresholds, [CAs well ahead of expiry](/en/certificates/internal-pki/#validity-expiry-alerts-and-automatic-reissue), [Node certificates whose renewal is failing](/en/nodes/updates-and-offline-behavior/#certificate-renewal), and [Git integration tokens](/en/integrations/source-control/#token-expiry-and-rotation) at 30 and 7 days. Each threshold alerts once, and a renewed certificate alerts again in its new lifetime. For managed storage and managed databases, create an alert rule for the **Managed Service Certificate Renewal Failed** certificate event, which opens while automatic renewal keeps failing and recovers after a successful renewal.
 
 Notification templates use a canonical nested context. Keep templates small and test the exact destination rendering; historical flat variable names are not aliases and can render empty. Treat template changes as operational changes because a broken message can hide the resource, severity, or recovery state even when transport succeeds.
 

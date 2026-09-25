@@ -5,7 +5,7 @@ section: Docker
 order: 7
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-25
 ---
 
 
@@ -27,13 +27,15 @@ Before removing an image or running a prune, check active Containers, inactive D
 
 Gateway-managed local volumes are the supported destination for new persistent mounts. A volume outlives a Container unless it is deleted separately, which is useful for planned recreation but dangerous when the data is no longer backed up.
 
+Renaming, relabeling, resizing, and adopting a volume need `docker:volumes:edit`, which can be restricted to one volume, Node, or folder.
+
 Before moving, recreating, exporting, or deleting a workload, identify all attached volumes and make an engine-appropriate backup of stateful data. Deleting a volume is destructive and cannot be undone by recreating the workload. Container archive exports do not include volume contents, so volume restore is a separate recovery step.
 
 ## Networks
 
 Networks provide workload-to-workload connectivity and may be private implementation resources. A network created by a managed workload or a higher-level owner must not be removed manually: Routes, database bindings, service discovery, and reconciliation can depend on it.
 
-Compose-owned non-external networks stay under the external Compose workflow. External or intentionally shared networks remain global resources and should be removed only after every referenced workload has been detached. Check node state and references first; an apparent unused network on an offline node is not sufficient evidence for deletion.
+Networks that Gateway creates for managed storage (`gateway-storage-*`) are internal: they cannot be connected, disconnected, removed, or used by new containers. Compose-owned non-external networks stay under the external Compose workflow. External or intentionally shared networks remain global resources and should be removed only after every referenced workload has been detached. Check node state and references first; an apparent unused network on an offline node is not sufficient evidence for deletion.
 
 ## Safe cleanup checklist
 
