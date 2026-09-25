@@ -48,7 +48,9 @@ The Default runtime is available on supported Docker nodes. The secure gVisor ru
 4. Follow the create Task until the daemon reports the runtime state.
 5. Check health, logs, and any Route or private database connection before sending application traffic.
 
-On a Docker Node whose default log driver is `json-file`, Gateway limits the logs of each container it creates or recreates without its own logging configuration to three files of 50 MB. Other log drivers are left unchanged, and Compose Projects keep Docker's defaults.
+On a Docker Node whose default log driver is `json-file`, Gateway limits the logs of each container it creates or recreates without its own logging configuration to three files of 50 MB. Compose Projects get the same limit for every service without its own `logging` section; see [Supported Compose configuration](/en/docker/compose/#supported-compose-configuration). Other log drivers are left unchanged, and a node whose `/etc/docker/daemon.json` sets default `log-opts` keeps them. When the Docker Node setup script installs Docker itself, it writes that file with the same 50 MB × 3 rotation, so containers created outside Gateway are limited too.
+
+To find containers whose logs still grow without a limit, create a Container alert on **Log Size (MB)**. It counts the container's log file and its rotated copies on the node; a Docker daemon that has not been updated yet reports zero.
 
 Use **Recreate** when a runtime configuration change requires a replacement process. Gateway preserves the stable resource identity while creating the intended runtime again. Use **Duplicate** when you need a separate resource with independent access grants and lifecycle history. Use **Rename** only after reviewing dependent Routes, bindings, and integrations.
 

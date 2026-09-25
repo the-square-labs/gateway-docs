@@ -60,7 +60,7 @@ Confirm that the submitted YAML matches the running application's services, volu
 
 Manual and adopted revisions accept a single-file Compose document up to 1 MiB, without YAML anchors or aliases. Top-level keys are limited to `name`, `version`, `services`, `volumes`, and `networks`, so `include`, top-level `secrets` and `configs`, and `x-` extensions are rejected.
 
-Each service must use `image` and may use only these keys: `image`, `command`, `entrypoint`, `working_dir`, `user`, `hostname`, `environment`, `labels`, `ports`, `volumes`, `networks`, `depends_on`, `healthcheck`, `restart`, `extra_hosts`, `cpus`, `cpu_shares`, `mem_limit`, `mem_reservation`, `memswap_limit`, and `pids_limit`. Everything else is rejected, including `build`, `env_file`, `container_name`, `privileged`, `cap_add`, `devices`, `network_mode`, `pid`, `ipc`, `security_opt`, `tmpfs`, `ulimits`, `logging`, `deploy`, `profiles`, `extends`, service-level `secrets` and `configs`, and `links`.
+Each service must use `image` and may use only these keys: `image`, `command`, `entrypoint`, `working_dir`, `user`, `hostname`, `environment`, `labels`, `ports`, `volumes`, `networks`, `depends_on`, `healthcheck`, `restart`, `extra_hosts`, `cpus`, `cpu_shares`, `mem_limit`, `mem_reservation`, `memswap_limit`, `pids_limit`, and `logging`. Everything else is rejected, including `build`, `env_file`, `container_name`, `privileged`, `cap_add`, `devices`, `network_mode`, `pid`, `ipc`, `security_opt`, `tmpfs`, `ulimits`, `deploy`, `profiles`, `extends`, service-level `secrets` and `configs`, and `links`.
 
 Other rules:
 
@@ -71,8 +71,11 @@ Other rules:
 - a long-syntax volume mount can set only `type`, `source`, `target`, and `read_only`, must include `type` (`VOLUME_TYPE_REQUIRED` otherwise), and must use `type: volume` with a named volume as its source;
 - `depends_on` accepts a list of services or a long-syntax mapping; in the mapping form, each entry can set only `condition`, which is required and must be `service_started`, `service_healthy`, or `service_completed_successfully`; every dependency must be a service in the same file;
 - top-level volumes and networks can set only `external`, `name`, `driver`, and `labels`, so `driver_opts` is rejected;
+- `logging` can set only `driver` and `options`; the driver must be `json-file`, `local`, or `none`, and options are limited to `max-size`, `max-file`, and `compress` (`none` takes no options);
 - labels that start with `com.docker.compose.` or `wiolett.gateway.compose.` are reserved;
 - every `${NAME}` reference needs a provided variable or secret.
+
+On a node whose default log driver is `json-file`, the Docker daemon gives every service without `logging` json-file rotation at 50 MB × 3, the same limit single containers get. To keep a service's logs longer, set your own `max-size` and `max-file`; `driver: json-file` without options keeps Docker's unlimited default. Docker cannot change the log settings of an existing container, so the first apply after the Docker daemon update recreates each service once. Applying a new revision already recreates every service, so this matters only when you re-apply an unchanged revision. A node whose Docker daemon has not been updated yet applies revisions without their `logging` sections and keeps Docker's defaults.
 
 Gateway and the Docker daemon apply the same rules, so a revision that passes validation is not rejected later when it is applied. Business and Enterprise projects with a Git source can additionally use a bounded `build` section; see [Create a managed project](#create-a-managed-project). The same rules apply to revisions created through the API, MCP, or AI Workspace. Rewriting a Compose file to fit these rules is part of adoption planning, so do it in staging first.
 

@@ -59,7 +59,7 @@ Gateway обнаруживает внешние приложения Docker Comp
 
 Ручные и принятые ревизии принимают однофайловый документ Compose размером до 1 МиБ без якорей и псевдонимов YAML. На верхнем уровне допустимы только `name`, `version`, `services`, `volumes` и `networks`, поэтому `include`, `secrets` и `configs` верхнего уровня и расширения `x-` отклоняются.
 
-Каждая служба должна использовать `image` и может содержать только ключи `image`, `command`, `entrypoint`, `working_dir`, `user`, `hostname`, `environment`, `labels`, `ports`, `volumes`, `networks`, `depends_on`, `healthcheck`, `restart`, `extra_hosts`, `cpus`, `cpu_shares`, `mem_limit`, `mem_reservation`, `memswap_limit` и `pids_limit`. Всё остальное отклоняется, в том числе `build`, `env_file`, `container_name`, `privileged`, `cap_add`, `devices`, `network_mode`, `pid`, `ipc`, `security_opt`, `tmpfs`, `ulimits`, `logging`, `deploy`, `profiles`, `extends`, `secrets` и `configs` на уровне службы, а также `links`.
+Каждая служба должна использовать `image` и может содержать только ключи `image`, `command`, `entrypoint`, `working_dir`, `user`, `hostname`, `environment`, `labels`, `ports`, `volumes`, `networks`, `depends_on`, `healthcheck`, `restart`, `extra_hosts`, `cpus`, `cpu_shares`, `mem_limit`, `mem_reservation`, `memswap_limit`, `pids_limit` и `logging`. Всё остальное отклоняется, в том числе `build`, `env_file`, `container_name`, `privileged`, `cap_add`, `devices`, `network_mode`, `pid`, `ipc`, `security_opt`, `tmpfs`, `ulimits`, `deploy`, `profiles`, `extends`, `secrets` и `configs` на уровне службы, а также `links`.
 
 Другие правила:
 
@@ -70,8 +70,11 @@ Gateway обнаруживает внешние приложения Docker Comp
 - в длинном синтаксисе монтирования тома допустимы только `type`, `source`, `target` и `read_only`; `type` обязателен (иначе `VOLUME_TYPE_REQUIRED`) и должен быть `type: volume`, а источником должен быть именованный том;
 - `depends_on` принимает список служб или развёрнутую форму; в развёрнутой форме для каждой записи допустим только `condition`, он обязателен и должен быть `service_started`, `service_healthy` или `service_completed_successfully`; каждая зависимость должна быть службой из того же файла;
 - для томов и сетей верхнего уровня допустимы только `external`, `name`, `driver` и `labels`, поэтому `driver_opts` отклоняется;
+- в `logging` допустимы только `driver` и `options`; драйвер должен быть `json-file`, `local` или `none`, а среди опций допустимы только `max-size`, `max-file` и `compress` (у `none` опций нет);
 - метки с префиксами `com.docker.compose.` и `wiolett.gateway.compose.` зарезервированы;
 - каждой ссылке `${NAME}` нужна заданная переменная или секрет.
+
+На ноде, где драйвер журналов по умолчанию — `json-file`, Docker-демон даёт каждой службе без `logging` ротацию json-file 50 МБ × 3, такую же, как у одиночных контейнеров. Чтобы хранить журналы службы дольше, задайте свои `max-size` и `max-file`; `driver: json-file` без опций оставляет безлимитный режим Docker по умолчанию. Docker не умеет менять настройки журналов у существующего контейнера, поэтому первое применение после обновления Docker-демона один раз пересоздаёт каждую службу. Применение новой ревизии и так пересоздаёт все службы, так что это заметно только при повторном применении неизменённой ревизии. Нода, Docker-демон которой ещё не обновлён, применяет ревизии без разделов `logging` и оставляет параметры Docker по умолчанию.
 
 Gateway и Docker-демон применяют одни и те же правила, поэтому ревизия, прошедшая проверку, не будет отклонена позже при применении. Проекты Business и Enterprise с источником Git могут дополнительно использовать ограниченную секцию `build`; см. [Создайте управляемый проект](#создайте-управляемый-проект). Те же правила действуют для ревизий, созданных через API, MCP или AI Workspace. Переписывание Compose-файла под эти правила — часть планирования принятия, поэтому сначала выполните его в тестовой среде.
 
