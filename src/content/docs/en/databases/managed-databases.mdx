@@ -5,7 +5,7 @@ section: Databases
 order: 2
 audience: [database-operator, operator]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 
@@ -74,7 +74,7 @@ The Storage Node must pass the same storage preflight used by the runtime. Gatew
 
 Direct publication uses native TLS. Gateway issues the server certificate from its separate Database CA and keeps the private key in daemon-owned storage outside the database image. PostgreSQL and Redis expose one TLS endpoint; ClickHouse exposes HTTPS and its native TLS endpoint. Clients must trust the displayed Database CA and should follow the documented hostname or certificate-fingerprint policy rather than disabling verification.
 
-Gateway renews the server certificate automatically, checking hourly: when two thirds of its lifetime have passed, 30 days or fewer remain, a configured service address is missing, or the certificate comes from another CA. The engine reloads the new certificate in place—PostgreSQL, Redis, and ClickHouse keep serving—and Gateway switches to it only after the instance serves it. The Database CA does not change, so clients that trust it keep working. The database detail page shows the certificate's expiry, renewal state, and last error.
+Gateway renews the server certificate automatically, checking hourly: when two thirds of its lifetime have passed, 30 days or fewer remain, a configured service address is missing, or the certificate comes from another CA. The engine reloads the new certificate in place—PostgreSQL, Redis, and ClickHouse keep serving—and Gateway switches to it only after the instance serves it. The Database CA does not change, so clients that trust it keep working. The database's **Connection Details** show a quiet **TLS Certificate** row with the expiry date and either "renewed automatically" or "needs attention". A notice appears on the page only when attention is needed—renewal failed, 7 days or fewer remain, the renewed certificate is not loaded yet, renewal waits for the Node daemon, or the CA limits the lifetime—with the reason, the expiry date, and **Rotate now** where you may rotate it. The Dashboard also shows a warning listing every managed database and managed storage whose certificate needs attention and that you may view.
 
 **Rotate TLS certificate** renews it immediately with the same in-place reload. A restart is used only when you allow it, when 7 days or fewer remain, or when the Node daemon cannot reload certificates yet. While renewal keeps failing, Gateway raises the **Managed Service Certificate Renewal Failed** notification event. API: `GET /api/databases/managed/{id}/certificate` and `POST /api/databases/managed/{id}/rotate-certificate` with optional `allowRestart`; MCP and assistant: `manage_managed_database` actions `certificate_status` and `rotate_certificate`.
 

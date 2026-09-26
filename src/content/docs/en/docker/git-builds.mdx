@@ -5,7 +5,7 @@ section: Docker
 order: 5
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-26
 ---
 
 Configure the connector using [Git hosting](/en/integrations/source-control/). That guide also separates repository permissions from the target permissions needed to start saved builds and read their history. Registry credentials are covered under [Container registries](/en/docker/registries/).
@@ -39,9 +39,15 @@ While a build is rolled out to a Container, Deployment, or Compose Project, Gate
 
 Automatic build and automatic deploy are independent controls. Keep automatic deployment disabled until the health and rollback path is proven for that workload. A successful build only proves that an artifact exists; it does not prove that the application starts correctly on a target node.
 
+## Folder placement of built workloads
+
+A Container or Deployment created from a Git source goes into the folder chosen when it is created: the folder field on the **Repository** tab of the deploy dialog, or `folderId` through the API and MCP. Creating it there needs the create permission on that folder, and a user who may create only in folders must choose one; the dialog preselects the only allowed folder. Configuring the source also needs `integrations:<provider>:use` on the repository; see [Git hosting](/en/integrations/source-control/#who-can-build-and-view-results).
+
+Until its first build finishes, the workload is listed in that folder with **Awaiting build** in place of an image. It can be moved like any other container: with **Move to folder...**, by dragging it, or through the API and MCP, which needs edit permission on the workload and on the destination. The first build creates it in the folder it is in at that moment and checks the create permission there, also when source automation starts the build. A folder-limited user therefore never ends up with a built workload at the root. The name stays reserved for the source meanwhile: creating, duplicating, renaming, or importing another container under it fails with `409 NAME_IN_USE`.
+
 ## Failure handling
 
-If a build cannot start, check source authorization, worker availability, entitlement, and integration state. If it fails after start, use the phase and logs to separate dependency, secret, policy, build-definition, or artifact-publication failures. Correct the source or build configuration, then run a new build. Retrying produces a new operation and preserves the previous history.
+If a build cannot start, check source authorization, worker availability, entitlement, and integration state. A cancelled build that reads "Build paused: <user> no longer has use on <repo>" means the account that saved the source lost `integrations:<provider>:use` on the repository; see [Who can build and view results?](/en/integrations/source-control/#who-can-build-and-view-results). If it fails after start, use the phase and logs to separate dependency, secret, policy, build-definition, or artifact-publication failures. Correct the source or build configuration, then run a new build. Retrying produces a new operation and preserves the previous history.
 
 When the worker or source automation is unavailable, existing history remains useful for diagnosis, but new builds must not be assumed to run. Do not substitute a mutable image tag for the missing immutable artifact; wait for a verified build or use a separately approved image.
 

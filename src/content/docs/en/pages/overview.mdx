@@ -5,7 +5,7 @@ section: Pages
 order: 1
 audience: [developer, platform-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-26
 ---
 
 
@@ -49,7 +49,7 @@ Custom Routes target Tags only. Verify the Domain, TLS certificate, nginx placem
 
 Previews are public to anyone who has the link. To protect them, choose an access list in the project's **Preview links** settings: its IP rules and basic auth then apply to every preview of the project, and plain HTTP redirects to HTTPS. An nginx node whose daemon cannot apply access lists to previews withholds the project's previews instead of serving them open. **Rotate links** gives the project a new hash and new Deployment hostnames, which revokes every preview link it has shared so far.
 
-Runtime configuration is public client-side data and is separate from the immutable artifact identity. It is exposed to the site as `window.runtime.config`, with a `Default` object and whole-object Tag overrides. Immutable previews use `Default`; a Tag Route uses its override when present or falls back to `Default`. Do not place secrets, credentials, or private topology in runtime configuration.
+Runtime configuration is public client-side data and is separate from the immutable artifact identity. It is exposed to the site as `window.runtime.config`, with a `Default` object and whole-object Tag overrides. Immutable Deployment previews use `Default`; a Tag Route and the Tag's preview hostname use the Tag's override when present or fall back to `Default`. Do not place secrets, credentials, or private topology in runtime configuration.
 
 Runtime configuration is useful for public API origins, feature presentation, analytics identifiers, or environment labels that legitimately belong in the browser. A Tag override replaces the whole object rather than merging individual keys, so review every required field when creating an override. Keep the contract backward-compatible with every Deployment that the Tag may select during rollback.
 

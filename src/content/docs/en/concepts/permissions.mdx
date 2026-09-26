@@ -5,7 +5,7 @@ section: Concepts
 order: 3
 audience: [security-admin, operator]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 Gateway uses explicit scopes. A scope has a capability base and may include a resource suffix.
@@ -62,10 +62,24 @@ What the user sees:
 - Nothing else: lists show only the granted resources, a granted folder that is still empty shows an empty list, and direct requests for other resources are denied. A resource moved out of the folder stops being visible unless the user has a separate grant for it.
 - Create dialogs offer only the folders the user may create in. **No folder** is hidden when the user cannot create at the top level, and the only allowed folder is preselected. Through the API or MCP, pass the folder as `folderId`; creating elsewhere returns `403`. Where a resource runs on a Node, the dialog lists only Nodes the user may deploy to, without granting Node administration.
 - A creation scope alone shows the folder as a destination but none of its contents. Grant a view scope on the folder as well when the team should see what is already there.
+- Containers and Deployments created from a Git source go into the chosen folder, also when the first build creates them later. While one waits for its first build it is listed in that folder and can be moved with **Move to folder...** or by dragging; the first build then creates it in the folder it is in at that moment. See [Folder placement of built workloads](/en/docker/git-builds/#folder-placement-of-built-workloads).
+- A refused create names the folders and Nodes where the user may create instead, for example `Missing docker:containers:create at the root (no folder). Your docker:containers:create access is limited to folder 'MyProject' (<id>): pass folderId for one of them.` Docker creates return this message in the Console and the REST API; for other resource types, MCP and AI Workspace tool errors add the same list of folders and Nodes.
 
 **Settings > Advanced > Auto-assign permissions for created resources** is on by default. It adds grants for each new resource to its creator's additional permissions: view of the new resource always, and other per-resource scopes only when the creator already holds them broadly or on the destination folder or Node. A user with only a creation scope therefore sees exactly the resources they created. A folder-limited creator therefore keeps the same access if the resource is later moved out of the folder, but gains nothing new: view and create on a folder do not turn into console or secret access. Turning the setting off affects new resources only; existing grants stay and can be changed in **Assign permissions**.
 
 API tokens and OAuth grants accept the same folder restrictions. Their folders are resolved first and the result is then limited by the owner's own access, so a token never sees more than its owner; see [Restrict tokens and OAuth grants](/en/identity/scopes-tokens-oauth/#restrict-tokens-and-oauth-grants).
+
+### See what an identity can reach
+
+`GET /api/auth/me/access` returns the caller's access grouped by product area: whether it is broad or limited, the granted folders with their paths, the Nodes, accounts, and individual resources with the actions allowed on each, and where the caller may create (`create.atRoot`, `create.folders`, `create.nodes`). It works with a session, an API token, or an OAuth token, and reports a token or OAuth grant as bounded by its owner's current access. The user's ID, name, email, and group are included only for a browser session and the AI Workspace, never for a token. MCP clients and the AI Workspace get the same summary from the `get_my_access` tool, and MCP also serves it as the `gateway://access` resource; see [Find out what the caller can access](/en/integrations/api-and-mcp/#find-out-what-the-caller-can-access).
+
+Folder-limited access is normal for agents and automation. A list returns only what the caller may see, so an empty list at the root is not a denial. When you test a folder-limited identity, read its access summary first, then create in one of the listed folders with `folderId`.
+
+## Restrict Git access to repositories
+
+Git integration scopes can be limited to one connected account and, below it, to GitLab groups and projects or GitHub owners and repositories. A grant on a GitLab group covers its subgroups and every project under them; a grant on a GitHub owner covers every repository of that organization or user. In the group editor, a user's additional permissions, the API token form, and OAuth and MCP consent, check a connector to cover all of its repositories, or open **Add groups or projects…** (GitLab) or **Add owners or repositories…** (GitHub) under the connector and search for narrower targets. Grants store stable provider IDs, so renaming or moving a group or repository does not change them.
+
+To let a team build from one project, grant `integrations:gitlab:use` on that project next to the workload's own permissions: `use` on the project is enough to configure a Docker or Pages build source. Keep that grant in place: manual builds check it again, and automatic builds of a source saved in this release pause when the account that saved it loses `use`. API tokens and OAuth grants carry the same restrictions and never reach a repository that their owner cannot reach at that moment. See [Git integration restrictions](/en/identity/scopes-reference/#git-integration-restrictions) for the qualifier format and [Restrict repository access](/en/integrations/source-control/#restrict-repository-access) for what each operation checks.
 
 ## Operate workloads without adopting them
 

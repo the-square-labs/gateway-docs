@@ -5,7 +5,7 @@ section: Automation
 order: 3
 audience: [developer, platform-engineer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 
@@ -22,7 +22,7 @@ Automation should:
 
 - use a dedicated least-privilege identity;
 - treat `202` or task creation as accepted work, then poll durable state;
-- retry only idempotent operations or use the operation's retry contract;
+- retry only idempotent operations, send an [`Idempotency-Key`](#safe-retries-with-idempotency-key) with the creates that accept one, or use the operation's retry contract;
 - handle `401`, `403`, `409`, `422`, and node-offline failures distinctly;
 - avoid parsing UI text when a structured API field exists;
 - record resource IDs and request IDs without logging secrets.
@@ -34,6 +34,23 @@ Use the OpenAPI document served by the running Gateway instance for exact reques
 Choose a session, API token, or OAuth client according to the caller. Remote MCP clients authorize through OAuth and discover task-oriented tools filtered by the same scopes and product state. Tool presence is not proof that a particular resource mutation will be admitted.
 
 Start automation by reading the target resource and capability state. Resolve stable IDs rather than scraping names from the UI. Keep the base URL, token, and environment separate so a development script cannot accidentally target production.
+
+## Find out what the caller can access
+
+Access limited to folders, Nodes, or individual resources is normal for automation and agents. Read the caller's access summary before creating resources, and whenever a list comes back empty or a create at the root is refused:
+
+- **REST:** `GET /api/auth/me/access`, with a session, an API token, or an OAuth token.
+- **MCP and the AI Workspace:** the `get_my_access` tool, optionally with an `area` such as `docker_containers` or `routes`.
+- **MCP resource:** `gateway://access`.
+
+The summary groups access by product area. For each area it says whether access is `broad` or `limited`, lists the granted folders (ID, name, and path), Nodes, accounts, and resources with the actions allowed on each, and says where the caller may create: `create.atRoot`, `create.folders`, and `create.nodes`, with a `howTo` hint. The `principal` object names the credential type (`session`, `api-token`, `oauth-token`, `mcp`, or `assistant`). Only a browser session and the AI Workspace also receive the user's ID, name, email, and permission group; API tokens, OAuth tokens, and MCP clients get just `principal: { credential, boundedByOwner: true }`, because their access never exceeds the owner's current access. When an MCP connection is limited, Gateway also adds a short version of the summary to the MCP server instructions at connect time.
+
+Work inside the listed grants:
+
+- List endpoints and tools return only what the caller may access; an empty list is not a denial.
+- `list_resource_folders` shows every folder the caller holds any grant on, including empty ones, with `access.actions` and `access.canCreate`.
+- A create without `folderId` targets the root. Pass `folderId`, and `nodeId` where the operation takes one, when create access is limited.
+- A refused create names the folders and Nodes where the caller may create and says to pass `folderId`. MCP and AI Workspace tool errors add this list for every resource type; REST responses include it for Docker resources. Treat a permission as missing only when the summary shows no grant for the action anywhere.
 
 ## Connect Codex or Claude Code through MCP
 
@@ -112,7 +129,7 @@ Confirm that the client reports `good-gateway` as connected, only expected resou
 
 - **The endpoint returns 404:** enable **Settings → Features → OAuth and MCP access → MCP server** and verify that the URL ends in `/api/mcp`.
 - **The client requires authentication:** run `codex mcp login good-gateway` or `claude mcp login good-gateway`. In an interactive client, use `/mcp`.
-- **Login succeeds but Gateway returns 403:** the account needs `mcp:use` and at least one effective resource scope. A grant limited to a folder sees only that folder's resources; creating elsewhere is denied.
+- **Login succeeds but Gateway returns 403:** the account needs `mcp:use` and at least one effective resource scope. A grant limited to a folder sees only that folder's resources; creating elsewhere is denied. Ask the agent to call `get_my_access` and to create in one of the folders it lists; see [Find out what the caller can access](#find-out-what-the-caller-can-access).
 - **A client sends a scope name that no longer exists:** Gateway 2.11 still accepts the [retired scope names](/en/identity/scopes-reference/#retired-scope-names) for two releases and grants their replacements.
 - **The client exhausts its context with too many tools:** disable **Extended MCP compatibility** to use the compact initial catalog and category discovery.
 - **Gateway rejects the OAuth callback:** update the client and retry first. Normal Codex and Claude Code loopback callbacks do not require **OAuth extended callback compatibility**.
@@ -129,7 +146,43 @@ Many infrastructure mutations return an accepted task or operation instead of a 
 5. verify the resulting resource state independently;
 6. retry only according to the operation's idempotency contract.
 
-Do not translate a transport timeout directly into a second create/delete request. The first request may have reached the owning daemon and be awaiting reconciliation.
+Do not translate a transport timeout directly into a second create/delete request. The first request may have reached the owning daemon and be awaiting reconciliation. A create sent to an endpoint that accepts an `Idempotency-Key` is the exception: retry it with the same key.
+
+## Safe retries with Idempotency-Key
+
+Selected create endpoints accept an optional `Idempotency-Key` header of 1–255 printable ASCII characters, for example a UUID. The OpenAPI document lists the header on exactly these operations:
+
+- **Docker:** creating and duplicating containers, and creating Deployments, Compose Projects, resources from a Git source, volumes, networks, and registries;
+- **Ingress and certificates:** Routes (`POST /api/proxy-hosts`), Route folders, Domains, ACME certificates, and root and intermediate certificate authorities;
+- **Databases and storage:** database connections, managed databases, storage connections, and managed storage;
+- **Other:** Page Projects, alert rules, and SIEM destinations.
+
+Generate a new key for each logical operation, and send the same key again only when retrying that request after a timeout or a dropped connection:
+
+```bash
+curl -X POST https://gateway.example.com/api/domains \
+  -H "Authorization: Bearer $GATEWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 5f0c6c1e-8a55-4c43-9d4e-2f1f8c3d9b10" \
+  -d '{"domain":"app.example.com"}'
+```
+
+- A key belongs to the API token, OAuth token, or browser session that sent it, together with that caller's current effective scopes, the method, and the exact path. After a scope change, the same key starts fresh, so a replay never outlives revoked access.
+- A retry with the same key and the same request—the same query string and JSON body, in any key order—returns the stored response with the header `Idempotency-Replayed: true` and creates nothing new. Gateway keeps the result for 24 hours, encrypted with its master key, and writes every replay to the audit log as `api.idempotency.replay`.
+- The same key with a different request returns `422 IDEMPOTENCY_KEY_REUSED`. The same key while the first request is still running returns `409 IDEMPOTENCY_KEY_IN_PROGRESS` with `Retry-After`. An invalid key returns `400 IDEMPOTENCY_KEY_INVALID`.
+- Gateway never stores a response that looks like it carries secret material, such as a token, password, private key, or credentials, nor one larger than 1 MiB. It records only that the request completed, and a retry returns `409 IDEMPOTENCY_RESPONSE_WITHHELD` with the original status and `Location` when known: look the resource up instead of retrying.
+- Only `2xx` responses and `400`, `404`, `409`, and `422` responses with a JSON or empty body are recorded. `401`, `403`, `5xx`, streamed, and download responses are not, so a retry after them runs the request again.
+- **Not covered:** every endpoint outside the list above, which runs normally and ignores the header. This deliberately includes endpoints that return a secret once or echo sensitive input: API, inference, logging-ingest, and Pages deploy tokens, Node enrollment, access keys and credentials, bindings, Access Lists, and notification webhooks. Request bodies over 1 MiB and non-JSON uploads also run without idempotency, and so does everything while Redis, which stores the keys, is unavailable.
+
+MCP create tools take an optional `idempotencyKey` argument with the same rules. The key is bound to the MCP token and its scopes, the owner's current scopes, and the tool. Only successful results are stored, so a tool error can be retried with the same key; a replayed result carries `_meta.idempotencyReplayed: true` and is audited. A result that looks like it carries a secret is not stored, and a retry returns `IDEMPOTENCY_RESULT_WITHHELD`. The argument is offered on:
+
+- **Docker:** `create_docker_container`, `duplicate_docker_container`, and the create operation of `manage_docker_deployment`, `manage_docker_compose`, `manage_docker_source`, `manage_docker_volume`, `manage_docker_network`, and `manage_docker_registry`;
+- **Ingress:** `create_route`, `create_route_folder`, and `create_domain`;
+- **Certificates:** `request_acme_cert`, the upload operation of `manage_ssl_certificate`, `create_root_ca`, and `create_intermediate_ca`;
+- **Databases and storage:** the create operation of `manage_database_connection`, `manage_managed_database`, `manage_storage_connection`, and `manage_managed_storage`;
+- **Other:** the `project_create` operation of `manage_pages`, `create_alert_rule`, and `create_siem_destination`.
+
+Tools that return a secret or echo sensitive input—`create_node`, `create_access_list`, `create_webhook`, binding creation, token and access-key creation, and `issue_certificate`—do not take the argument. The Compose lifecycle operations of `manage_docker_compose` keep their own `idempotencyKey` argument with its previous meaning.
 
 ## Error handling
 
@@ -145,6 +198,8 @@ Do not translate a transport timeout directly into a second create/delete reques
 
 In 2.11, MCP tools cover every resource and management operation that the OAuth grant's scopes allow, including Node configuration and files, Docker migrations, the logging backend, Gateway settings, users and groups, Relay Pool and update operations, inference administration, hosting, and the GitLab, GitHub, generic Git, Cloudflare, and external SSH connectors. MCP does not expose AI Workspace internals such as conversations, plans, and sandboxes, or tools that mint API tokens or OAuth authorizations. See [What tokens can and cannot do](/en/identity/scopes-tokens-oauth/#what-tokens-can-and-cannot-do-in-211).
 
+Creating Routes and Domains does not require Node permissions: `create_route` and `create_domain` can omit the Node when a registered Domain or the only eligible Ingress Node decides it (for Routes, that node must be online), and `list_route_ingress_nodes` lists the Nodes the caller may create Routes on. See [Choose the Ingress Node](/en/ingress/domains-routes-tls/#choose-the-ingress-node).
+
 Use MCP for goal-oriented operations where the tool schema adds safety and resource context. Read tool descriptions and returned warnings, pass exact resource identifiers, and treat external content as untrusted input. MCP calls are audited and must not be used to bypass confirmation, permission, entitlement, or lifecycle checks.
 
 ## Verification
@@ -155,7 +210,7 @@ For every automation path, test one allowed action, one denied action, one valid
 
 Model automation as reconciliation rather than a sequence of blind button presses. Read the current resource, compare it with the desired state, submit the smallest required mutation, and verify the resulting owner-reported state. Use stable IDs in stored state and human-readable names only for display. When an API exposes an operation or Task ID, persist it alongside the automation run so an operator can correlate a timeout with Gateway history.
 
-Set bounded connection, request, and overall operation deadlines separately. A short HTTP deadline can coexist with a long-running durable Task. Retry reads and explicitly idempotent updates with capped exponential backoff and jitter. Do not automatically retry creates, deletes, migrations, restores, or credential rotation after an ambiguous timeout unless the API contract provides an idempotency key or the existing operation has been reconciled.
+Set bounded connection, request, and overall operation deadlines separately. A short HTTP deadline can coexist with a long-running durable Task. Retry reads and explicitly idempotent updates with capped exponential backoff and jitter. Do not automatically retry creates, deletes, migrations, restores, or credential rotation after an ambiguous timeout unless the request carried an [`Idempotency-Key`](#safe-retries-with-idempotency-key) to an endpoint that accepts one, or the existing operation has been reconciled.
 
 Version the client against the OpenAPI document and the Gateway releases it has actually tested. Reject unknown destructive fields and states rather than silently ignoring them. If a release changes a lifecycle contract, update the client and its acceptance tests before rolling it across all installations.
 

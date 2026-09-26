@@ -5,7 +5,7 @@ section: AI and inference
 order: 1
 audience: [developer, platform-engineer, operator]
 status: ready
-lastReviewed: 2026-09-02
+lastReviewed: 2026-09-26
 ---
 
 Good Gateway can become an infrastructure control plane for coding agents without giving them direct SSH access or teaching each agent your deployment process from scratch. The public Good Gateway skills explain how Gateway resources, permissions, Tasks, builds, delivery, diagnosis, verification, and rollback work: `using-gateway` is the entry point, and one skill per product area goes into the details. Gateway's remote MCP server then gives the agent authenticated access to the resources its user is allowed to see.
@@ -114,5 +114,7 @@ The skill tells the agent to read current state first, preserve resource ownersh
 ## Permissions and safety
 
 Create a dedicated Gateway user or group for agent access and grant only the necessary resources and actions. MCP does not bypass Gateway authorization: removing `mcp:use`, changing group membership, or narrowing resource scopes affects future calls made with the existing connection.
+
+An agent whose user may work only in some folders, Nodes, or resources stays inside them. When the connection is limited, Gateway adds a summary of that access to the MCP server instructions at connect time. The `using-gateway` and `access-control` skills tell the agent to call `get_my_access`, or read `gateway://access`, when a list comes back empty or a create at the root is refused, and to pass `folderId` when creating; a refused create also names the folders it may use. See [Find out what the caller can access](/en/integrations/api-and-mcp/#find-out-what-the-caller-can-access).
 
 Use separate identities and Gateway installations for development and production. A skill gives an agent instructions, not authority; the connected user's scopes and the user's explicit request determine what it can do.

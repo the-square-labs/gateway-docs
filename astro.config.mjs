@@ -36,8 +36,8 @@ const llmsLinkSections = [
 		title: 'Security and access',
 		links: [
 			['security/security-model', 'Security model', 'trust boundaries, secret handling, and what leaves a self-hosted installation'],
-			['concepts/permissions', 'Permissions and scopes', 'global, Node, folder, and resource-scoped grants, restricting a team to one project folder, and access to unmanaged containers and external Compose projects'],
-			['identity/scopes-reference', 'Scope reference', 'every permission scope, the resource levels it supports, implied view access, folder support by resource type, and scope names retired in 2.11'],
+			['concepts/permissions', 'Permissions and scopes', 'global, Node, folder, and resource-scoped grants, restricting a team to one project folder or Git access to repositories, and access to unmanaged containers and external Compose projects'],
+			['identity/scopes-reference', 'Scope reference', 'every permission scope, the resource levels it supports, Git connector, group, and repository restrictions, implied view access, folder support by resource type, and scope names retired in 2.11'],
 			['identity/scopes-tokens-oauth', 'Scopes, API tokens, OAuth, and MCP', 'delegated credentials and consent, including limiting tokens and OAuth grants to folders or resources'],
 			['security/hardening', 'Hardening checklist', 'production hardening steps'],
 		],
@@ -67,7 +67,7 @@ const llmsLinkSections = [
 	{
 		title: 'Automation and AI',
 		links: [
-			['integrations/api-and-mcp', 'REST API and MCP', 'programmatic access with scoped tokens, OAuth, and remote MCP'],
+			['integrations/api-and-mcp', 'REST API and MCP', 'programmatic access with scoped tokens, OAuth, and remote MCP, access summaries for folder-limited callers, and safe retries with Idempotency-Key'],
 			['ai/agent-skills', 'AI agent skills', 'connect Codex, Claude Code, and other agents through authenticated MCP'],
 		],
 	},

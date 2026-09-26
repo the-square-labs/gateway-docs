@@ -5,7 +5,7 @@ section: Databases
 order: 5
 audience: [database-operator, operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 Gateway creates native backups of PostgreSQL, Redis, and ClickHouse databases and writes them to a [storage connection](/en/storage/overview/). Backups work for both [managed databases and external connections](/en/databases/overview/#managed-and-external-databases-at-a-glance) and are available on Personal and higher. Each backup and restore runs as a job on a Storage Node that you choose as the executor, not on the Gateway host.
@@ -57,7 +57,7 @@ For an external Redis target, the restore runs a temporary, password-protected R
 
 ## Runs, queueing, and schedules
 
-An executor Storage Node runs one backup or restore at a time. A run admitted while the Node is busy stays **Queued** and starts in creation order when the Node is free; a queued run can be cancelled immediately. Cancelling a running job waits for the executor to confirm; **Force cancel** ends the run without that confirmation while Gateway keeps reconciling the job in the background. A run that exceeds its timeout by more than 15 minutes is marked failed. A scheduled run is skipped, with an error on the policy, while the previous run of the same policy is still queued or running. If Gateway was down when a scheduled time passed, it runs only the most recent missed slot within the last 24 hours rather than a backlog.
+An executor Storage Node runs one backup or restore at a time. A run admitted while the Node is busy stays **Queued** and starts in creation order when the Node is free; a queued run can be cancelled immediately. Cancelling a running job waits for the executor to confirm; **Force cancel** ends the run without that confirmation while Gateway keeps reconciling the job in the background. A run that exceeds its timeout by more than 15 minutes is marked failed. A policy has at most one queued or running backup: **Run now** while a backup of the policy is active is refused with `409 BACKUP_ALREADY_RUNNING`, which names the active run, and a scheduled run is skipped, with an error on the policy. Likewise, only one restore into the same new managed database name can be queued or running at a time; another is refused with `409 BACKUP_RESTORE_ALREADY_RUNNING`. The database enforces both rules, so they also hold across several Gateway processes. If a policy had several active backups when Gateway was updated to 2.11, one kept running—a running backup over a queued one, otherwise the newest—and the others were marked failed and cancelled; see [Conflicts resolved by the 2.11 update](/en/operations/updates-backups/#conflicts-resolved-by-the-211-update). If Gateway was down when a scheduled time passed, it runs only the most recent missed slot within the last 24 hours rather than a backlog.
 
 A backup is complete only after its manifest has been validated. The manifest records the source identity, server version, sizes, and SHA-256 checksums of the artifacts; a successful upload alone does not count. Retention keeps the newest completed backups per policy and removes only older artifacts under the policy's prefix, skipping artifacts that a restore is using.
 

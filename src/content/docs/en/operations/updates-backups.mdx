@@ -5,7 +5,7 @@ section: Operations and security
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-05
+lastReviewed: 2026-09-26
 ---
 
 
@@ -126,7 +126,39 @@ Every Gateway update, on every plan, first authorizes the target release with th
 - **Paid installations:** an installation that holds or held a paid activation—including an expired, revoked, transferred, or deactivated one—receives the commercial core for the target version, so its existing paid resources keep running after the update. Gateway verifies the core's signature, version, sizes, and hashes, and accepts the authorization only as a signed license state for that request. If authorization or verification fails, the current Gateway keeps running; Gateway never silently replaces a paid installation with Community. An installation that never held a paid plan updates as Community.
 - **Running operations:** after pulling images and before changing the host, Gateway waits for running and queued orchestration work—Deployments, Compose operations, Workload Availability actions, migrations, and build rollouts—to finish. The wait lasts up to 15 minutes by default, or up to the longest deadline announced by running work, and at most 60 minutes. New orchestration work started during the wait is rejected with `GATEWAY_UPDATING`. An administrator can end the wait early with **Update now**.
 
+- **Free disk space:** before it replaces the app, the update takes a snapshot of the Gateway database and needs free space for it on the filesystem that holds the Gateway directory: the database size plus 10% plus 256 MiB. With less, the update stops before any change, and the update container logs say how much space is needed.
+
 The previous image and commercial core are kept so that a failed update can roll back. See [Commercial core](/en/reference/plans-and-entitlements/#commercial-core) for how paid features are delivered.
+
+### Automatic rollback and the database snapshot
+
+Just before the new version starts, the update writes a `pg_dump` custom-format snapshot of the Gateway database to `.gateway-foundation-backups/pre-update-<time>/gateway-db.dump` in the Gateway directory, next to the saved `.env` and `docker-compose.yml`. If the new version does not become healthy within about five minutes, the update container rolls back: it restores `.env` and `docker-compose.yml`, stops every Compose service except `postgres`, drops the `gateway` database, and recreates it from the snapshot. The previous version therefore never runs on a schema changed by the new version's migrations. Data written after the snapshot is lost.
+
+The snapshot is deleted once the update or the restore succeeds, and a later update deletes any leftover snapshot older than 7 days. If the migrated database cannot be dropped, the previous version starts on it as before and the snapshot is kept. If the restore fails after the drop, Gateway is left stopped and the snapshot is kept: fix the cause shown in the update container logs, then restore from the Gateway directory:
+
+```bash
+docker compose exec -T postgres psql -U gateway -d postgres -c 'DROP DATABASE IF EXISTS gateway WITH (FORCE)'
+docker compose exec -T postgres pg_restore --create --exit-on-error -U gateway -d postgres < .gateway-foundation-backups/pre-update-<time>/gateway-db.dump
+docker compose up -d
+```
+
+The snapshot protects only the update itself. Keep the PostgreSQL backups of the [recovery set](#build-the-recovery-set) as well.
+
+## Conflicts resolved by the 2.11 update
+
+Gateway 2.11 enforces several uniqueness rules in its database rather than only in application code, so they also hold when several Gateway processes handle requests at once. The update never fails on existing data that breaks one of them: migration `0207` keeps the earliest record, flags or renames the others, and writes every case to the [audit log](/en/reference/tasks-and-audit/#audit-interpretation). After the update, search the audit log for these actions and resolve what they report.
+
+| Rule after the update | What the update did with existing conflicts | Audit action |
+| --- | --- | --- |
+| Two enabled Routes on one Ingress Node cannot serve the same name (`409 PROXY_HOST_DOMAIN_CONFLICT`) | The earliest Route keeps the name. Later ones keep their configuration and stay flagged until their names or node change. Once disabled, such a Route cannot be enabled again while another enabled Route serves the name. nginx serves only one of them, so remove the name from one Route or disable it | `proxy_host.domain_conflict` |
+| A backup policy has one queued or running backup (`409 BACKUP_ALREADY_RUNNING`), and one restore into a given new database name runs at a time (`409 BACKUP_RESTORE_ALREADY_RUNNING`) | One active run continues: a running one over a queued one, otherwise the newest. The others are marked failed with the phase `superseded`, release their executor, and have their runners cancelled | `database.backup.superseded` |
+| Managed storage names are unique per Storage Node (`409 MANAGED_STORAGE_NAME_IN_USE`) | The earliest cluster keeps the name. Later ones, and their storage connections, are renamed with the first free `-2`, `-3`, … suffix | `storage.managed.renamed_duplicate` |
+| A host port on a Node belongs to one Deployment, managed storage, or managed database (`409 DEPLOYMENT_HOST_PORT_IN_USE`, `MANAGED_STORAGE_PORT_CONFLICT`, or `MANAGED_DATABASE_PORT_CONFLICT`) | The earliest workload keeps the port. Later ones keep running and are flagged; move one of them to another port | `node.host_port_conflict` |
+| A certificate that a Route uses cannot be deleted (`409 CERT_IN_USE`) | Nothing to resolve: the database now enforces the existing check | — |
+
+Host ports that the Docker daemon picks for a managed database avoid the ports other workloads reserve on that Node. A managed database whose published port still conflicts with another workload's reservation lists it in `managed.hostPortConflicts` of its database connection, with the port and the workload that holds it.
+
+The update does not delete Routes, workloads, storage, or backups, and does not stop running workloads. Clients that rename managed storage or look it up by name should be checked for the renamed clusters.
 
 ## Daemon and Relay updates
 
@@ -150,7 +182,7 @@ If only part of the recovery set is available, stop and assess the consequence. 
 
 Decide the rollback trigger before starting an update: failed migration, inability to decrypt existing secrets, Relay authorization failure, incompatible daemon state, broken customer Routes, or another measurable condition. Keep the prior approved image references and the matching backup until the new release completes its observation window.
 
-Application rollback and data rollback are separate. Reverting a Gateway image does not reverse a completed PostgreSQL schema migration, and moving a workload back to an older artifact does not revert mutable volume or database data. Follow the release-specific compatibility guidance and restore data only from a coordinated recovery point when integrity requires it.
+Application rollback and data rollback are separate. Apart from the [automatic rollback](#automatic-rollback-and-the-database-snapshot) of an update that never became healthy, reverting a Gateway image does not reverse a completed PostgreSQL schema migration, and moving a workload back to an older artifact does not revert mutable volume or database data. Follow the release-specific compatibility guidance and restore data only from a coordinated recovery point when integrity requires it.
 
 ### Operator validation after update
 

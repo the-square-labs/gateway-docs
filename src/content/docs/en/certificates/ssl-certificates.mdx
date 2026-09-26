@@ -5,7 +5,7 @@ section: Certificates and PKI
 order: 1
 audience: [operator, security-admin]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 
@@ -73,6 +73,6 @@ A linked Internal PKI certificate is reissued automatically, checked daily, when
 - **Incomplete chain:** include intermediates in issuer order and exclude unrelated roots.
 - **Not distributed:** confirm an enabled TLS Route on that node actually references the certificate.
 
-Delete a certificate only after all Routes are detached and a replacement has been externally verified. Preserve exported material according to the organization's key-retention policy.
+Delete a certificate only after all Routes are detached and a replacement has been externally verified. Gateway refuses to delete a certificate that a Route or the Pages wildcard profile still uses with `409 CERT_IN_USE`, even when a Route is attached to it while the deletion runs. Preserve exported material according to the organization's key-retention policy.
 
 If a key may be compromised, treat replacement as an incident rather than ordinary renewal. Issue a new keypair, update all dependent Routes, verify externally, revoke the old certificate where the authority supports revocation, and record the affected names and exposure window. A rollback must never restore a certificate whose private key is suspected to be compromised.

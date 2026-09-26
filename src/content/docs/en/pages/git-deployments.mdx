@@ -5,7 +5,7 @@ section: Pages
 order: 2
 audience: [developer, platform-engineer]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-26
 ---
 
 Connect and restrict the repository first using [Git hosting](/en/integrations/source-control/). Connector access, Pages deployment permissions, and permission to view build history are separate checks.
@@ -29,7 +29,7 @@ The connector should have read access only to the selected repositories. The Bui
 
 Record the expected branch, application root, package manager, Node.js version, build script, artifact directory, publish Tag, and responsible owner. Then define the acceptance check for the produced site: expected entry document, direct navigation behavior, asset loading, metadata, language Routes, sitemap or search index where applicable, and absence of secrets in the artifact.
 
-Enable automatic builds when every relevant source update should produce a candidate. Enable automatic deployment only when every successful candidate may safely move the configured Tag. For documentation and marketing sites, automatic build with explicit production promotion allows the immutable preview to be reviewed first.
+Enable automatic builds when every relevant source update should produce a candidate. Enable automatic deployment only when every successful candidate may safely move the configured Tag. For documentation and marketing sites, automatic build with explicit production promotion allows the immutable preview to be reviewed first. Automatic builds of a source saved since 2.11.0-rc.11 run only while the account that saved it keeps `integrations:<provider>:use` on the repository; otherwise the build history shows "Build paused: <user> no longer has use on <repo>". See [Who can build and view results?](/en/integrations/source-control/#who-can-build-and-view-results).
 
 ## Build a deployment
 

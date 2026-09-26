@@ -5,7 +5,7 @@ section: Identity and access
 order: 2
 audience: [security-admin, developer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 See the [scope reference](/en/identity/scopes-reference/) for every permission, its description, supported restrictions, and token delegation.
@@ -69,6 +69,7 @@ A token or OAuth grant can be limited to folders, Nodes, or individual resources
 
 - **API tokens:** in **Profile > Authorizations > API Tokens**, each selected scope that supports restrictions has its own picker for folders, Nodes, and resources. The picker offers only what you can use yourself.
 - **OAuth and MCP consent:** restrictions start collapsed. A scope you hold broadly shows **All resources · Restrict…**; a scope you hold only for some resources shows **No resources selected** until you choose them. **Limit selected scopes to folder…** applies one folder to every selected scope of that folder's resource type at once. You can change the scopes and restrictions of an existing OAuth authorization later under **Profile > Authorizations**.
+- **Git integrations:** both forms restrict Git scopes to a connector, a GitLab group or project, or a GitHub owner or repository, with **Add groups or projects…** or **Add owners or repositories…** under each connector. Such a token is checked against its own restriction and against your current Git access on every repository operation, so it stops reaching a repository as soon as you lose access to it. See [Git integration restrictions](/en/identity/scopes-reference/#git-integration-restrictions).
 
 Gateway expands a token's own folder and Node restrictions first and then limits the result by your current access, so a token never sees more than you do. A creation grant never counts as a view grant when you delegate it. If a client requests a broad scope that you hold only for some resources, Gateway narrows the grant to those resources.
 

@@ -5,7 +5,7 @@ section: Storage
 order: 1
 audience: [platform-engineer, operator, developer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 The **Storage** area manages two kinds of resource. A **storage connection** records access to object or file storage that runs elsewhere. **Managed storage** is S3-compatible object storage that Gateway provisions and runs on a Storage Node; new clusters use SeaweedFS. Both require Personal or higher. Storage resources serve as destinations for [database backups](/en/databases/backups/), and managed storage can give workloads private, bucket-scoped access.
@@ -44,6 +44,8 @@ A cluster runs on one Storage Node; distributed clusters are not available for S
 
 After provisioning you can change the name, tags, CPU, memory, swap, disk size, and S3 publication. The disk can only grow, and a change is rejected while a previous one is still being applied. Growing the disk, and turning publication on or off or changing its port, recreate the storage container; data and keys are retained. **Restart** and retrying a failed provisioning are also available.
 
+Managed storage names are unique on each Storage Node. Creating or renaming managed storage with a name that another managed storage on the same Node already uses fails with `409 MANAGED_STORAGE_NAME_IN_USE`; when that other storage failed to provision, retry or delete it first. A name becomes free as soon as its storage starts being deleted. When Gateway was updated to 2.11, later clusters that shared a name on one Node were renamed with the first free `-2`, `-3`, … suffix, together with their storage connection; see [Conflicts resolved by the 2.11 update](/en/operations/updates-backups/#conflicts-resolved-by-the-211-update).
+
 Managed storage is private by default. Gateway reaches it through authenticated Relay routes. You can enable additional access paths explicitly:
 
 - **Publish S3 endpoint** exposes the S3 API on a host port, 9000 by default.
@@ -57,7 +59,7 @@ SeaweedFS clusters offer S3 only; they have no FTP or SFTP listeners.
 
 Gateway renews the certificate of a TLS cluster automatically, checking hourly: when two thirds of its lifetime have passed, 30 days or fewer remain, a required name is missing, or the certificate comes from another CA. The Storage Node daemon writes the new certificate and the engine reloads it without a restart; Gateway switches to it only after the cluster serves it. The Storage CA does not change, so clients keep working.
 
-- The storage detail page shows the certificate's expiry, the renewal state, and the last error. **Renew now** renews immediately.
+- The storage's **Connection Details** show a quiet **TLS Certificate** row with the expiry date and either "renewed automatically" or "needs attention". A notice appears on the page only when attention is needed—renewal failed, 7 days or fewer remain, the renewed certificate is not loaded yet, renewal waits for the Node daemon, or the CA limits the lifetime—with the reason, the expiry date, and **Renew now** for users who may edit the storage. The Dashboard also lists every managed storage and managed database whose certificate needs attention and that you may view. Through the API and MCP you can renew at any time.
 - A restart is used only when 7 days or fewer remain, when you allow it on a manual renewal, or when you renew manually on a Node whose daemon cannot reload certificates yet. Otherwise such a Node keeps the current certificate until its daemon is updated.
 - SeaweedFS clusters created before 2.11 reread their certificate files only every few hours, so a renewal can take that long to be served; allow a restart to apply it sooner.
 - While renewal keeps failing, Gateway raises the **Managed Service Certificate Renewal Failed** notification event, which clears after a successful renewal. Create an [alert rule](/en/observability/notifications-status-pages/) for it. Renewals are recorded in the audit log.

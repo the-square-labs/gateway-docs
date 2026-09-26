@@ -5,7 +5,7 @@ section: Integrations
 order: 3
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-26
 ---
 
 
@@ -81,13 +81,45 @@ This connector uses HTTPS credentials, not a private key imported from External 
 7. Test that an out-of-scope repository or host is denied.
 8. Configure webhook authenticity and delivery only after the read path works.
 
+## Restrict repository access
+
+The connector's allowlist decides which repositories Gateway can reach at all. Git integration scopes decide which users, groups, API tokens, and OAuth grants may use them. Every Git scope except `manage` can be limited below the connector:
+
+- **GitLab:** a group, which also covers its subgroups and every project under them, or a single project. Gateway reads a project's parent groups from GitLab, so a project moved to another group follows its new group.
+- **GitHub:** an owner, which covers every repository of that organization or user, or a single repository.
+- **Generic Git:** the connector only.
+
+Connector administration—settings, tokens, the allowlist, sync, test, and deletion—needs `integrations:<provider>:manage` on the connector or without a restriction; a group, owner, project, or repository grant never allows it.
+
+To restrict a grant, open the scope's restriction in the group editor, a user's additional permissions, the API token form, or OAuth and MCP consent. Check a connector to cover all of its repositories, or open **Add groups or projects…** or **Add owners or repositories…** under the connector to search the provider and select targets. Grants store the provider's numeric IDs, so renames and moves do not break them; a target that has since been deleted is shown as **Unavailable** and can still be removed.
+
+With restricted grants:
+
+- Connector, project, and repository lists, including the build source picker, show only what the grants cover. A project missing from a list is usually outside the grant rather than unsynchronized.
+- Every repository operation checks the repository—files, branches, commits, pipelines and job logs, variables, webhooks, deploy tokens, registry settings, and sandbox clones—in the Console, the REST API, the AI Workspace, and MCP alike. A GitLab project outside the grant answers exactly like a project that is not synchronized: `404 GITLAB_PROJECT_NOT_FOUND`, without its path, so project IDs cannot be probed. For GitHub and generic Git, where the caller already supplies the repository, a denial returns `403 CONNECTOR_SCOPE_DENIED` with the required scope.
+- Gateway uses the connector's credential for a repository only when `use` covers that repository; otherwise it uses the user's personal credential.
+- Writes, secrets, sandbox clones, and the credential decision read a GitLab project's groups or a GitHub repository's owner fresh from the provider, so a transferred repository is judged by where it is now; plain reads may use a value cached for up to five minutes. Connector syncs and source webhook deliveries clear the cache.
+- The search picker offers only targets inside the connector's allowlist and is limited to 60 requests a minute per account; beyond that it returns `429 SCOPE_TARGET_RATE_LIMITED` with `Retry-After`.
+- API tokens and OAuth grants keep their own restrictions and are also checked against the owner's current grants on every request. A token restricted to one project works while its owner holds the group that contains the project and stops working when the owner loses that access.
+
+See [Git integration restrictions](/en/identity/scopes-reference/#git-integration-restrictions) for the exact qualifier format and the picker endpoints.
+
 ## Source binding lifecycle
 
 ### Who can build and view results?
 
-Repository discovery and direct source operations use provider integration scopes. GitLab, GitHub, and generic Git share the same verbs: `integrations:<provider>:view` lists connectors, `:manage` configures, tests, and synchronizes them, `:use` uses the connector's own credential, and `:repo:read` and `:repo:write` read or change repository content. Listing and reading GitLab's synced projects needs `integrations:gitlab:view`. GitLab `repo:read` covers repository files, CI pipelines and job logs, and CI/CD variable keys, never values; changing variables needs `repo:write`, and reading GitHub Actions variable values needs `integrations:github:repo:write`. The built-in viewer and operator groups get `integrations:gitlab:view` only. See the [scope reference](/en/identity/scopes-reference/#integrations-gitlab). Attaching or changing a source binding must pass the applicable connector and repository checks. GitLab's interactive source tools may also require the user's own GitLab authorization unless system credentials are explicitly permitted.
+Repository discovery and direct source operations use provider integration scopes. GitLab, GitHub, and generic Git share the same verbs: `integrations:<provider>:view` lists connectors, `:manage` configures, tests, and synchronizes them, `:use` uses the connector's own credential, and `:repo:read` and `:repo:write` read or change repository content. Listing and reading GitLab's synced projects needs `integrations:gitlab:view`. GitLab `repo:read` covers repository files, CI pipelines and job logs, and CI/CD variable keys, never values; changing variables needs `repo:write`, and reading GitHub Actions variable values needs `integrations:github:repo:write`. The built-in viewer and operator groups get `integrations:gitlab:view` only. See the [scope reference](/en/identity/scopes-reference/#integrations-gitlab). Each of these scopes can be limited to a connector, a GitLab group or project, or a GitHub owner or repository; see [Restrict repository access](#restrict-repository-access).
 
-Starting a build from an already saved Docker source is a resource action: `docker:containers:manage` for containers/deployments or `docker:compose:manage` for Compose. It does not require giving the operator separate `integrations:gitlab:repo:read` access just to run that saved build. Gateway still checks the saved connector, allowed repository, and source credentials. Pages uses `pages:deploy` for deployment actions.
+Attaching or changing a source binding needs `integrations:<provider>:use` on the repository, next to the workload's own permissions. `use` limited to that one project or repository is enough; `repo:read` and a personal provider credential are not needed, because builds use the connector credential. The built-in operator group can therefore see GitLab projects in the source picker but cannot save a source until it is given `integrations:gitlab:use`, preferably limited to the projects it builds. GitLab's interactive tools in the AI Workspace ask for the user's own GitLab authorization when `use` does not cover the project.
+
+Starting a build from an already saved source is a resource action—`docker:containers:manage` for containers and Deployments, `docker:compose:manage` for Compose, and `pages:deploy` for Pages—and also checks the caller's `integrations:<provider>:use` on the saved repository again, so revoking `use` stops manual rebuilds. `repo:read` is still not needed. Gateway also checks the saved connector, allowed repository, and source credentials.
+
+Automatic builds from polling and webhooks depend on when the source was last saved:
+
+- **Sources saved before 2.11.0-rc.11** keep building automatically exactly as before.
+- **Sources created or saved again since then** build automatically only while the account that last saved them still holds `integrations:<provider>:use` on the repository and is active. Otherwise no build runs: the build history shows a cancelled build with `SOURCE_OWNER_ACCESS_REVOKED` and the message "Build paused: <user> no longer has use on <repo>", recorded once per commit, and the source shows the same message as its polling or webhook error. Webhook deliveries are still accepted. Automatic builds resume when the account regains `use`, or when someone who holds it saves the source again.
+
+Grant `use` to the teams that save sources, limited to their projects, before relying on automatic builds.
 
 Build history and logs require view access to the target: `docker:containers:view`, `docker:compose:view`, or `pages:view`. Resource and inherited folder restrictions apply. Since 2.11, any action scope on the same target, such as `docker:containers:manage`, also grants view of it. Do not grant account-wide repository or node access to work around a missing target grant. See [Permissions](/en/concepts/permissions/).
 
