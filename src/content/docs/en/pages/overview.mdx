@@ -39,11 +39,15 @@ Use separate Tags when environments need independent promotion. Do not use Tag n
 
 For a Git-backed release, a supported source integration and Build Worker produce a new immutable Deployment. For a manual release, provide the ready static-site artifact and create a new Deployment from it. In either path, review the resulting artifact and deployment identity before moving a public Tag.
 
+A manual upload can be a single HTML file, which becomes the site's `index.html`, or a `.tar.gz` archive with `index.html` at its root. Finalizing the upload returns the Deployment's preview link and, when the upload named a Tag, the Tag's link, so an agent that generated a report can hand the user a URL right away (see the `publishing-html-pages` skill in [AI agent skills](/en/ai/agent-skills/)). An upload may set an expiry (`expiresInHours` or `expiresAt`). When it passes, Gateway deletes the Deployment with its files and previews and clears the Tags that still select it; a Deployment that a Route still serves keeps its files, but its previews stop. Deploy tokens restricted to certain Tags cannot set an expiry.
+
 Creating a Deployment does not publish it to a custom domain. Publication starts when a Route targets a Tag that points to that Deployment. This allows a team to verify a release before promotion and lets an incident rollback move a Tag without rewriting the prior artifact.
 
 ## Routes, previews, and runtime configuration
 
-Custom Routes target Tags only. Verify the Domain, TLS certificate, nginx placement, and Tag target before announcing a release. Optional wildcard previews use immutable deployment hostnames; they are useful for reviewing a particular artifact without changing a public Tag.
+Custom Routes target Tags only. Verify the Domain, TLS certificate, nginx placement, and Tag target before announcing a release. Optional wildcard previews give every Deployment an immutable hostname, useful for reviewing a particular artifact without changing a public Tag, and every Tag a stable hostname `<project hash>-<tag>.<wildcard domain>` that follows the Tag when it moves. The project hash is random, so preview hostnames never reveal project names. New Tag names must be lowercase DNS labels of at most 50 characters.
+
+Previews are public to anyone who has the link. To protect them, choose an access list in the project's **Preview links** settings: its IP rules and basic auth then apply to every preview of the project, and plain HTTP redirects to HTTPS. An nginx node whose daemon cannot apply access lists to previews withholds the project's previews instead of serving them open. **Rotate links** gives the project a new hash and new Deployment hostnames, which revokes every preview link it has shared so far.
 
 Runtime configuration is public client-side data and is separate from the immutable artifact identity. It is exposed to the site as `window.runtime.config`, with a `Default` object and whole-object Tag overrides. Immutable previews use `Default`; a Tag Route uses its override when present or falls back to `Default`. Do not place secrets, credentials, or private topology in runtime configuration.
 

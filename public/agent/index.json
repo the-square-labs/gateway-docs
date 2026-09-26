@@ -1,0 +1,57 @@
+[
+  {
+    "name": "access-control",
+    "description": "Administer Gateway identity and access, including users, permission groups, scopes, folder, node, and resource restrictions, API tokens, OAuth and MCP grants, and impersonation limits. Use when asked to create, block, or delete a user, change someone's permissions, design a least-privilege scope set for an integration or agent, or explain what a token or OAuth grant can and cannot do. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/access-control/SKILL.md"
+  },
+  {
+    "name": "databases",
+    "description": "Provision and operate managed PostgreSQL, Redis, and ClickHouse on Gateway, bind them privately to Containers, Deployments, or Compose services, register external database connections, run SQL or Redis queries, and manage native backups and restores. Use when asked to create a database, give an application private database access, run a query, rotate database credentials or certificates, or set up and verify backups. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/databases/SKILL.md"
+  },
+  {
+    "name": "deploying-workloads",
+    "description": "Deploy and operate Docker workloads on Gateway, including standalone Containers, blue/green Deployments with rollback, Compose Projects, Git-source builds into Gateway's internal registry, images, registries, volumes, networks, folders, and cross-node migration. Use when asked to run, update, roll out, roll back, recreate, migrate, or inspect a container, Deployment, or Compose Project on a Gateway-managed Docker Node, or to deploy a repository with a Dockerfile or Compose file through Gateway. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/deploying-workloads/SKILL.md"
+  },
+  {
+    "name": "high-availability",
+    "description": "Preflight, enable, and operate Gateway Docker Workload Availability, which places a Container, blue/green Deployment, or whole Compose Project on several independent Docker Nodes in replicated or failover mode. Use when asked to make a workload highly available, add replicas, set up failover, check an availability policy, or recover after losing a Node. Business and Enterprise only. Use after using-gateway, and after deploying-workloads for the underlying workload.",
+    "url": "/agent/high-availability/SKILL.md"
+  },
+  {
+    "name": "ingress-and-domains",
+    "description": "Expose and troubleshoot services through Gateway ingress, including Domains and DNS, Routes (proxy hosts) to Docker, Pages, or manual upstreams, SSL certificates from ACME, upload, or internal PKI, Access Lists, Additional Routes, Secure Links, nginx templates, and maintenance mode. Use when asked to put a service on a hostname, add HTTPS, restrict access by IP or basic auth, put a Route into maintenance, or find out why a Route, Domain, or certificate is not working. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/ingress-and-domains/SKILL.md"
+  },
+  {
+    "name": "internal-pki",
+    "description": "Operate Gateway's user-facing Internal PKI (Enterprise), including root and intermediate certificate authorities, tls-server, tls-client, code-signing, and email certificates, templates, revocation, expiry, and linking an internal certificate as a Route's SSL certificate. Use when asked to stand up a private certificate authority, issue, renew, or revoke an internal certificate, or explain internal PKI expiry and reissue. Separate from Gateway's hidden system PKI. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/internal-pki/SKILL.md"
+  },
+  {
+    "name": "managing-nodes",
+    "description": "Enroll, inspect, and operate Gateway Nodes, the servers running Gateway daemons for nginx ingress, Docker, builder, storage and databases, monitoring, and relay. Use when asked to add a server to Gateway, check Node or daemon health, change a Node's service address, open a Node console or browse its filesystem, update daemons, or diagnose an offline or degraded Node. For a brand-new installation, start with the instance setup in using-gateway. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/managing-nodes/SKILL.md"
+  },
+  {
+    "name": "observability",
+    "description": "Work with Gateway observability, including structured-logging environments, schemas, ingest tokens, and log search, alert rules and notification webhooks, SIEM audit export, public status pages and incidents, and the audit log. Use when asked to search logs, set up log ingestion, create or debug an alert or webhook, export audit events to a SIEM, manage a status page or incident, or find who changed something. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/observability/SKILL.md"
+  },
+  {
+    "name": "publishing-html-pages",
+    "description": "Build an HTML report, static site, or frontend output and publish it to Gateway Pages, then hand the user a working link. Use when asked to publish, host, preview, put online, or share a link to generated HTML or static files through Gateway, including single-file uploads, stable Tag links, expiring links, access-list-protected previews, preview-link rotation, rollback, custom domains, and Git-backed Pages builds. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/publishing-html-pages/SKILL.md"
+  },
+  {
+    "name": "storage",
+    "description": "Manage Gateway object storage, including external S3, R2, MinIO-compatible, FTP, FTPS, and SFTP connections, Gateway-managed SeaweedFS clusters and legacy managed MinIO, buckets and objects, private workload links and scoped access keys, server-side copy jobs, and the guided legacy MinIO to SeaweedFS migration. Use when asked to connect external storage, provision managed object storage, upload or browse objects, copy or sync data between storages, or migrate off a legacy MinIO cluster. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "url": "/agent/storage/SKILL.md"
+  },
+  {
+    "name": "using-gateway",
+    "description": "Entry point and router for deploying, publishing, configuring, diagnosing, or operating applications through a user-owned Good Gateway instance and its authenticated remote MCP. Use first in any Gateway task for setup, MCP connection, tool discovery, safety rules, asynchronous Tasks, and verification, and to choose the domain skill for Pages, Docker workloads, high availability, ingress and TLS, internal PKI, databases, object storage, Nodes, observability, or access control. Do not use for generic Docker or hosting work that is not targeting Gateway.",
+    "url": "/agent/using-gateway/SKILL.md"
+  }
+]

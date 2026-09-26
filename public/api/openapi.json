@@ -180096,6 +180096,13 @@
                     "type": "integer",
                     "minimum": 1048576,
                     "maximum": 9007199254740991
+                  },
+                  "accessListId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
                   }
                 }
               }
@@ -180398,6 +180405,322 @@
           "Pages"
         ],
         "summary": "Delete an empty Page Project",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "550e8400-e29b-41d4-a716-446655440000"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Example resource"
+                        }
+                      },
+                      "additionalProperties": {},
+                      "description": "Resource object. Exact fields depend on the endpoint.",
+                      "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Example resource",
+                        "createdAt": "2024-01-01T12:00:00.000Z"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "example": {
+                    "data": {
+                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                      "name": "Example resource"
+                    }
+                  }
+                },
+                "example": {
+                  "data": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "name": "Example resource",
+                    "createdAt": "2024-01-01T12:00:00.000Z",
+                    "updatedAt": "2024-01-01T12:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "VALIDATION_ERROR",
+                  "message": "Request validation failed",
+                  "details": [
+                    {
+                      "path": [
+                        "name"
+                      ],
+                      "message": "Required"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "message": "Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "message": "Resource not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "CONFLICT",
+                  "message": "Resource already exists"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "UNPROCESSABLE_ENTITY",
+                  "message": "Request could not be processed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "INTERNAL_ERROR",
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/{id}/preview-hash/rotate": {
+      "post": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Rotate every preview link of a Page Project",
+        "description": "Gives the Project a new random preview hash and new Deployment preview slugs, revokes every old preview hostname at once, and republishes the new links. Requires pages:edit.",
         "security": [
           {
             "bearerAuth": []
@@ -184712,6 +185035,330 @@
         }
       }
     },
+    "/api/pages/{projectId}/deployments/{deploymentId}/links": {
+      "get": {
+        "tags": [
+          "Pages"
+        ],
+        "summary": "Get the preview links of a Page Deployment",
+        "description": "Returns links.preview (immutable Deployment preview), links.tag (the Tag requested at upload) and links.latest when it points at this Deployment, each with status ready, pending or unavailable and a reason.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "550e8400-e29b-41d4-a716-446655440000"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Example resource"
+                        }
+                      },
+                      "additionalProperties": {},
+                      "description": "Resource object. Exact fields depend on the endpoint.",
+                      "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Example resource",
+                        "createdAt": "2024-01-01T12:00:00.000Z"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "example": {
+                    "data": {
+                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                      "name": "Example resource"
+                    }
+                  }
+                },
+                "example": {
+                  "data": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "name": "Example resource",
+                    "createdAt": "2024-01-01T12:00:00.000Z",
+                    "updatedAt": "2024-01-01T12:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "VALIDATION_ERROR",
+                  "message": "Request validation failed",
+                  "details": [
+                    {
+                      "path": [
+                        "name"
+                      ],
+                      "message": "Required"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "message": "Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "message": "Resource not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "CONFLICT",
+                  "message": "Resource already exists"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "UNPROCESSABLE_ENTITY",
+                  "message": "Request could not be processed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "INTERNAL_ERROR",
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/pages/{projectId}/tokens": {
       "get": {
         "tags": [
@@ -185778,6 +186425,25 @@
                     },
                     "default": {},
                     "additionalProperties": false
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "tar.gz",
+                      "html"
+                    ]
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "expiresInHours": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8760
                   }
                 },
                 "required": [
@@ -186421,7 +187087,8 @@
         "tags": [
           "Pages Deploy API"
         ],
-        "summary": "Validate and store a Deployment archive",
+        "summary": "Validate, store and publish a Deployment; returns its preview links",
+        "description": "Accepts an optional JSON body with expiresAt or expiresInHours. The response carries the Deployment and links.preview, links.tag (requested Tag) and links.latest; a link still being published after about 15 seconds has status pending.",
         "security": [
           {
             "bearerAuth": []
@@ -186439,6 +187106,31 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "description": "Optional JSON request body",
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "expiresInHours": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8760
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",

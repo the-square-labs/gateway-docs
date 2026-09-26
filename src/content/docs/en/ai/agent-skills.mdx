@@ -8,26 +8,36 @@ status: ready
 lastReviewed: 2026-09-02
 ---
 
-Good Gateway can become an infrastructure control plane for coding agents without giving them direct SSH access or teaching each agent your deployment process from scratch. The public `using-gateway` skill explains how Gateway resources, permissions, Tasks, builds, delivery, diagnosis, verification, and rollback work. Gateway's remote MCP server then gives the agent authenticated access to the resources its user is allowed to see.
+Good Gateway can become an infrastructure control plane for coding agents without giving them direct SSH access or teaching each agent your deployment process from scratch. The public Good Gateway skills explain how Gateway resources, permissions, Tasks, builds, delivery, diagnosis, verification, and rollback work: `using-gateway` is the entry point, and one skill per product area goes into the details. Gateway's remote MCP server then gives the agent authenticated access to the resources its user is allowed to see.
 
 The two layers have different jobs:
 
 - **Agent skill:** reusable operating knowledge installed into Codex, Claude Code, Cursor, and other compatible agents.
 - **Gateway MCP:** live tools from your Gateway installation, protected by OAuth, resource scopes, plan entitlements, confirmations, and audit logging.
 
-## Install the Good Gateway skill
+## Install the Good Gateway skills
 
-From a project where the agent should use Gateway, run:
-
-```bash
-npx skills add the-square-labs/gateway-skills --skill using-gateway
-```
-
-The installer lets you select the compatible agents configured on your machine. To make the skill available across projects, install it globally:
+From a project where the agent should use Gateway, install the whole set:
 
 ```bash
-npx skills add the-square-labs/gateway-skills --skill using-gateway -g
+npx skills add the-square-labs/gateway-skills --skill '*'
 ```
+
+The installer lets you select the compatible agents configured on your machine. To make the skills available across projects, install them globally with `-g`. To install one skill, name it, for example `--skill publishing-html-pages`; `using-gateway` alone routes the agent to the other skills and tells it where to read them.
+
+| Skill | Covers |
+| --- | --- |
+| `using-gateway` | Connecting over MCP, tool discovery, safety rules, Tasks and verification; routes to the skills below |
+| `publishing-html-pages` | Publishing generated HTML reports and static sites to Pages and sharing the link |
+| `deploying-workloads` | Containers, blue/green Deployments, Compose Projects, Git builds, volumes and migration |
+| `high-availability` | Running a workload on several Docker Nodes with replicas or failover |
+| `ingress-and-domains` | Domains, DNS, TLS, Routes, Access Lists, Secure Links and maintenance mode |
+| `internal-pki` | Private certificate authorities and internal certificates |
+| `databases` | Managed and external PostgreSQL, Redis and ClickHouse, bindings, queries and backups |
+| `storage` | Storage connections, managed object storage, copy jobs and the MinIO migration |
+| `managing-nodes` | Enrolling, updating and repairing Nodes, console and files |
+| `observability` | Logging, SIEM export, alerts, webhooks, status pages and the audit log |
+| `access-control` | Users, groups, scopes, API tokens and OAuth grants |
 
 The skill is plain Markdown with focused references. You can inspect it before installation in the `the-square-labs/gateway-skills` repository and keep it under version control when installing at project scope.
 
@@ -52,6 +62,10 @@ codex plugin add gateway@gateway-skills
 Start a new session after installing or updating the plugin. The repository contains no always-on hooks: installation alone does not connect to Gateway or change infrastructure.
 
 The complete installation, update, and verification commands are maintained in the repository's [INSTALL.md](https://github.com/the-square-labs/gateway-skills/blob/main/INSTALL.md).
+
+### Skills served by your Gateway
+
+Every Gateway since 2.11 serves the same skills over MCP, matching its own release: the index is the resource `gateway://skills`, each file is `gateway://skills/<name>/SKILL.md`, and each skill is also an MCP prompt named `skill-<name>`. An agent connected to Gateway can read them without installing anything. The skills are also published at `https://docs.goodgateway.dev/agent/<name>/SKILL.md`, listed in [`/agent/index.json`](/agent/index.json) and in `llms.txt`.
 
 ## Connect the agent to Gateway
 

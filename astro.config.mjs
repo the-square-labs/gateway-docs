@@ -5,6 +5,7 @@ import starlight from '@astrojs/starlight';
 import mermaid from 'astro-mermaid';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import starlightLlmsTxt from 'starlight-llms-txt';
+import { readFileSync } from 'node:fs';
 
 const docsSite = 'https://docs.goodgateway.dev';
 
@@ -72,6 +73,9 @@ const llmsLinkSections = [
 	},
 ];
 
+/** Agent Skills copied from the Gateway repository by scripts/sync-agent-skills.mjs. */
+const agentSkills = JSON.parse(readFileSync(new URL('./public/agent/index.json', import.meta.url), 'utf8'));
+
 const llmsDetails = [
 	'Key facts:',
 	'',
@@ -88,6 +92,12 @@ const llmsDetails = [
 		...links.map(([slug, label, description]) => `- [${label}](${docsSite}/en/${slug}/): ${description}`),
 		'',
 	]),
+	'## Agent skills',
+	'',
+	`Agent Skills (SKILL.md) for operating Gateway, also served by every Gateway's MCP server under gateway://skills. Index: ${docsSite}/agent/index.json. Start with using-gateway.`,
+	'',
+	...agentSkills.map(({ name, url }) => `- [${name}](${docsSite}${url})`),
+	'',
 ].join('\n').trim();
 
 export default defineConfig({
