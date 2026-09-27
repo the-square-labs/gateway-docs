@@ -5,7 +5,7 @@ section: Docker
 order: 4
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-05
+lastReviewed: 2026-09-27
 ---
 
 
@@ -91,7 +91,7 @@ Lifecycle work is represented by durable operations and Tasks. Reloading the pag
 
 ## Routes and database bindings
 
-Routes and Secure Links can target a managed Compose service by stable project and service identity rather than an ephemeral container name. Managed database bindings update the project's revision while preserving authored configuration and protected secrets. Removing a service or binding must go through a new revision so Gateway can reconcile dependent relationships safely.
+Routes and Secure Links can target a managed Compose service by stable project and service identity rather than an ephemeral container name. Managed database bindings update the project's revision while preserving authored configuration and protected secrets. Removing a service or binding must go through a new revision so Gateway can reconcile dependent relationships safely. Applying an older revision keeps the current bindings; a revision that does not define a bound service is refused until that binding is deleted. Through the API, MCP, or the assistant, a service can be bound before the project's first revision; see [Workloads that are not running](/en/databases/bindings/#workloads-that-are-not-running).
 
 Bindings are available only for [managed databases](/en/databases/managed-databases/). To reach an external database, pass its connection values through variables and secrets; see [Managed and external databases](/en/databases/overview/#managed-and-external-databases-at-a-glance).
 

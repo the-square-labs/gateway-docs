@@ -5,7 +5,7 @@ section: Identity and access
 order: 1
 audience: [security-admin, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-27
 ---
 
 
@@ -38,6 +38,15 @@ OIDC proves identity but does not automatically grant broad product access. Gate
 7. Delete only after ownership and automation dependencies are transferred.
 
 Blocking stops new use without erasing attribution. Deletion remains visible in audit history. Restoring a deleted record does not silently reactivate it.
+
+### Invitation emails
+
+An invitation email tells a new user that an administrator created their Gateway account and links to the sign-in page, with one hint for their sign-in method: the identity provider, an email code, or the separate email that sets their password. Sending needs verified [SMTP](/en/integrations/dns-email-webhooks/#email) and the Gateway public URL.
+
+- **Send invitation email** in **Administration > Users > Configure User**, in the **Account** panel, sends it by hand. It is offered once per user and only until their first sign-in; after sending, the panel shows when it was sent. It needs `admin:users` on that user.
+- **Settings > Advanced > Identity provisioning > Send an invitation email when an account is created** sends it for every account created in the Console, the API, or MCP. It is off by default and needs `settings:gateway:edit` to change. If sending fails, the account is still created and the invitation can be sent later by hand.
+
+API: `POST /api/admin/users/{id}/invitation`; MCP and assistant: `manage_user` operation `send_invitation`. The user list returns `lastLoginAt` and `invitationSentAt` for each user.
 
 ## Group design
 

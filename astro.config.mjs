@@ -73,7 +73,10 @@ const llmsLinkSections = [
 	},
 ];
 
-/** Agent Skills copied from the Gateway repository by scripts/sync-agent-skills.mjs. */
+/**
+ * Agent Skills copied from the Gateway repository by scripts/sync-agent-skills.mjs.
+ * @type {{ name: string; description: string; url: string }[]}
+ */
 const agentSkills = JSON.parse(readFileSync(new URL('./public/agent/index.json', import.meta.url), 'utf8'));
 
 const llmsDetails = [

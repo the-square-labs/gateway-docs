@@ -47,7 +47,7 @@ Until its first build finishes, the workload is listed in that folder with **Awa
 
 ## Failure handling
 
-If a build cannot start, check source authorization, worker availability, entitlement, and integration state. A cancelled build that reads "Build paused: <user> no longer has use on <repo>" means the account that saved the source lost `integrations:<provider>:use` on the repository; see [Who can build and view results?](/en/integrations/source-control/#who-can-build-and-view-results). If it fails after start, use the phase and logs to separate dependency, secret, policy, build-definition, or artifact-publication failures. Correct the source or build configuration, then run a new build. Retrying produces a new operation and preserves the previous history.
+If a build cannot start, check source authorization, worker availability, entitlement, and integration state. A cancelled build that reads `Build paused: <user> no longer has use on <repo>` means the account that saved the source lost `integrations:<provider>:use` on the repository; see [Who can build and view results?](/en/integrations/source-control/#who-can-build-and-view-results). If it fails after start, use the phase and logs to separate dependency, secret, policy, build-definition, or artifact-publication failures. Correct the source or build configuration, then run a new build. Retrying produces a new operation and preserves the previous history.
 
 When the worker or source automation is unavailable, existing history remains useful for diagnosis, but new builds must not be assumed to run. Do not substitute a mutable image tag for the missing immutable artifact; wait for a verified build or use a separately approved image.
 

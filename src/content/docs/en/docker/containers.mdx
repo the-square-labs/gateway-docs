@@ -38,6 +38,8 @@ You need access to the target Docker node and permission to create or change the
 
 New host bind mounts are rejected. Use Gateway-managed local volumes for new persistent data. Legacy bind mounts can remain during an ordinary update, but once removed they cannot be added back through Gateway.
 
+A workload with legacy host bind mounts keeps them through changes that do not change its image, such as environment edits, database or storage links, and deployment slot switches; these need no `docker:containers:mounts`. A new image gets the same host access, so changing it requires that scope: from the person who starts the change, and for automatic Git deploys and webhooks from the account that last saved the source or the webhook, checked at deploy time. Webhooks saved before v2.11.0-rc.14 have no recorded account and are refused on such workloads until someone holding the scope saves them again.
+
 The Default runtime is available on supported Docker nodes. The secure gVisor runtime requires a healthy reported capability and cannot be combined with GPUs, devices, host bind mounts, migration, or archive export.
 
 ## Create and update a Container

@@ -5,7 +5,7 @@ section: Databases
 order: 2
 audience: [database-operator, operator]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-09-27
 ---
 
 
@@ -79,6 +79,8 @@ Gateway renews the server certificate automatically, checking hourly: when two t
 **Rotate TLS certificate** renews it immediately with the same in-place reload. A restart is used only when you allow it, when 7 days or fewer remain, or when the Node daemon cannot reload certificates yet. While renewal keeps failing, Gateway raises the **Managed Service Certificate Renewal Failed** notification event. API: `GET /api/databases/managed/{id}/certificate` and `POST /api/databases/managed/{id}/rotate-certificate` with optional `allowRestart`; MCP and assistant: `manage_managed_database` actions `certificate_status` and `rotate_certificate`.
 
 Gateway's own connections for Explorer, Console, monitoring, and backups reach a managed instance through the mutually authenticated Relay tunnel. For PostgreSQL with TLS, Gateway additionally verifies the server certificate against the Gateway Database CA and the identity issued to that instance. Redis and ClickHouse use plaintext inside the tunnel.
+
+Application bindings reach the instance through the same tunnel. For PostgreSQL with TLS, a binding client that connects with the plain binding URI still works: the Storage Node's daemon opens the TLS connection to PostgreSQL and verifies the instance's certificate, while a client that requests TLS itself keeps end-to-end TLS. See [Application database bindings](/en/databases/bindings/#create-a-binding).
 
 ## Recovery decisions
 

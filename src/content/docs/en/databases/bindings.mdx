@@ -5,7 +5,7 @@ section: Databases
 order: 3
 audience: [platform-engineer, developer, security-admin]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-27
 ---
 
 
@@ -35,7 +35,7 @@ The nginx/workload Secure Link connector is a separate real component. It serves
 
 ## Create a binding
 
-Before creating a binding, confirm that the managed database is **Ready**, the target Docker node is online, the workload is eligible, and you have access to both resources: `databases:edit` on the database, and on the workload `docker:containers:environment` and `docker:containers:secrets` for a Container or Deployment, or `docker:compose:manage` for a Compose service. Any binding change on a Deployment rolls it out, so it also needs `docker:containers:manage` on that Deployment, plus `docker:containers:edit` when it changes the Deployment's environment. Review the intended database or role permissions and make sure the workload can consume the delivered connection settings without placing them in source control.
+Before creating a binding, confirm that the managed database is **Ready**, the target Docker node is online, the workload is eligible, and you have access to both resources: `databases:edit` on the database, and on the workload `docker:containers:environment` and `docker:containers:secrets` for a Container or Deployment, or `docker:compose:manage` for a Compose service. A binding change on a Deployment can roll it out, so it also needs `docker:containers:manage` on that Deployment, plus `docker:containers:edit` when it changes the Deployment's environment. Review the intended database or role permissions and make sure the workload can consume the delivered connection settings without placing them in source control.
 
 1. Select the managed database and the target workload.
 2. Choose which connection values to deliver and the environment variable name for each.
@@ -45,15 +45,27 @@ Before creating a binding, confirm that the managed database is **Ready**, the t
 
 Use private bindings for workload access even when direct TCP publication is enabled for an external client. Publication is opt-in and does not replace binding isolation.
 
-Bindings can target an eligible standalone Container, Deployment, or Compose service on an online Docker Node, and the database must be **Ready**. Gateway delivers the values you select—connection URI, host, port, database, username, and password—under the environment variable names you choose; at least one value is required. The Console suggests names such as `DATABASE_URL` or `REDIS_URL`, or engine-specific names for individual values. The URI uses the engine's plain protocol on the private binding network (`postgresql://`, `redis://`, or `http://` for ClickHouse); bindings do not add TLS settings. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
+Bindings can target an eligible standalone Container, Deployment, or Compose service on an online Docker Node, and the database must be **Ready**. Gateway delivers the values you select—connection URI, host, port, database, username, and password—under the environment variable names you choose; at least one value is required. The Console suggests names such as `DATABASE_URL` or `REDIS_URL`, or engine-specific names for individual values. The URI uses the engine's plain protocol on the private binding network (`postgresql://`, `redis://`, or `http://` for ClickHouse); bindings do not add TLS settings. The plain URI also works for PostgreSQL with TLS enabled: when a client connects without TLS, the daemon on the database's Storage Node (2.11.0-rc.14 or later) opens the TLS connection to PostgreSQL and verifies the instance's certificate. A client that requests TLS itself, for example with `sslmode=require`, keeps its own end-to-end TLS session. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
 
 One database can serve multiple workloads through separate bindings. That is preferable to reusing one shared account: each binding can be audited, rotated, and retired independently. Gateway rejects conflicting environment-variable assignments rather than silently replacing an existing application value; the only exception is an explicit opt-in to replace existing values on a standalone Container.
+
+### Workloads that are not running
+
+The target workload does not have to run. You can create or delete a binding for a stopped, crash-looping, or failed Container, Deployment, or Compose service, and for one that has not been deployed yet. The request returns without waiting for the workload to start or become healthy, and a failed rollout does not undo the binding.
+
+- A binding that is saved in the workload's configuration but not yet used by it shows as **pending** (`observedState: "target_applied"` in the API and MCP). It becomes active when the workload next starts or finishes its current rollout.
+- A crash-looping Container is recreated with the binding and keeps restarting under its restart policy.
+- A Deployment whose first Git build failed gets the binding when you retry the build; you do not need to set an image.
+- During a Git build rollout, bindings can still be saved; they reach the new revision when the rollout finishes.
+- Through the API, MCP, or the assistant, you can also bind a Git-source Container before its first build, by its name, and a Compose service before the project's first revision or while a build rollout holds the project. The first build or the next revision starts the workload with the binding; if that revision does not define the service, the binding fails with the reason. The Console offers bindings for these workloads once the Container or the first revision exists.
+- A Deployment rollback, a slot switch, and applying an older Compose revision keep the current bindings. A revision that does not define a bound service cannot be applied until you delete that binding.
+- The target Docker Node must be online: a binding for a workload on an offline Node is refused with `409 NODE_OFFLINE`.
 
 ## Verify isolation
 
 After creation or workload recreation, verify all of the following:
 
-- the binding reports **Ready** and its target workload is running;
+- the binding reports **Ready**, not **pending**, and its target workload is running;
 - the workload received the expected variable names without exposing their values;
 - an application query succeeds and an administrative operation outside the application database, such as creating a role or database, fails;
 - binding runtime telemetry shows the expected stream and no sustained admission rejects;

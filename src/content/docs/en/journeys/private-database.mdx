@@ -5,7 +5,7 @@ section: End-to-end journeys
 order: 3
 audience: [platform-engineer, developer, database-operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-27
 ---
 
 This journey gives an application private database access without publishing the database port and without sharing the database owner credential. Gateway creates a durable **binding**—the managed relationship between one workload and one database—and provisions a dedicated engine identity for that relationship.
@@ -50,7 +50,7 @@ Gateway keeps the engine owner credential internal. **Reveal credentials** shows
 
 Open the target Container, Deployment, or Compose service and create a managed database link. Select the database and the supported connection variables/options. Gateway creates a distinct PostgreSQL role, Redis ACL user, or ClickHouse user for that binding.
 
-For a standalone Container, Gateway attaches the private binding network and uses the normal recreate flow to apply the connection environment. For a Deployment, the desired configuration is updated and a slot rolls so future blue and green instances receive the same private endpoint, served by a listener that the target Docker daemon owns. Compose keeps the binding attached to the owning service rather than an ephemeral child container name.
+For a standalone Container, Gateway attaches the private binding network and uses the normal recreate flow to apply the connection environment. For a Deployment, the desired configuration is updated and a slot rolls so future blue and green instances receive the same private endpoint, served by a listener that the target Docker daemon owns. Compose keeps the binding attached to the owning service rather than an ephemeral child container name. A workload that is stopped, failing, or not deployed yet can be linked too: the binding is saved as **pending** and applied when the workload next starts or finishes its rollout; see [Workloads that are not running](/en/databases/bindings/#workloads-that-are-not-running).
 
 Apply or recreate the workload only when the UI indicates that the changed runtime configuration requires it. The binding's desired state is durable; a normal workload recreation must not create a new engine user every time.
 

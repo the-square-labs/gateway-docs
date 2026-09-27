@@ -5,7 +5,7 @@ section: Storage
 order: 1
 audience: [platform-engineer, operator, developer]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-09-27
 ---
 
 The **Storage** area manages two kinds of resource. A **storage connection** records access to object or file storage that runs elsewhere. **Managed storage** is S3-compatible object storage that Gateway provisions and runs on a Storage Node; new clusters use SeaweedFS. Both require Personal or higher. Storage resources serve as destinations for [database backups](/en/databases/backups/), and managed storage can give workloads private, bucket-scoped access.
@@ -76,6 +76,8 @@ On the storage detail page, the **IAM Keys** tab issues S3 credentials with an o
 The credentials dialog shows AWS CLI and rclone quick-start commands. For a TLS cluster they pass the downloaded CA as `--ca-bundle storage-ca.pem` (AWS CLI) or `--ca-cert storage-ca.pem` (rclone). With a bucket-scoped key, rclone needs `no_check_bucket = true` (included in the quick start); otherwise it tries to create the bucket and fails with 403.
 
 A **managed storage link** gives a Container or Deployment private access to 1–32 buckets. Add it from the workload's **Environment** tab; Compose services are not supported. Gateway issues a key limited to those buckets, runs a small connector on a private network for the link, and stores the values as managed secrets in environment variables that default to `S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET` (the first bucket), and `AWS_REGION`. The key can reach only the listed buckets, so a compromised workload cannot read the rest of the storage. Creating a link requires `storage:iam` and permission to edit the workload's environment and secrets; a link on a Deployment also needs `docker:containers:manage` on it, plus `docker:containers:edit` when it changes the Deployment's environment.
+
+The workload does not have to run: a link can target a Container or Deployment that is stopped, crash-looping, failed, or not deployed yet, and Gateway saves it without waiting for the workload. Until the workload runs with the link, the link shows as **pending** (`observedState: "target_applied"` in the API and MCP); it becomes active when the workload next starts or finishes its current rollout, and retrying a failed Git build deploys it. Through the API, MCP, or the assistant, a Git-source Container can also be linked by name before its first build, which then starts it with the link. A Deployment rollback or slot switch keeps the current links. The workload's Docker Node must be online.
 
 For advanced nginx configuration, a Route can also use an additional Secure Link binding to ready managed object storage, without a shared Docker network or a published S3 port; clients still need S3 credentials. Managed storage cannot be a Route's main upstream. Creating the binding requires Route edit access and view access to the storage; see [Secure upstreams](/en/ingress/secure-upstreams/).
 

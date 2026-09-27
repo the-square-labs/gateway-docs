@@ -31030,6 +31030,9 @@
                       "autoAssignCreatedResourcePermissions": {
                         "type": "boolean"
                       },
+                      "sendInvitationOnUserCreate": {
+                        "type": "boolean"
+                      },
                       "fileUploadMaxBytes": {
                         "type": "integer",
                         "minimum": 1048576,
@@ -32553,6 +32556,321 @@
                     "message",
                     "purpose"
                   ]
+                },
+                "example": {
+                  "data": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "email": "operator@example.com",
+                    "name": "Operator",
+                    "groupName": "Operators"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "VALIDATION_ERROR",
+                  "message": "Request validation failed",
+                  "details": [
+                    {
+                      "path": [
+                        "name"
+                      ],
+                      "message": "Required"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "message": "Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "message": "Resource not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "CONFLICT",
+                  "message": "Resource already exists"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "UNPROCESSABLE_ENTITY",
+                  "message": "Request could not be processed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Error code",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable error message",
+                      "example": "Request validation failed"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "code": "INTERNAL_ERROR",
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}/invitation": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Email the one-time account invitation to a user who has never signed in",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "550e8400-e29b-41d4-a716-446655440000"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Example resource"
+                        }
+                      },
+                      "additionalProperties": {},
+                      "description": "Resource object. Exact fields depend on the endpoint.",
+                      "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Example resource",
+                        "createdAt": "2024-01-01T12:00:00.000Z"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "example": {
+                    "data": {
+                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                      "name": "Example resource"
+                    }
+                  }
                 },
                 "example": {
                   "data": {
@@ -36610,6 +36928,7 @@
           "Docker Webhooks"
         ],
         "summary": "Configure container webhook",
+        "description": "Saving the webhook records the caller as the account its calls act for: on a workload with host bind mounts, a call that brings a new image needs that account's current docker:containers:mounts.",
         "security": [
           {
             "bearerAuth": []
@@ -37252,6 +37571,7 @@
           "Docker Webhooks"
         ],
         "summary": "Regenerate container webhook token",
+        "description": "Rotating the token records the caller as the account the webhook calls act for: on a workload with host bind mounts, a call that brings a new image needs that account's current docker:containers:mounts.",
         "security": [
           {
             "bearerAuth": []
@@ -41907,6 +42227,7 @@
           "Docker Deployments"
         ],
         "summary": "Deploy a new inactive slot",
+        "description": "Rolls the deployment out to its standby slot, with the requested image or tag or the saved configuration. On a deployment with legacy host bind mounts, a requested image or tag needs docker:containers:mounts (new code gets that host access); redeploying the saved configuration needs none.",
         "security": [
           {
             "bearerAuth": []
@@ -42264,6 +42585,7 @@
           "Docker Deployments"
         ],
         "summary": "Switch deployment slot",
+        "description": "Serves the standby slot as it was deployed. A standby deployed before the current managed database and storage links is recreated from its own release with the current link networks; the deployment keeps its saved configuration. That recreate keeps the standby image and mounts, so it needs no docker:containers:mounts.",
         "security": [
           {
             "bearerAuth": []
@@ -42617,6 +42939,7 @@
           "Docker Deployments"
         ],
         "summary": "Rollback a deployment",
+        "description": "Serves the previous release from the standby slot. The release keeps the current managed database and storage links: their networks come from the current configuration (a link added since stays, a link removed since is not reattached) and their secrets are merged at deploy time. Rolling back to another image on a deployment with host bind mounts needs docker:containers:mounts.",
         "security": [
           {
             "bearerAuth": []
@@ -44937,6 +45260,7 @@
           "Docker Deployments"
         ],
         "summary": "Configure deployment webhook",
+        "description": "Saving the webhook records the caller as the account its calls act for: on a workload with host bind mounts, a call that brings a new image needs that account's current docker:containers:mounts.",
         "security": [
           {
             "bearerAuth": []
@@ -45581,6 +45905,7 @@
           "Docker Deployments"
         ],
         "summary": "Regenerate deployment webhook token",
+        "description": "Rotating the token records the caller as the account the webhook calls act for: on a workload with host bind mounts, a call that brings a new image needs that account's current docker:containers:mounts.",
         "security": [
           {
             "bearerAuth": []
@@ -50276,6 +50601,7 @@
           "Docker Compose"
         ],
         "summary": "Start a managed Compose lifecycle operation",
+        "description": "An apply (pull_apply) runs the revision with the managed database links that exist when it starts: links deleted since the revision was built are left out, links the project runs are kept and links saved pending are added when the revision defines their service. When that changes the revision, a copy is applied and the operation names it; a revision lacking the service of a link the project runs is refused.",
         "security": [
           {
             "bearerAuth": []
@@ -57903,6 +58229,25 @@
                     "minimum": 0,
                     "maximum": 3600,
                     "default": 15
+                  },
+                  "priorityMode": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "nodePriority": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 64,
+                    "default": []
+                  },
+                  "failbackDelaySeconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3600,
+                    "default": 300
                   }
                 },
                 "required": [
@@ -58054,6 +58399,21 @@
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 3600
+                            },
+                            "priorityMode": {
+                              "type": "boolean"
+                            },
+                            "nodePriority": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "failbackDelaySeconds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 3600
                             }
                           },
                           "required": [
@@ -58062,7 +58422,10 @@
                             "nodeSelectionMode",
                             "selectedNodeIds",
                             "rolloutPolicy",
-                            "offlineReplacementGraceSeconds"
+                            "offlineReplacementGraceSeconds",
+                            "priorityMode",
+                            "nodePriority",
+                            "failbackDelaySeconds"
                           ]
                         },
                         "blockers": {
@@ -58276,6 +58639,21 @@
                               ]
                             },
                             "offlineReplacementGraceSeconds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 3600
+                            },
+                            "priorityMode": {
+                              "type": "boolean"
+                            },
+                            "nodePriority": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "failbackDelaySeconds": {
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 3600
@@ -58513,7 +58891,8 @@
                                     "rollout",
                                     "heal",
                                     "disable",
-                                    "stale_cleanup"
+                                    "stale_cleanup",
+                                    "failback"
                                   ]
                                 },
                                 "status": {
@@ -58710,6 +59089,9 @@
                             "desiredGeneration",
                             "rolloutPolicy",
                             "offlineReplacementGraceSeconds",
+                            "priorityMode",
+                            "nodePriority",
+                            "failbackDelaySeconds",
                             "status",
                             "lastErrorCode",
                             "lastErrorMessage",
@@ -59142,6 +59524,25 @@
                     "minimum": 0,
                     "maximum": 3600,
                     "default": 15
+                  },
+                  "priorityMode": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "nodePriority": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 64,
+                    "default": []
+                  },
+                  "failbackDelaySeconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3600,
+                    "default": 300
                   }
                 },
                 "required": [
@@ -59290,6 +59691,21 @@
                           ]
                         },
                         "offlineReplacementGraceSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600
+                        },
+                        "priorityMode": {
+                          "type": "boolean"
+                        },
+                        "nodePriority": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "failbackDelaySeconds": {
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 3600
@@ -59527,7 +59943,8 @@
                                 "rollout",
                                 "heal",
                                 "disable",
-                                "stale_cleanup"
+                                "stale_cleanup",
+                                "failback"
                               ]
                             },
                             "status": {
@@ -59724,6 +60141,9 @@
                         "desiredGeneration",
                         "rolloutPolicy",
                         "offlineReplacementGraceSeconds",
+                        "priorityMode",
+                        "nodePriority",
+                        "failbackDelaySeconds",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -60197,6 +60617,21 @@
                           "minimum": 0,
                           "maximum": 3600
                         },
+                        "priorityMode": {
+                          "type": "boolean"
+                        },
+                        "nodePriority": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "failbackDelaySeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -60430,7 +60865,8 @@
                                 "rollout",
                                 "heal",
                                 "disable",
-                                "stale_cleanup"
+                                "stale_cleanup",
+                                "failback"
                               ]
                             },
                             "status": {
@@ -60627,6 +61063,9 @@
                         "desiredGeneration",
                         "rolloutPolicy",
                         "offlineReplacementGraceSeconds",
+                        "priorityMode",
+                        "nodePriority",
+                        "failbackDelaySeconds",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -61065,6 +61504,21 @@
                           "minimum": 0,
                           "maximum": 3600
                         },
+                        "priorityMode": {
+                          "type": "boolean"
+                        },
+                        "nodePriority": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "failbackDelaySeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -61298,7 +61752,8 @@
                                 "rollout",
                                 "heal",
                                 "disable",
-                                "stale_cleanup"
+                                "stale_cleanup",
+                                "failback"
                               ]
                             },
                             "status": {
@@ -61495,6 +61950,9 @@
                         "desiredGeneration",
                         "rolloutPolicy",
                         "offlineReplacementGraceSeconds",
+                        "priorityMode",
+                        "nodePriority",
+                        "failbackDelaySeconds",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -61854,6 +62312,22 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 3600
+                  },
+                  "priorityMode": {
+                    "type": "boolean"
+                  },
+                  "nodePriority": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 64
+                  },
+                  "failbackDelaySeconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3600
                   }
                 }
               }
@@ -61996,6 +62470,21 @@
                           ]
                         },
                         "offlineReplacementGraceSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600
+                        },
+                        "priorityMode": {
+                          "type": "boolean"
+                        },
+                        "nodePriority": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "failbackDelaySeconds": {
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 3600
@@ -62233,7 +62722,8 @@
                                 "rollout",
                                 "heal",
                                 "disable",
-                                "stale_cleanup"
+                                "stale_cleanup",
+                                "failback"
                               ]
                             },
                             "status": {
@@ -62430,6 +62920,9 @@
                         "desiredGeneration",
                         "rolloutPolicy",
                         "offlineReplacementGraceSeconds",
+                        "priorityMode",
+                        "nodePriority",
+                        "failbackDelaySeconds",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -62749,7 +63242,8 @@
                               "rollout",
                               "heal",
                               "disable",
-                              "stale_cleanup"
+                              "stale_cleanup",
+                              "failback"
                             ]
                           },
                           "status": {
@@ -63265,7 +63759,8 @@
                               "rollout",
                               "heal",
                               "disable",
-                              "stale_cleanup"
+                              "stale_cleanup",
+                              "failback"
                             ]
                           },
                           "status": {
@@ -63898,6 +64393,21 @@
                           "minimum": 0,
                           "maximum": 3600
                         },
+                        "priorityMode": {
+                          "type": "boolean"
+                        },
+                        "nodePriority": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "failbackDelaySeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -64131,7 +64641,8 @@
                                 "rollout",
                                 "heal",
                                 "disable",
-                                "stale_cleanup"
+                                "stale_cleanup",
+                                "failback"
                               ]
                             },
                             "status": {
@@ -64328,6 +64839,9 @@
                         "desiredGeneration",
                         "rolloutPolicy",
                         "offlineReplacementGraceSeconds",
+                        "priorityMode",
+                        "nodePriority",
+                        "failbackDelaySeconds",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -64655,7 +65169,8 @@
                             "rollout",
                             "heal",
                             "disable",
-                            "stale_cleanup"
+                            "stale_cleanup",
+                            "failback"
                           ]
                         },
                         "status": {
@@ -97925,6 +98440,7 @@
           "Docker Webhooks"
         ],
         "summary": "Trigger a Docker webhook",
+        "description": "Updates the image of the webhook's container or deployment. On a workload with legacy host bind mounts the call acts for the account that last saved the webhook and needs its current docker:containers:mounts; a webhook with no recorded account (saved before Gateway recorded one) is refused there until it is saved again.",
         "security": [],
         "parameters": [
           {
@@ -217728,6 +218244,7 @@
           "Managed Storage"
         ],
         "summary": "Bind a workload to a managed object storage cluster over a private connector",
+        "description": "The link is saved into the workload whatever it is doing and the call does not wait for the workload to become healthy. A ready link reports observedState target_applied while the workload has not run it yet (never started, stopped, or its rollout pending or failed) and active once its runtime carries it. A Git-source container whose first build has not created it yet is linked by its name, authorized on its reserved identity, and its first build starts it with the link.",
         "security": [
           {
             "bearerAuth": []
@@ -225472,6 +225989,7 @@
           "Databases"
         ],
         "summary": "Create a managed database binding",
+        "description": "The link is saved into the workload whatever it is doing and the call does not wait for the workload to become healthy; observedState is target_applied until the workload runs it, then active. A Git-source container whose first build has not created it yet is linked by its name, authorized on its reserved identity, and its first build starts it with the link. A Compose service may be linked before the project's first revision or while a build rollout or another operation holds the project, by a service name the next revision defines; the link fails with the reason when that revision lacks the service.",
         "security": [
           {
             "bearerAuth": []

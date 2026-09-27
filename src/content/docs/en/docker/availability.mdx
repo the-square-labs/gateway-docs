@@ -5,7 +5,7 @@ section: Docker
 order: 5
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-05
+lastReviewed: 2026-09-27
 ---
 
 Availability adds placements on independent Docker nodes to an existing Container, Deployment, or Compose Project. Gateway preserves the resource identity, configuration, and relationships while creating and replacing runtime instances according to its availability policy.
@@ -49,6 +49,20 @@ Changing the switch alone does not apply the policy: **Save** is required. A suc
 - **Maximum unavailable** — how many placements a planned update may make unavailable simultaneously.
 - **Maximum surge** — how many temporary placements may exist above the desired count. These require additional capacity.
 - **Drain interval** — time between removing a placement from new routing and stopping it, allowing existing connections to finish.
+
+## Priority mode
+
+By default, Gateway places serving instances on eligible nodes by free capacity. **Priority mode** makes either mode prefer nodes in a fixed order instead. Turn it on below **Eligible nodes** and order the list with the up and down buttons: the first node is **Primary**, the next ones are **Backup 1**, **Backup 2**, and so on. The list holds only eligible nodes; nodes that become eligible later are added at the end. Select **Save** to apply the order.
+
+Serving placements go to the first available nodes in the order. When a higher-priority node returns and stays healthy for **Return to the primary after** (300 seconds by default, 0–3600), Gateway runs a **Failback** operation: it starts the workload on that node, switches traffic to it, and then drains and removes the backup placement, so a placement keeps serving throughout. Turning priority mode on or changing the order moves the workload the same way. The Availability summary shows the **Primary** node and where the workload is **Serving from**, marked **On backup** while a backup serves.
+
+- A node that goes offline or reports an error restarts its delay, so a flapping node does not take traffic back.
+- Failback runs only while the policy is healthy and no other operation is active; replacement, rollout, and scaling come first.
+- A failed failback leaves the backup serving and is tried again after 15 minutes. Use **Retry** in **Operations** to try sooner.
+- Failback needs **Maximum surge** of at least 1 so that a placement keeps serving during the move; in Replicated mode, **Maximum unavailable** of at least 1 is also enough. Otherwise **Check eligibility** warns, and the workload stays on the backup.
+- After a Gateway restart, every node's healthy time starts again, so no failback runs until the delay has passed.
+
+In the API and MCP (`manage_docker_availability`), the policy fields are `priorityMode`, `nodePriority` (node IDs in order, primary first), and `failbackDelaySeconds`.
 
 ## Routes and database bindings
 
