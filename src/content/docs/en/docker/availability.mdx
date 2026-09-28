@@ -5,7 +5,7 @@ section: Docker
 order: 5
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-09-29
 ---
 
 Availability adds placements on independent Docker nodes to an existing Container, Deployment, or Compose Project. Gateway preserves the resource identity, configuration, and relationships while creating and replacing runtime instances according to its availability policy.
@@ -72,7 +72,7 @@ By default, Gateway places serving instances on eligible nodes by free capacity.
 Serving placements go to the first available nodes in the order. When a higher-priority node returns and stays healthy for **Return to the primary after** (300 seconds by default, 0–3600), Gateway runs a **Failback** operation: it starts the workload on that node, switches traffic to it, and then drains and removes the backup placement, so a placement keeps serving throughout. Turning priority mode on or changing the order moves the workload the same way. The Availability summary shows the **Primary** node and where the workload is **Serving from**, marked **On backup** while a backup serves.
 
 - A node that goes offline or reports an error restarts its delay, so a flapping node does not take traffic back.
-- Failback runs only while the policy is healthy and no other operation is active; replacement, rollout, and scaling come first.
+- Failback runs only while the policy is healthy and no other operation of the same policy is active; replacement, rollout, and scaling of that policy come first. Operations of different policies run in parallel, so a failback never waits for another workload's heal.
 - A failed failback leaves the backup serving and is tried again after 15 minutes. Use **Retry** in **Operations** to try sooner.
 - Failback needs **Maximum surge** of at least 1 so that a placement keeps serving during the move; in Replicated mode, **Maximum unavailable** of at least 1 is also enough. Otherwise **Check eligibility** warns, and the workload stays on the backup.
 - When the nodes run the failover themselves ([data-plane failover](/en/docker/data-plane-failover/)), a failback is a handoff instead: the serving node stops its copy before the next node starts its own, because the default strict partition mode never runs two copies at once. In Failover mode the workload does not serve while the old copy stops and the new one starts and becomes ready, usually 5–15 seconds; in Replicated mode the other replicas keep serving.
@@ -104,7 +104,7 @@ Gateway checks replica health every 30 seconds. A replica that is missing, stopp
 
 ## Node loss and recovery
 
-In lease mode, the Nodes replace a lost holder themselves; see [Data-plane failover](/en/docker/data-plane-failover/). On backend failover, a Node whose control connection drops is shown offline after 5 seconds, and its placements leave routing after 10 seconds, so a short Relay restart does not move traffic. After **Replacement grace**, Gateway creates a replacement on an available eligible node. When the lost Node reconnects, Gateway heals the policy immediately.
+In lease mode, the Nodes replace a lost holder themselves; see [Data-plane failover](/en/docker/data-plane-failover/). On backend failover, a Node whose control connection drops is shown offline after 5 seconds, and its placements leave routing after 10 seconds, so a short Relay restart does not move traffic. After **Replacement grace**, Gateway starts a prepared standby if the policy has one, and otherwise creates a replacement on an available eligible node. When the lost Node reconnects, Gateway heals the policy immediately.
 
 In both modes, a policy with fewer serving placements than requested and eligible online capacity is healed without an edit: Gateway checks every 15 seconds, outside a Node's offline grace, and whenever a Node connects. An `update` that sets the current serving count or node selection again also repairs missing placements. If the requested count is still not restored, inspect the operation phase, node compatibility and capacity, image pull, application health, and private dependencies.
 
@@ -118,8 +118,20 @@ After recovery, verify serving count, real customer traffic, database access, an
 
 **Stop** on a workload with Availability stops the copies that are running and keeps every placement: standbys stay prepared, and the policy stays healthy while the workload is stopped. **Start** starts the copies that served last, never a standby, and keeps the standbys, so no placement is removed, recreated, or failed by a stop and a start. The original workload is never deleted: not when a lease closes, not by stale-placement cleanup, and not as a surplus standby. On a Node that is no longer selected it stays, stopped. A Docker daemon that is busy with long-running commands delays a stop, start, or heal (`AVAILABILITY_DAEMON_BUSY`, retried automatically) instead of marking placements failed.
 
+## Operations of several policies
+
+Each policy runs one operation at a time, in order. Operations of different policies run in parallel: heal, scale, rollout, enable, and cleanup operations run for at most 4 policies at once, while failback, start, stop, restart, and disable never wait for that limit and run beside them.
+
 ## Disable Availability
 
 Turn off **Enable** and save the change. In **Disable Availability**, choose **Surviving placement**, enter the workload name for confirmation, and select **Disable and keep one**.
 
-Wait for the operation and cleanup of other placements to finish. Verify the surviving instance, Routes, and database bindings: the resource should continue its ordinary single-node lifecycle.
+The surviving placement keeps running and becomes the ordinary workload as it runs; disabling does not restart or recreate it:
+
+- The original **Container**, **Deployment**, or **Compose Project** is adopted as it runs, and gets its own restart policy back. A Compose Project whose containers were prepared by Availability shows as drifted on the Compose page until your next apply.
+- A **Deployment** copy on another Node is adopted as it runs as well.
+- A **Container** or **Compose Project** copy on another Node runs under a name Availability generated. It is replaced by a copy with the workload's original name on that Node, which starts before the old copy is removed, so traffic has no gap.
+
+If the policy is in lease mode, the disable first closes the lease and keeps the surviving copy running through the close. While the disable runs, no heal, scale, failback, or start of the policy runs (`AVAILABILITY_DISABLE_IN_PROGRESS`), and a disable that has to wait keeps the status `disabling`. A retry keeps the surviving placement chosen first.
+
+Wait for the operation and the removal of the other placements to finish. Verify the surviving instance, Routes, and database bindings: the resource should continue its ordinary single-node lifecycle.
