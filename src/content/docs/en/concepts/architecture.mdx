@@ -5,7 +5,7 @@ section: Concepts
 order: 1
 audience: [operator, platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 Gateway separates centralized intent and identity from host-local execution.
@@ -43,7 +43,7 @@ The Relay is a required long-lived data-plane service and the sole public owner 
 
 Relay carries managed-node control traffic and supported private streams. It does not own nginx configuration, containers, databases, builds, or monitoring work on the destination host. It also does not create firewall rules, provide NAT traversal, or act as a general-purpose VPN. Every managed host must be able to reach its assigned Relay endpoint.
 
-If Relay is unavailable, new managed-node operations and new private-link admissions fail closed because identity and authorization cannot be established. Previously applied workloads may continue locally. Existing data-plane sessions may continue only where the protocol and authorization lifecycle permit it; operators must not infer that a green application process means the control path has recovered.
+If Relay is unavailable, new managed-node operations and new private-link admissions fail closed because identity and authorization cannot be established. An outage of the Gateway application alone is different: a Relay admits connections on a signed policy with a lease, 72 hours by default, so it keeps admitting authorized connections while the Gateway application is stopped or unreachable; see [Relays without Gateway](/en/nodes/relay-pool/#relays-without-gateway). Previously applied workloads may continue locally. Existing data-plane sessions may continue only where the protocol and authorization lifecycle permit it; operators must not infer that a green application process means the control path has recovered.
 
 ## Managed daemons
 

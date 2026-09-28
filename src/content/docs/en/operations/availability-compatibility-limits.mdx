@@ -5,7 +5,7 @@ section: Operations and security
 order: 2
 audience: [evaluator, operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-05
+lastReviewed: 2026-09-28
 ---
 
 Gateway separates management availability from service availability. A control-plane outage removes the ability to make and authorize new changes, but it should not stop infrastructure already applied to managed hosts.
@@ -16,11 +16,11 @@ This distinction is central to production planning: the customer-facing applicat
 
 | Failure | What normally continues | What becomes unavailable or uncertain |
 | --- | --- | --- |
-| Gateway application unavailable; Relay healthy | nginx keeps serving applied configuration; containers and databases keep running; existing authorized private streams can continue where their session lifecycle permits | UI, API, new authorization decisions, desired-state changes, new managed operations, and new private-link admissions |
-| Gateway host unavailable; local Relay runs on the same host | public routes and workloads that do not depend on Relay continue on their own hosts | local Relay also fails; managed-node control, new Secure Links, and Relay-dependent sessions are unavailable or may break |
+| Gateway application unavailable; Relay healthy | nginx keeps serving applied configuration; containers and databases keep running; Relays keep admitting new Secure Link and database-link connections on their last signed policy for the [policy lease](/en/nodes/relay-pool/#relays-without-gateway) (72 hours by default); Availability policies in lease mode keep failing over; the public status page is served from the Ingress Node's cache | UI, API, desired-state changes, new or changed Routes and links, revocations, new managed operations, and backend failover of Availability |
+| Gateway host unavailable; local Relay runs on the same host | public routes and workloads that do not depend on Relay continue on their own hosts; links that also use a Relay on another host keep working through it, and lease-mode Availability fails over through such Relays | local Relay also fails; managed-node control is unavailable, and links carried only by the local Relay break |
 | One external Relay member unavailable | workloads continue; assigned traffic can use other ready members only where placement and active assignments provide that path | sessions assigned only to the failed member may reconnect or fail; new capacity is reduced until recovery and rebalance |
 | No reachable Relay | ordinary host-local workloads and directly served public traffic may continue | managed-node control and new private links fail; existing Relay-dependent streams are not guaranteed |
-| One managed Node unavailable | resources on other Nodes continue | resources owned by that Node are unavailable or stale; Gateway must not mutate from stale inventory |
+| One managed Node unavailable | resources on other Nodes continue; an Availability policy in lease mode moves the Node's slots to other candidates within about 45 seconds, with or without Gateway | resources owned by that Node are unavailable or stale; Gateway must not mutate from stale inventory; on backend failover, replacements need a running Gateway |
 | License key ordinarily expires, or a paid plan is downgraded, revoked, or deactivated | everything during the grace period (none for revocation, transfer, or deactivation); after it, existing workloads, the data plane, data, scheduled backups, and viewing, monitoring, and deletion of existing paid resources | creating paid resources and changing their configuration; SIEM forwarding and external registry tokens pause until renewal; see [Downgrade and expiry](/en/reference/plans-and-entitlements/#downgrade-and-expiry) |
 | License service unreachable | Gateway, workloads, and paid features continue; a previously valid paid key stays valid for 100 days after its last signed license state | activating a key and updating Gateway on any plan; after 100 days, the after-grace rules of an ordinary expiry |
 | Valid paid key, commercial core missing or rejected | existing infrastructure and Community features continue | paid features are reported as not ready until **Enable paid features** succeeds |
@@ -29,13 +29,13 @@ This distinction is central to production planning: the customer-facing applicat
 
 ## Workload Availability
 
-[Workload Availability (HA)](/en/docker/availability/) is available on Business and Enterprise. It supports 2–32 replicas or one serving placement with replacement for mount-free Containers, Deployments, and whole Compose Projects. After node loss, Gateway can restore the requested placements on available eligible nodes. This requires a healthy control plane, capacity, artifacts, and dependencies; it does not provide HA for Gateway itself, nginx, databases, or storage, or physically fence an unreachable old process.
+[Workload Availability (HA)](/en/docker/availability/) is available on Business and Enterprise. It supports 2–32 replicas or one serving placement with replacement for mount-free Containers, Deployments, and whole Compose Projects. When every Docker Node, Ingress Node, and Relay of a workload runs a release with [data-plane failover](/en/docker/data-plane-failover/), the Nodes replace a lost holder themselves, even while Gateway is down, and a cut-off Node stops its own copy. Otherwise Gateway restores the requested placements on available eligible nodes, which requires a healthy control plane. Both need capacity, artifacts, and dependencies; neither provides HA for Gateway itself, nginx, databases, or storage.
 
 ## The local Relay concern
 
 Every installation includes a local Relay. If Gateway and that Relay share one host, losing the host removes both management and the transport used by Secure Links and managed-node sessions.
 
-For environments that require private connections to survive loss of the Gateway host, add external Relay members in independent failure domains and verify that every relevant Node can reach them. Merely running a second Relay container on the same machine, firewall, power source, or network path does not improve fault tolerance.
+For environments that require private connections to survive loss of the Gateway host, add external Relay members in independent failure domains and verify that every relevant Node can reach them. Gateway then places every Secure Link on at least one Relay off the Gateway host that its Nodes can reach, and **Settings → Relay** warns about links that depend on the Gateway host because their Nodes can reach no other Relay. Merely running a second Relay container on the same machine, firewall, power source, or network path does not improve fault tolerance.
 
 Test the exact application path. A public Route to a local upstream may continue without Relay, while a Route or application database binding that uses a Secure Link depends on reachable Relay transport.
 
@@ -49,6 +49,8 @@ Treat Gateway, Relay, managed daemons, and their protocol versions as one tested
 - Do not assume arbitrary older or newer daemons are compatible because they can establish a TCP connection.
 - Keep the previous approved image references and matching backup until the observation window ends.
 - Do not downgrade across a database migration unless the release notes explicitly support it and a coordinated restore point exists.
+
+Data-plane failover needs the same release on every participant of a workload: a policy enters it only after all of them have run it for 2 minutes and leaves it when an Ingress Node or Relay stays outdated for 2 minutes. See [Updates and mixed versions](/en/docker/data-plane-failover/#updates-and-mixed-versions).
 
 Gateway does not currently publish a universal long-term compatibility matrix for every historical component combination. If your policy requires an extended mixed-version window, validate that exact combination during the pilot and record it as an installation-specific constraint.
 

@@ -5,7 +5,7 @@ section: Operations and security
 order: 3
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 
@@ -27,7 +27,7 @@ Inspect the Relay service, identity volume, database reachability, image version
 
 ## Node offline
 
-Existing workloads may continue. Check host power/network, daemon service, time, certificate identity, and outbound Relay reachability. Do not mutate from stale inventory.
+Existing workloads may continue. Availability policies in lease mode move the Node's slots to other candidates by themselves; check **Lease mode** and the holders in the workload's Availability summary before acting. Check host power/network, daemon service, time, certificate identity, and outbound Relay reachability. Do not mutate from stale inventory.
 
 ## Bad release
 
@@ -47,7 +47,7 @@ Confirm recovery from an external client, clear maintenance intentionally, docum
 
 Check the Gateway container/process, PostgreSQL, Redis, persistent volumes, disk pressure, migrations, and application logs. Preserve the existing encryption keys and database before attempting a replacement instance. If customer workloads continue, avoid broad host changes while restoring the control plane.
 
-First determine whether Relay is still reachable. If Relay is healthy, already applied nginx configuration, containers, databases, and permitted existing private streams can continue while new management and authorization decisions wait. If the only Relay is local to the failed Gateway host, Secure Links and managed-node sessions lose their transport as well; ordinary host-local workloads may still run, but existing Relay-dependent streams are not guaranteed. Independent external Relay members reduce this shared failure only when Nodes can actually reach and use them.
+First determine whether Relay is still reachable. If Relay is healthy, already applied nginx configuration, containers, databases, and permitted existing private streams can continue while new management and authorization decisions wait. Relays keep admitting new Secure Link and database-link connections on their last signed policy for the [policy lease](/en/nodes/relay-pool/#relays-without-gateway), Availability policies in [lease mode](/en/docker/data-plane-failover/) keep failing over, and the public status page is served from the Ingress Node's cache. If the only Relay is local to the failed Gateway host, Secure Links and managed-node sessions lose their transport as well; ordinary host-local workloads may still run, but existing Relay-dependent streams are not guaranteed. Independent external Relay members reduce this shared failure only when Nodes can actually reach and use them.
 
 After Gateway returns, verify sign-in, decryption, Relay health, background jobs, update discovery, notifications, and fresh node snapshots. Do not assume daemons reconciled merely because the Dashboard loads.
 

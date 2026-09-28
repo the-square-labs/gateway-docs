@@ -5,7 +5,7 @@ section: Operations and security
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-09-28
 ---
 
 
@@ -163,6 +163,8 @@ The update does not delete Routes, workloads, storage, or backups, and does not 
 ## Daemon and Relay updates
 
 Update one failure domain at a time. For Relay Pool members, drain, update, verify, and return each member before moving to the next. For ordinary Nodes, verify role-specific resources after reconnect. Do not update every Ingress, Storage, or Relay member simultaneously unless the environment has an independently tested recovery path.
+
+After a Gateway update, update the Node daemons before the Relay Pool, especially when coming from 2.10 or an earlier 2.11 release candidate: the Relay Pool update also recreates the local Relay, and current daemons reconnect to it within a fraction of a second; see [Relay and Relay Pool](/en/nodes/relay-pool/#drain-update-and-remove). Daemon and Relay updates of Nodes that take part in [data-plane failover](/en/docker/data-plane-failover/#updates-and-mixed-versions) are sequenced by Gateway, one member of each Availability policy at a time, so an update can wait for its lease peers.
 
 ## Restore procedure
 
