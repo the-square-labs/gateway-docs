@@ -59323,6 +59323,31 @@
                                     ]
                                   }
                                 },
+                                "retainedHolders": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 31
+                                      },
+                                      "holderNodeId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "confirmed": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "slot",
+                                      "holderNodeId",
+                                      "confirmed"
+                                    ]
+                                  }
+                                },
                                 "voters": {
                                   "type": "array",
                                   "items": {
@@ -59469,6 +59494,7 @@
                                 "strictPending",
                                 "copiesStoppedAt",
                                 "excludedNodes",
+                                "retainedHolders",
                                 "voters",
                                 "witness",
                                 "witnesses",
@@ -60766,6 +60792,31 @@
                                 ]
                               }
                             },
+                            "retainedHolders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "confirmed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "confirmed"
+                                ]
+                              }
+                            },
                             "voters": {
                               "type": "array",
                               "items": {
@@ -60912,6 +60963,7 @@
                             "strictPending",
                             "copiesStoppedAt",
                             "excludedNodes",
+                            "retainedHolders",
                             "voters",
                             "witness",
                             "witnesses",
@@ -62064,6 +62116,31 @@
                                 ]
                               }
                             },
+                            "retainedHolders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "confirmed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "confirmed"
+                                ]
+                              }
+                            },
                             "voters": {
                               "type": "array",
                               "items": {
@@ -62210,6 +62287,7 @@
                             "strictPending",
                             "copiesStoppedAt",
                             "excludedNodes",
+                            "retainedHolders",
                             "voters",
                             "witness",
                             "witnesses",
@@ -63327,6 +63405,31 @@
                                 ]
                               }
                             },
+                            "retainedHolders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "confirmed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "confirmed"
+                                ]
+                              }
+                            },
                             "voters": {
                               "type": "array",
                               "items": {
@@ -63473,6 +63576,7 @@
                             "strictPending",
                             "copiesStoppedAt",
                             "excludedNodes",
+                            "retainedHolders",
                             "voters",
                             "witness",
                             "witnesses",
@@ -64687,6 +64791,31 @@
                                 ]
                               }
                             },
+                            "retainedHolders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "confirmed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "confirmed"
+                                ]
+                              }
+                            },
                             "voters": {
                               "type": "array",
                               "items": {
@@ -64833,6 +64962,7 @@
                             "strictPending",
                             "copiesStoppedAt",
                             "excludedNodes",
+                            "retainedHolders",
                             "voters",
                             "witness",
                             "witnesses",
@@ -66982,6 +67112,31 @@
                                 ]
                               }
                             },
+                            "retainedHolders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "confirmed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "confirmed"
+                                ]
+                              }
+                            },
                             "voters": {
                               "type": "array",
                               "items": {
@@ -67128,6 +67283,7 @@
                             "strictPending",
                             "copiesStoppedAt",
                             "excludedNodes",
+                            "retainedHolders",
                             "voters",
                             "witness",
                             "witnesses",
