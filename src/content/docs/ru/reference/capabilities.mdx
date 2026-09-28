@@ -5,7 +5,7 @@ section: Справочник
 order: 1
 audience: [evaluator, operator]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-09-28
 ---
 
 
@@ -31,7 +31,7 @@ lastReviewed: 2026-09-27
 
 ## Доступность и ближайшие версии
 
-- **Workload Availability (HA) — доступна**, Business/Enterprise: репликация или переключение при отказе для Containers, Deployments и целых Compose Projects без монтирований, с необязательным порядком приоритета нод и автоматическим возвратом на основную ноду. См. [руководство HA](/ru/docker/availability/).
+- **Workload Availability (HA) — доступна**, Business/Enterprise: репликация или переключение при отказе для Containers, Deployments и целых Compose Projects без монтирований, с необязательным порядком приоритета нод и автоматическим возвратом на основную ноду. Когда все участники работают на 2.11 rc.20 или новее, ноды переключают нагрузку сами, без Gateway ([переключение на уровне данных](/ru/docker/data-plane-failover/)). См. [руководство HA](/ru/docker/availability/).
 - **Хранилища — доступны в 2.11**, с Personal: подключения к S3-совместимым хранилищам, FTP, FTPS и SFTP, а также управляемое объектное хранилище SeaweedFS с приватными привязками рабочих нагрузок и Secure Links. См. [Хранилища](/ru/storage/overview/).
 - **Резервное копирование и восстановление баз данных — доступны в 2.11**, с Personal: штатные резервные копии управляемых и внешних PostgreSQL, Redis и ClickHouse в подключённые хранилища. См. [Резервное копирование баз данных](/ru/databases/backups/).
 - **Экспорт конфигурации Gateway для переноса на другой экземпляр — ожидается в 2.12**, для всех планов.

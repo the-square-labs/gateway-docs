@@ -82,7 +82,7 @@ A policy leaves lease mode only when lease mode has become impossible:
 | `ingress_not_capable` | An Ingress Node of the workload's Routes runs an nginx daemon without `availability_lease_v2` |
 | `relays_not_capable` | A Relay that carries the workload runs a version without `availability_lease_v2` |
 | `candidates_not_capable`, `watchdog_missing` | No candidate can hold a slot, and no slot is held |
-| `controller_unsupported` | The license or edition does not include data-plane failover |
+| `controller_unsupported` | This Gateway edition runs Availability failover from the backend only |
 | `signing_key_pending` | No Relay policy signing key can sign lease data yet |
 
 Except for disabling Availability and lifecycle operations such as **Stop**, which leave at once, the condition must last 2 minutes without a break. Meanwhile the lease keeps working, the API shows since when in `lease.reason.since`, and the summary warns: "Data-plane failover is impossible right now: … The policy goes back to backend failover at …".

@@ -82,7 +82,7 @@ lastReviewed: 2026-09-28
 | `ingress_not_capable` | Узел Ingress для Routes нагрузки работает с nginx-демоном без `availability_lease_v2` |
 | `relays_not_capable` | Relay, который передаёт нагрузку, работает с версией без `availability_lease_v2` |
 | `candidates_not_capable`, `watchdog_missing` | Ни один кандидат не может держать слот, и ни один слот не занят |
-| `controller_unsupported` | Лицензия или редакция не включает переключение на уровне данных |
+| `controller_unsupported` | Эта редакция Gateway переключает нагрузку Availability только силами Gateway |
 | `signing_key_pending` | Ни один ключ подписи политики Relay пока не может подписывать данные аренды |
 
 Кроме отключения Availability и операций жизненного цикла вроде **Stop**, которые выводят из режима аренды сразу, условие должно длиться 2 минуты без перерыва. Всё это время аренда продолжает работать, API показывает начало в `lease.reason.since`, а сводка предупреждает: `Data-plane failover is impossible right now: … The policy goes back to backend failover at …`.
