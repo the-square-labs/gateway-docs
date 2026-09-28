@@ -5,7 +5,7 @@ section: Databases
 order: 4
 audience: [database-operator, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 
@@ -30,6 +30,8 @@ Use logs to classify startup, storage, authentication, permission, and recovery 
 Explorer browses schemas and rows for PostgreSQL and ClickHouse; schema changes such as adding or altering columns are available for PostgreSQL. Redis uses the command Console. Each Console statement is classified as a read, write, or administrative operation and requires `databases:query:read`, `databases:query:write`, or `databases:query:admin` respectively.
 
 Gateway configuration backups do not replace database data backups. Use an engine-appropriate backup method, retain recovery evidence, and test restores against a separate target. Plan a backup before destructive lifecycle work, substantial resize, or a migration that involves persistent data. The control-plane recovery set is described in [Updates, backups, and restore](/en/operations/updates-backups/).
+
+On a managed PostgreSQL instance, the database and every application object in it belong to the instance's application role, and every binding works as that role. The SQL Console runs write and administrative statements as the application role too, so a table created or filled from the Console is usable by every binding at once; read-only statements keep a read-only principal. For a statement that needs Gateway's own control principal, such as creating a role or an extension that needs a superuser, start the request with `RESET ROLE`; objects it creates are handed to the application role right afterwards. Gateway also repairs this ownership whenever it creates or reconciles a binding, which fixes tables created from the Console by earlier releases. The repair changes objects only inside the application database and skips system schemas and extension members. Bindings stay ready while the database Node reconnects.
 
 The interactive Console is intentionally bounded by an execution budget shared across statements. It is an operator tool, not a batch migration runner. Prefer versioned migration tooling for schema changes and long-running maintenance, and use a read-only or narrowly privileged identity whenever possible. A browser disconnect must not be treated as proof that a query was cancelled; check the resulting engine state before retrying.
 
