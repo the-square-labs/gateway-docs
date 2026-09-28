@@ -5,7 +5,7 @@ section: Integrations
 order: 2
 audience: [operator, platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-28
 ---
 
 Connect a provider account under **Settings > Integrations > Hosting** to create and manage VMs in Gateway. Saving a connector does not create a VM; an order requires separate confirmation.
@@ -237,6 +237,37 @@ If **Add connector** is unavailable, check Gateway hosting-integration administr
 
 </details>
 
+### CloudBlast
+
+Create and manage CloudBlast cloud servers, their firewalls, and backups with an account API token. Gateway installs its daemon on new servers over SSH.
+
+<details>
+<summary>Set up CloudBlast</summary>
+
+#### Create an API token
+
+1. Sign in to the CloudBlast console and open **Account Settings → API**.
+2. Create a token with a dedicated name and copy it for the next step.
+
+The token acts for the whole account and can order billable servers. Keep it away from users who should only operate an existing Gateway node.
+
+#### Connect in Gateway
+
+1. Open **Settings > Integrations** and click **Add connector** in **Hosting**.
+2. On **Connection**, select **Provider → CloudBlast** and enter a **Connector name**, such as `CloudBlast production`. **API origin** is filled automatically with `https://console.cloudblast.io`; do not change it.
+3. Paste the token into **API token** and click **Test Connection**.
+4. Click **Continue**. On **Settings**, configure **Automatic sync**, **Sync interval (seconds)**, **Automatic adoption**, **Node scope**, and the optional defaults as for the other providers.
+5. Click **Create connector**. This saves the connection without ordering a server.
+6. Open the saved account from the integrations list or **Nodes > Providers**. Check synchronization, inventory, the account balance in EUR, and invoices.
+7. To create a node, click **Create VM** and choose the role, name, location, OS, and plan. CloudBlast offers x86-64 plans; Gateway lists its Ubuntu and Debian templates. Review the configuration and price, then select **Confirm and create VM**; this places a billable order.
+8. To change settings, open **Configure** in the account menu. Leave the token field blank to keep the saved token.
+
+CloudBlast has no user data, so Gateway installs over SSH. For each order it creates a one-time SSH key, registers its public key in the CloudBlast account, and creates the server with it. It then connects as `root`, pins the server's host key on first connection, runs the node installer, and afterwards deletes the key from the account and removes it from the server. The private key is kept only encrypted with the operation and is cleared when it ends.
+
+CloudBlast does not report a server's location through its API, so Gateway shows the location chosen at creation. Plan changes are not available through the CloudBlast API, so **Resize** is not offered.
+
+</details>
+
 ## Create and enroll a node
 
 1. Open **Nodes > Add Node** and choose hosted creation, or create a VM from the provider account.
@@ -246,13 +277,13 @@ If **Add connector** is unavailable, check Gateway hosting-integration administr
 
 A running VM is not necessarily an online Gateway node. Wait for the daemon and its role-specific capabilities. See [Add your first node](/en/getting-started/first-node/) and [Node roles](/en/nodes/roles-and-installation/).
 
-If installation fails after the VM was created, use **Retry installation** on that operation rather than placing another order. An uncertain provider response must be reconciled first. Installing on an existing VM needs a supported Guest Agent channel or a [trusted SSH connection](/en/integrations/ssh-connections/) to that VM. Matching a VMID or IP alone is not sufficient proof for automatic adoption.
+If installation fails after the VM was created, the operation shows the last lines of the installer's output, with enrollment tokens removed. Use **Retry installation** on that operation rather than placing another order. An SSH installation interrupted by a Gateway restart is sent again once. Deleting a server whose installation left a pending node also removes that node. An uncertain provider response must be reconciled first. Installing on an existing VM needs a supported Guest Agent channel or a [trusted SSH connection](/en/integrations/ssh-connections/) to that VM. Matching a VMID or IP alone is not sufficient proof for automatic adoption.
 
 ## Operate the VM
 
 - **Power and resize:** actions depend on provider state, permissions, and supported resources. Proxmox disks can grow, not shrink.
-- **Firewall:** the tab is available only for supported resources. On Proxmox, interface participation and VM firewall enablement are separate settings; the cluster firewall and token rights also matter. Gateway does not enable the cluster firewall for you.
-- **Snapshots:** supported Proxmox, DigitalOcean, and Hetzner resources expose creation, deletion, restore, and folders on the node. Creation does not require shutting down the VM. Proxmox can optionally capture RAM from a running VM and handles stopping/restarting during restore; other integrations currently require a stopped VM for restore. HOSTKEY is not advertised as a supported snapshot provider.
+- **Firewall:** the tab is available only for supported resources: DigitalOcean, CloudBlast, and Proxmox. On Proxmox, interface participation and VM firewall enablement are separate settings; the cluster firewall and token rights also matter. Gateway does not enable the cluster firewall for you.
+- **Snapshots:** supported Proxmox, DigitalOcean, Hetzner, and CloudBlast resources expose creation, deletion, restore, and folders on the node. On CloudBlast, snapshots are the provider's full-disk server backups, restored in place, with names of up to 40 characters. Creation does not require shutting down the VM. Proxmox can optionally capture RAM from a running VM and handles stopping/restarting during restore; other integrations currently require a stopped VM for restore. HOSTKEY is not advertised as a supported snapshot provider.
 - **Costs and consistency:** snapshot storage can incur charges. The table shows estimated storage cost when available; a dash means size or price is unavailable. VM snapshots are not application-consistent database backups and may exclude attached volumes.
 
 Snapshot creation, deletion, and restore are mutually exclusive with conflicting VM operations. Restore replaces data; confirm the selected snapshot before proceeding.
