@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 2
 audience: [operator]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-28
 ---
 
 These role requirements apply both to nodes enrolled on your own servers and to [VMs created through Gateway](/en/integrations/hosting-providers/).
@@ -20,7 +20,7 @@ The platform lead should approve the role, host ownership, failure domain, data 
 Use the generated installer command from the Node creation flow. It contains bounded enrollment material and the pinned Gateway identity.
 
 - **nginx:** requires nginx, public ingress ports where applicable, configuration validation, and log access.
-- **Docker:** requires a supported Docker Engine and permissions for the configured runtime operations.
+- **Docker:** requires a supported Docker Engine and permissions for the configured runtime operations. The installer also installs the lease watchdog, `gateway-lease-watchdog`, a separate service that [data-plane failover](/en/docker/data-plane-failover/#lease-watchdog) needs on Nodes that hold Availability leases.
 - **database:** requires dedicated storage and the kernel/storage facilities documented by the installer.
 - **builder:** requires dedicated BuildKit/containerd capacity and should not have a Docker Engine socket.
 - **monitoring:** provides supported monitoring collection.
@@ -63,7 +63,7 @@ Enrollment is complete only when the daemon reports the expected capabilities an
 
 ## Installation failure modes
 
-If the command cannot download or start the daemon, verify outbound HTTPS, DNS, system time, package-manager state, architecture, and available disk space. If the daemon starts but enrollment does not complete, verify Relay reachability, the one-time token has not already been consumed, and the command was run for the pending Node shown in the dialog. Do not generate several pending records and try their commands interchangeably.
+The nginx node installer can be run again on the same host after a failed run. If the command cannot download or start the daemon, verify outbound HTTPS, DNS, system time, package-manager state, architecture, and available disk space. If the daemon starts but enrollment does not complete, verify Relay reachability, the one-time token has not already been consumed, and the command was run for the pending Node shown in the dialog. Do not generate several pending records and try their commands interchangeably.
 
 A Node that enrolls without its expected capability is not ready for that role. Check the role service, socket or storage permissions, required kernel features, and the daemon's bounded startup logs. Correct the host prerequisite and allow capability reporting to refresh; changing the Node Type after installation is not a substitute for installing the correct profile.
 
