@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 3
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-09-29
 ---
 
 
@@ -93,7 +93,7 @@ Restarting or updating the Docker daemon does not stop containers, and it interr
 
 Nodes that vote in or can hold [data-plane failover](/en/docker/data-plane-failover/) leases are updated one at a time per Availability policy: a daemon update of such a Node may wait for its lease peers, and the Node shows as updating meanwhile. See [Updates and mixed versions](/en/docker/data-plane-failover/#updates-and-mixed-versions). On Docker Nodes that can hold leases, the lease watchdog runs as its own service, `gateway-lease-watchdog`, and updates itself.
 
-A Node rolled back to any daemon release since 2.10.0 still starts: daemons keep the state files an older release reads next to their own.
+A Node rolled back to any daemon release since 2.10.0 still starts: daemons keep the state files an older release reads next to their own. Daemons replace their state files durably (write, flush, rename), so a `kill -9` or a power loss never leaves a partial file behind.
 
 ## nginx daemon restarts
 

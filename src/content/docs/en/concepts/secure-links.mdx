@@ -5,7 +5,7 @@ section: Concepts
 order: 4
 audience: [platform-engineer, security-admin, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-29
 ---
 
 Secure Links connect supported Gateway-managed resources without turning the destination into a general public endpoint.
@@ -33,6 +33,8 @@ For a failed database binding, check the managed database and Storage Node, then
 Routes and Additional Routes can target supported Docker resources through a Secure Link. Gateway validates the selected resource and application port, creates the relationship, and reconciles a Gateway-owned connector through Relay. The connector used for nginx-to-workload traffic is a real runtime component, but it remains outside ordinary user lifecycle APIs.
 
 A link created by a managed Route belongs to that Route. It is visible for diagnosis but cannot be deleted independently; disabling the Route preserves its configuration and relationship, while deleting the Route retires the owned binding after reconciliation. Workload restart or recreation keeps the link because the Route targets the stable Gateway resource. Deployment promotion and Compose revision changes resolve the active runtime behind the same higher-level identity.
+
+Since 2.11 rc.20, the Secure Link listeners on an Ingress Node keep accepting under load. Before, from 2.10.0 on, the nginx daemon checked every new connection with a full nginx configuration dump, so an Ingress Node stalled beyond roughly 100 new Secure Link connections per second and kept failing requests long after the load dropped. Now the check uses cached process information: a single-core Ingress Node handles thousands of new connections per second, connections beyond 1024 in setup are refused at once so nginx fails over quickly instead of queueing, connections a client already abandoned are dropped without opening a tunnel, and the listener recovers as soon as the load drops. A transient accept error, such as running out of file descriptors, no longer stops a listener until the daemon restarts.
 
 Advanced nginx configurations can use separately managed additional bindings with their own lifecycle. Do not confuse those with Route-owned bindings. Before deleting a user-managed binding, identify every configuration that references it.
 
