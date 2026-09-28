@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 4
 audience: [operator, network-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 
@@ -43,13 +43,42 @@ A pending Relay Node is not pool capacity. Do not treat a created database recor
 
 Place members in distinct failure domains when resilience matters. Confirm every managed host can reach every Relay that may be assigned to it. Assignment spread controls how many ready Relays receive new workload connections; increasing spread improves redundancy but consumes additional connections and memory.
 
+### Nearest Relays first
+
+Daemons measure the round trip to every Relay they can reach and report it to Gateway. For each endpoint, Gateway adds the round trip from the endpoint's Node to the average round trip from the Nodes that connect to it, and makes the nearest Relays the **primary** ones; the remaining slots of the spread go to standby Relays in other failure domains. Relays within about 20% or 3 ms of the nearest share the primary role, so Relays in one data center share the load. Primaries change only when another Relay is clearly closer, by at least 30% and 5 ms, so round-trip jitter never moves traffic. Until a Node has reported measurements, placement uses a stable hash of the endpoint as before.
+
+### Availability members and the Gateway host
+
+Two rules apply on top of the spread:
+
+- The Secure Links of [Workload Availability](/en/docker/availability/) placements (member links) go on **every** ready Relay that supports data-plane failover (`availability_lease_v2`), whatever the spread. Standby placements stay registered there too but take no traffic until their Node holds the workload, so after a takeover the new holder is already reachable through every Relay. A new member link starts on those Relays at once.
+- Every other Secure Link keeps its spread but includes at least one Relay that does not run on the Gateway host, as soon as its Nodes have measured such a Relay as reachable. A link that only the local Relay carries stops when the Gateway host does. When the Nodes of a link can reach no Relay off the Gateway host, the link stays where it works and **Settings → Relay** shows a warning: "No relay off the Gateway host is reachable from &lt;node&gt;: traffic of this link depends on the Gateway host." The pool stays healthy; the warning is not an alert.
+
+After an update to a release with these rules, expect one automatic rebalance for each link whose placement changes.
+
 Rebalancing is automatic. When Relay capacity or workload spread changes, Gateway starts a rebalance after the new placement has stayed stable for 30 seconds; existing connections drain without interruption. A failed attempt is retried automatically after 5 minutes, and **Rebalance** retries it immediately. Automatic rebalancing pauses during a Relay Pool update, but workloads continue to move off drained members.
+
+## Relays without Gateway
+
+Gateway signs the policy it pushes to each Relay with a lease. A Relay keeps admitting connections on its last signed policy until that lease expires, so Secure Links and database links keep opening new connections through a remote Relay while Gateway is stopped, updated, or unreachable. Set the lease in **Settings → Relay** under **Policy lease**: 72 hours by default, from 1 hour to 7 days (168 hours).
+
+**Grant lifetime** (1–224 hours, 4 by default) sets how long newly issued endpoint and connection grants are valid. Grants of a Relay Pool member always live at least a third longer than the policy lease (96 hours with the defaults), so a Relay never runs out of grants while it still admits on its last policy. A rotation of the grant signing key waits until every Relay has applied the new key or its lease has run out. A Relay from before 2.11 rc.18 keeps a 15-minute lease and caps its grants at 48 hours until it is updated.
+
+What needs Gateway: new and changed Routes and links, revocations, new grants, enrollment, and every management operation. The local Relay stops with the Gateway host, so only Relays on other hosts carry traffic when the whole host is down.
+
+## Route revocation
+
+When a Route or link is deleted or its target changes, Gateway pushes a policy that revokes the old route to every Relay. A Relay that has not applied it within 90 seconds is treated as stale for the revoked routes: Gateway drops it from their candidates, and the daemon at the endpoint refuses those routes through it, because every tunnel carries the route it was admitted for. The Relay's other routes keep working. In **Settings → Relay**, such a Relay shows "Revocation of N revoked routes pending" and then "Stale for revocation of N revoked routes" until it applies the required policy revision.
 
 ## Drain, update, and remove
 
 **Drain** moves new tunnels to other members. Existing streams can continue for up to 10 minutes and are then disconnected; **Force disconnect** ends the wait immediately. **Resume** returns the member to service. Drain, resume, and force disconnect require `admin:system`.
 
-A Relay Pool update performs the rolling procedure itself: it drains each remote member, updates it, verifies it, and returns it to service before moving to the next. It waits up to 30 minutes for streams on a member to end and otherwise pauses the run; a failed run releases the drains it took. The local Relay is updated with Gateway. In 2.11, Relay releases require Gateway 2.11 or newer, and Gateway does not offer an update while its local Relay is two or more minor versions behind the target.
+A Relay Pool update performs the rolling procedure itself: it drains each remote member, updates it, verifies it, and returns it to service before moving to the next. It waits up to 30 minutes for streams on a member to end and otherwise pauses the run; a failed run releases the drains it took. The same run updates the local Relay by recreating its container. In 2.11, Relay releases require Gateway 2.11 or newer, and Gateway does not offer an update while its local Relay is two or more minor versions behind the target.
+
+With a single Relay, recreating it briefly interrupts Secure Link traffic: requests that are open through the old Relay at that moment end, and daemons reconnect within a fraction of a second after the new Relay listens. Ingress Nodes hold new Secure Link connections for up to 3 seconds while the Relay or the target daemon is back, so current daemons see added latency rather than `502` responses. A Relay older than 2.11 rc.7 is stopped after 2 seconds instead of waiting for Docker's 10-second stop timeout. When updating from 2.10 or an earlier 2.11 release candidate, update the Node daemons before the Relay Pool so the recreated Relay meets daemons that reconnect quickly. Relay updates without any interruption need a second Relay in the pool.
+
+Relays vote in [data-plane failover](/en/docker/data-plane-failover/). Before draining a Relay, the update waits until the other voters and candidates of its Availability policies are back and voting, and after the restart it waits until the Relay votes again (at most 3 minutes), so a Relay update never takes a second vote away from a policy.
 
 Remove a remote Relay after it is drained and nothing is assigned to it. An offline member can also be removed when its policy has expired, it has not been seen for at least 90 seconds, and every affected workload is served by a ready remaining member; Gateway refuses removal that would orphan an endpoint.
 
@@ -63,6 +92,8 @@ Gateway repairs common Relay trust and certificate problems itself:
 - **Policy trust, local Relay.** If the local Relay rejects Gateway's signed policy, Gateway re-pins the active signing key automatically, at most once every 10 minutes, and records the recovery in the audit log. A local Relay without this capability shows a message with the manual procedure; update the Relay Pool first.
 - **Policy trust, remote members.** A remote member that no longer trusts any key Gateway can sign with is marked for re-enrollment.
 - **Re-enroll.** For a remote member that needs re-enrollment, has an expired certificate, or is offline or failing, **Re-enroll** issues a single-use installer command, valid for 7 days, pinned to the Relay version the pool runs. The member keeps its place and assignments; on the host, the supervisor keeps its previous identity aside and restores it if Gateway rejects the enrollment. The local Relay cannot be re-enrolled; Gateway recovers it automatically.
+- **Lost state.** A Relay that restarts without its stored policy, for example after its data file was reset, receives its policy again as soon as it reconnects instead of refusing connections with "policy snapshot is required".
+- **Local Relay restarts.** With **Automatic recovery** on, Gateway restarts a local Relay that crashed or hangs. It leaves a restart or stop that someone else started alone, however long it takes, and reconnects to the new Relay within seconds. An operator's `docker stop` of the local Relay is still undone, 2 seconds after the stop finished. A Node whose connection drops during a Relay restart is shown offline only after 5 seconds, and daemons retry registrations with a growing delay of up to 15 seconds, right away once the Relay is reachable again.
 
 ## Incident checks
 
