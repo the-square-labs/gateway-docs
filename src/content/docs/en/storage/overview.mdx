@@ -105,6 +105,8 @@ A copy job copies objects server-side from one S3 storage to another, managed or
 
 Copy jobs take storage connection IDs. For managed storage, use its storage connection ID (`objectStorageConnectionId` in the managed storage details returned by the API and MCP), not the managed storage ID.
 
+A cancelled or timed-out job never leaves a runner container behind, and its final status is saved before it is reported, so it survives a daemon restart right afterwards.
+
 Starting a job needs `storage:objects:read` and `storage:credentials:use` on the source, `storage:objects:write` and `storage:credentials:use` on the destination, and `nodes:backups:execute` on the executor Node. Gateway rechecks the job owner's permissions when it dispatches the job. Starting a job needs a current Personal or higher plan; following, listing, and cancelling jobs keep working after a license grace period ends.
 
 ## Migrating from MinIO

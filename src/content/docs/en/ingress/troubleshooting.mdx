@@ -52,6 +52,8 @@ Compare three views:
 
 A mismatch between these views identifies whether the failure is control-plane state, node apply, or external infrastructure.
 
+Secure Link failures are logged once per link, not once per request. The nginx daemon on the Ingress Node logs a warning `proxy secure-link connections failing` with the `link_id`, the last Relay, stage, and error when a link starts failing, `still failing` with a count every 5 minutes, an info line when requests succeed only after retries, and `recovered` with the numbers of failed and retried requests at the first clean connection. The Docker daemon of the target logs failing incoming tunnels the same way per endpoint owner (`relay endpoint tunnels`), and refusals on revoked routes separately (`relay endpoint tunnels on revoked routes`). Per-attempt details are at debug level.
+
 ## Safe recovery
 
 - Correct DNS only after the intended node placement is confirmed.
