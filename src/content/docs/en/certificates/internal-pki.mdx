@@ -5,7 +5,7 @@ section: Certificates and PKI
 order: 2
 audience: [security-admin]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-28
 ---
 
 
@@ -44,6 +44,8 @@ Use separate intermediate authorities for materially different environments or a
 ## Issue and operate certificates
 
 Record the owner, purpose, template, subject, validity, renewal expectation, and revocation contact for every certificate. Grant private-key export only to identities that need the key material. A user who can inspect certificate metadata does not automatically need authority or key-export permissions.
+
+When a Route uses a certificate from an internal CA, the Ingress Node serves it together with its intermediate CAs, so clients that trust only the root can validate it.
 
 Before renewal, verify that the subject and intended use are still valid. Revoke compromised or retired certificates, publish the updated CRL, and confirm relying systems consume it. Deleting a UI record is not a substitute for revocation when a certificate may still be trusted externally.
 

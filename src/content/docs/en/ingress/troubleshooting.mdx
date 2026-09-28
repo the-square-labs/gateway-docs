@@ -5,7 +5,7 @@ section: Ingress
 order: 5
 audience: [operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 
@@ -32,11 +32,13 @@ Common mistakes include cross-node Domain/Route placement, stale external DNS af
 | Hostname does not resolve | DNS | External `A`/`AAAA` lookup and Domain placement |
 | Connection timeout | network | Public address, firewall, ports 80/443, node availability |
 | Certificate warning | TLS | Certificate hostname, chain, expiry, and assigned Route |
+| TLS handshake fails at once | Route matching | No enabled Route on that node serves the hostname; the node rejects such handshakes instead of answering with another Route's site |
 | Immediate `404` | Route matching | Hostname, path prefix, enabled state, raw config |
 | Managed `503` | maintenance or unhealthy upstream | Maintenance state and health history |
 | `502`/`504` | upstream transport | Secure Link, target port, workload health, timeout settings |
 | WebSocket disconnects | protocol forwarding | WebSocket option, application path, proxy/read timeouts |
-| Changes never appear | apply/reconciliation | task state, nginx revision, node connection, validation error |
+| Changes never appear | apply/reconciliation | task state, nginx revision, node connection, validation error; a rejected change reports the `nginx -t` output |
+| `502` from a Deployment | Deployment router | Header `X-Gateway-Deployment-Router: upstream-unavailable` means the [router](/en/docker/deployments/#deployment-router) could not reach the active slot |
 
 ## Collect evidence before changing state
 

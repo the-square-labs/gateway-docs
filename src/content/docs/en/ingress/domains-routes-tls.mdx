@@ -5,7 +5,7 @@ section: Ingress
 order: 2
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-09-28
 ---
 
 For managed Cloudflare DNS, configure the [Cloudflare integration](/en/integrations/cloudflare/) before selecting zones and creating Domain records. A DNS connector does not replace the ingress node or its TLS configuration.
@@ -30,6 +30,8 @@ Issue Let's Encrypt certificates through HTTP-01 or DNS-01, or upload existing m
 ## Routes
 
 Choose the Domain, behavior, upstream, TLS certificate, and health policy. Enable WebSockets, rewrites, headers, buffering, or timeout changes only when required by the application.
+
+An Ingress Node answers TLS only for hostnames that one of its Routes serves. A TLS request for any other name is rejected during the handshake instead of receiving another Route's certificate and site. The daemon update installs this on existing nodes; where the node's own nginx already has a default server on port 443, the update skips it and logs a warning. When nginx rejects a configuration change, the error reported for the change includes the `nginx -t` output.
 
 Two enabled Routes on the same node cannot serve the same name, because nginx would serve only one of them. Creating, enabling, or editing a Route, or moving it to another node, so that it serves a name that another enabled Route on that node already serves fails with `409 PROXY_HOST_DOMAIN_CONFLICT`, which names the other Route. Names are compared without regard to case. Routes that already overlapped before the update to 2.11 keep their configuration; see [Conflicts resolved by the 2.11 update](/en/operations/updates-backups/#conflicts-resolved-by-the-211-update).
 

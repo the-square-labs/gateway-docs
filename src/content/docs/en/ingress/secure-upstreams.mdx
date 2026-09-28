@@ -5,7 +5,7 @@ section: Ingress
 order: 4
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 
@@ -49,7 +49,7 @@ The connector container used for nginx-to-workload traffic is Gateway-owned. It 
 - Compose apply resolves the selected service from the active project revision.
 - Disabling a Route stops serving it but preserves its configuration and owned relationship.
 - Deleting a Route retires its Route-owned binding after reconciliation.
-- A user-managed additional binding has an independent lifecycle and must be removed explicitly.
+- A user-managed additional binding has an independent lifecycle and must be removed explicitly. Deleting it is refused while the Route's advanced or raw configuration, or an Additional Route's advanced configuration, still refers to it, either through its `{{additionalSecureLinks.<name>}}` variable or by its rendered upstream name.
 
 ## Failure diagnosis
 
