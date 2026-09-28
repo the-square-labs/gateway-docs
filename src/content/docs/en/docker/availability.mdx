@@ -60,6 +60,7 @@ Serving placements go to the first available nodes in the order. When a higher-p
 - Failback runs only while the policy is healthy and no other operation is active; replacement, rollout, and scaling come first.
 - A failed failback leaves the backup serving and is tried again after 15 minutes. Use **Retry** in **Operations** to try sooner.
 - Failback needs **Maximum surge** of at least 1 so that a placement keeps serving during the move; in Replicated mode, **Maximum unavailable** of at least 1 is also enough. Otherwise **Check eligibility** warns, and the workload stays on the backup.
+- When the nodes run the failover themselves (data-plane lease mode), a failback is a handoff instead: the serving node stops its copy before the next node starts its own, because the default strict partition mode never runs two copies at once. In Failover mode the workload does not serve while the old copy stops and the new one starts and becomes ready, usually 5–15 seconds; in Replicated mode the other replicas keep serving.
 - After a Gateway restart, every node's healthy time starts again, so no failback runs until the delay has passed.
 
 In the API and MCP (`manage_docker_availability`), the policy fields are `priorityMode`, `nodePriority` (node IDs in order, primary first), and `failbackDelaySeconds`.
