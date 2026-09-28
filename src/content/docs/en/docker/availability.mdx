@@ -56,6 +56,8 @@ Enabling Availability on a workload that already serves does not interrupt it an
 
 The Node where the workload runs keeps serving it even when **Priority mode** puts another Node first; failback moves it afterwards.
 
+Routes keep reaching the original workload through their own Secure Link until a placement serves through its member link. Only then does Gateway switch the Route to the members; it keeps the old link for another 5 seconds so that requests nginx's previous workers still hold can finish, and then removes it.
+
 ## Replacement and rollout settings
 
 - **Replacement grace** — time to wait after losing the node control connection before creating a replacement. The default is 15 seconds; image preparation, startup, and health checks take additional time.
@@ -84,7 +86,11 @@ Proxy Hosts, Additional Routes, and Advanced Secure Links can target the logical
 
 A placement takes traffic only once its workload is ready: its image health check reports healthy if the image has one; otherwise its port accepts connections. For a Deployment, the application of the active slot must answer through the Deployment router, not only the router itself. Route health is checked through the placements' Secure Links, so a healthy Availability Route is shown online.
 
-If a placement fails anyway, the Ingress Node retries the next placement: on connection errors for every request, and on `502`, `503`, and `504` responses for requests that are safe to repeat, such as `GET` and `HEAD`, up to 5 tries within 10 seconds. `POST`, `PATCH`, and `LOCK` requests are not sent again once they reached a placement.
+A placement that does not serve, such as a standby or a stopped copy, keeps its link closed on the Ingress Node in every mode, so no request reaches it: nginx fails the connection before it sends anything and moves on to the next placement, which is safe for every method.
+
+If a placement fails anyway, the Ingress Node retries the next placement: on connection errors for every request, and on `502`, `503`, and `504` responses for requests that are safe to repeat, such as `GET` and `HEAD`, up to 5 tries within 10 seconds. `POST`, `PATCH`, and `LOCK` requests are not sent again once they reached a placement. A placement that failed is skipped for one second; every placement is also listed as a backup that is never skipped, so the Route never runs out of upstreams while one placement serves.
+
+When the host of a placement becomes unreachable, the Relays drop its connection within about 3.5 seconds and report it as not ready, and the Ingress Node closes its link. Until then, a new connection to it costs at most 2 seconds before nginx tries the next placement. Requests already in flight to it are retried on another placement when they are safe to repeat; a `POST` already sent gets `502`.
 
 Managed database bindings receive per-placement connections. Keep relationships attached to the logical resource rather than temporary Container names. To diagnose a particular instance, use the placement selector in logs, console, and monitoring where available.
 
@@ -110,7 +116,7 @@ After recovery, verify serving count, real customer traffic, database access, an
 
 ## Stop and start
 
-**Stop** on a workload with Availability stops every copy and removes none. The original workload is never deleted: not when a lease closes, not by stale-placement cleanup, and not as a surplus standby. On a Node that is no longer selected it stays, stopped. **Start** starts one copy, preferring the original, and removes other surplus copies; the policy then restores its serving count.
+**Stop** on a workload with Availability stops the copies that are running and keeps every placement: standbys stay prepared, and the policy stays healthy while the workload is stopped. **Start** starts the copies that served last, never a standby, and keeps the standbys, so no placement is removed, recreated, or failed by a stop and a start. The original workload is never deleted: not when a lease closes, not by stale-placement cleanup, and not as a surplus standby. On a Node that is no longer selected it stays, stopped. A Docker daemon that is busy with long-running commands delays a stop, start, or heal (`AVAILABILITY_DAEMON_BUSY`, retried automatically) instead of marking placements failed.
 
 ## Disable Availability
 
