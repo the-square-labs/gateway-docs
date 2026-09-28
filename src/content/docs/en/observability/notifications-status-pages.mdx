@@ -5,7 +5,7 @@ section: Observe and notify
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-28
 ---
 
 [Hosting integrations](/en/integrations/hosting-providers/) also expose VM power changes, operation failures, synchronization, and supported account-balance thresholds. Billing alerts require billing access and a currency; a running VM is not proof that its Gateway daemon is online.
@@ -57,6 +57,12 @@ Notification templates use a canonical nested context. Keep templates small and 
 Create components that match customer-visible services, not internal daemon topology. Map incidents to affected components, publish concise updates, and distinguish investigating, identified, monitoring, and resolved states according to the communication process.
 
 Maintenance mode on a managed Route can surface as planned maintenance. Confirm the public status view does not expose node names, private addresses, stack traces, resource IDs, or security details.
+
+### While Gateway is unavailable
+
+Gateway serves the public status page through an Ingress Node, and that Node keeps the last good copy of the page, its assets, and the status data the page polls. While Gateway restarts, is updated, or is unreachable, visitors get that copy, the last one fetched while Gateway answered, so it shows the state from just before the interruption. A page that was never loaded before shows a short "Back in a moment" page that reloads by itself. Browsers never store the page, so live data returns as soon as Gateway answers; while it answers, the data a visitor sees is at most 5 seconds old. By default the status page uses an upstream the Ingress Node can reach.
+
+Ingress Nodes pick this up when they reconnect to an updated Gateway. The first Gateway update to a release with this behavior still interrupts the page, because the cache is empty when the old Gateway stops; every later update is covered.
 
 Close an incident only after the customer path is verified, not merely when an internal alert turns green. Publish a final summary appropriate to the audience and preserve detailed technical findings in the internal incident record.
 
