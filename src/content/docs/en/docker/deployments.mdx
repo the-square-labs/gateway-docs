@@ -5,7 +5,7 @@ section: Docker
 order: 3
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-09-28
 ---
 
 
@@ -47,6 +47,16 @@ If a customer-visible regression appears after cutover, use the explicit rollbac
 Deployment operations survive Gateway restarts. A durable sweep finishes the drain of the previous slot, and an interrupted release is reconstructed from the slot that the Node's router actually serves. If the Node cannot be inspected within 5 minutes, the release is marked failed with a reason such as a stopped router or a daemon that cannot report its serving slot; update the Docker daemon in the latter case.
 
 While a release is running, the Deployment's settings are locked: saving returns `DEPLOYMENT_BUSY` and the Console disables **Save** until the release finishes. While a Git build is being rolled out to the Deployment, lifecycle and configuration changes return `BUILD_ROLLOUT_IN_PROGRESS`; wait for the rollout to finish. During a Gateway update, new Deployment operations are refused with `GATEWAY_UPDATING` until the update completes; see [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
+
+## Deployment router
+
+Each Deployment has a small nginx router container on its Node. The router receives the Deployment's traffic and forwards it to the active slot; a switch or rollback changes only the router's target.
+
+- **It comes back after a reboot.** Routers run with the `unless-stopped` restart policy. When the Docker daemon starts, it repairs the router of every serving Deployment: a router created by an older release, or left with the restart policy `no`, gets the current policy or is recreated from the configuration it serves, with its routes and published ports, and is pointed at the application slot that actually runs. The daemon repeats the repair every minute until it succeeds. A Deployment that was deliberately stopped or killed keeps its router stopped.
+- **Operations start a stopped router.** A deploy, slot switch, router update, or start brings up a router that was stopped by a kill or stop instead of failing on it, and a Deployment whose active slot cannot start no longer stays stuck.
+- **It does not depend on Docker's DNS.** The router configuration names the address of the active slot's container, and the daemon keeps it current every 5 seconds; with nginx 1.27.3 or later the router also resolves the slot name in the background. A hung Docker Engine (dockerd) therefore does not stop traffic to a running Deployment. Existing routers are updated in place, without being recreated.
+- **Request bodies are not limited.** The router passes request bodies of any size (the Route decides the limit) and streams them to the slot instead of buffering them on disk. Routers created before this change pick it up at their next deploy, slot switch, or restart.
+- **Its own errors are marked.** When the router cannot reach the active slot, it answers `502` or `504` with the header `X-Gateway-Deployment-Router: upstream-unavailable`, which tells a router error from an application error. [Workload Availability](/en/docker/availability/#routes-and-database-bindings) uses it to decide whether a Deployment placement is ready.
 
 ## Retirement consequences
 
