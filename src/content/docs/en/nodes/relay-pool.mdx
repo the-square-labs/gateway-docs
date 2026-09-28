@@ -56,7 +56,13 @@ Two rules apply on top of the spread:
 
 After an update to a release with these rules, expect one automatic rebalance for each link whose placement changes.
 
-Rebalancing is automatic. When Relay capacity or workload spread changes, Gateway starts a rebalance after the new placement has stayed stable for 30 seconds; existing connections drain without interruption. A failed attempt is retried automatically after 5 minutes, and **Rebalance** retries it immediately. Automatic rebalancing pauses during a Relay Pool update, but workloads continue to move off drained members.
+Rebalancing is automatic. When Relay capacity or workload spread changes, Gateway starts a rebalance after the new placement has stayed stable for 30 seconds; existing connections drain without interruption. Before a move, the daemons that use the endpoint probe the new Relay; a probe that the Relay refuses only because the target is an Availability standby counts as verified, and at most 2 probes run per daemon at a time. Automatic rebalancing pauses during a Relay Pool update, but workloads continue to move off drained members.
+
+The pool stays `healthy` in steady state. Gateway tells three kinds of rebalance errors apart:
+
+- **Transient** conditions, such as a busy daemon, a Node that is not connected, a restarting local Relay, or a preparation a Gateway restart interrupted, do not count as failures. The move is deferred with the note "Deferred by a transient condition and retried automatically" and tried again after 30 seconds, doubling up to 5 minutes; the pool does not degrade.
+- **Genuine** failures degrade the pool and are retried automatically after 5 minutes; **Rebalance** retries them immediately.
+- A workload removed during a rebalance simply leaves it; the other moves continue.
 
 ## Relays without Gateway
 
@@ -64,7 +70,16 @@ Gateway signs the policy it pushes to each Relay with a lease. A Relay keeps adm
 
 **Grant lifetime** (1–224 hours, 4 by default) sets how long newly issued endpoint and connection grants are valid. Grants of a Relay Pool member always live at least a third longer than the policy lease (96 hours with the defaults), so a Relay never runs out of grants while it still admits on its last policy. A rotation of the grant signing key waits until every Relay has applied the new key or its lease has run out. A Relay from before 2.11 rc.18 keeps a 15-minute lease and caps its grants at 48 hours until it is updated.
 
-What needs Gateway: new and changed Routes and links, revocations, new grants, enrollment, and every management operation. The local Relay stops with the Gateway host, so only Relays on other hosts carry traffic when the whole host is down.
+What needs Gateway: new and changed Routes and links, revocations, new grants, enrollment, and every management operation. The local Relay stops with the Gateway host, so only Relays on other hosts carry traffic when the whole host is down. When a Relay reconnects after a gap, the audit log records the time it ran on its last policy as `relay.instance.policy.stale_period`, with `from` and `to`.
+
+When Gateway or a Relay comes back, the Relay receives every policy change as soon as it is connected again, and Secure Links that keep serving are not taken apart: if refreshing a link fails because a Node has not reconnected yet, the link keeps its Relay endpoint and Gateway retries.
+
+### Registrations and grant changes
+
+- **Endpoint generation changes.** When an endpoint moves to a new generation, for example after its target's certificate was rotated or its target moved to another Node, the Relay keeps the previous registration serving, with its tunnels, until the new generation registers. Tunnels are closed only for route or assignment changes and removed endpoints.
+- **Grants ahead of the policy.** A daemon may receive a grant before its Relay has the policy that includes it. The Relay then waits up to 10 seconds for that policy instead of refusing, and a registration refused as "does not match policy" by an older Relay is retried every 0.2–0.4 seconds for the first 10 seconds.
+- **Unreachable daemons.** A Relay drops the connection of a daemon whose host does not acknowledge data within about 2 seconds, usually about 3.5 seconds after the host became unreachable. Its registrations and tunnels end with it, and Availability routes move to other placements. A daemon that is only busy keeps its connection, because its host still acknowledges.
+- **Restarting daemons.** A Docker daemon that restarts gracefully announces it; the Relay keeps its registrations for up to 15 seconds until the next process registers and answers new tunnels with "target endpoint is restarting" meanwhile, which Ingress Nodes hold instead of failing. See [Docker daemon restarts](/en/nodes/updates-and-offline-behavior/#docker-daemon-restarts).
 
 ## Route revocation
 
