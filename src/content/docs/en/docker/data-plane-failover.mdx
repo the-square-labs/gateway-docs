@@ -1,0 +1,126 @@
+---
+title: Data-plane failover
+description: How Workload Availability fails over without Gateway, and what to expect during partitions, freezes, and upgrades.
+section: Docker
+order: 5
+audience: [platform-engineer, operator, sre]
+status: ready
+lastReviewed: 2026-09-28
+---
+
+[Workload Availability](/en/docker/availability/) can fail over in two ways. On **backend failover**, Gateway notices that a Node is gone and creates a replacement; this needs a running Gateway. In **data-plane failover** (lease mode), the Docker Nodes, Ingress Nodes, and Relays of the workload decide among themselves who serves it, so a dead or cut-off Node is replaced within about 45 seconds even while Gateway is stopped, being updated, or unreachable.
+
+Lease mode is part of Business and Enterprise. It needs no switch: a policy uses it as soon as every participant supports it and has run steadily for 2 minutes. Participants are the Docker Nodes that can run the workload (candidates), the Ingress Nodes of its Routes, and the Relays that carry its traffic. They must advertise the `availability_lease_v2` capability, which the Docker daemon, nginx daemon, and Relay of Gateway 2.11 rc.20 and later do. Components from rc.18 and rc.19 advertise `availability_lease_v1` and count as outdated.
+
+The **Availability** summary of the workload shows **Lease mode**: **Lease** when the Nodes fail over by themselves, **Legacy** on backend failover, and **Bootstrapping** or **Closing** while the policy switches. Hover the badge for the reason.
+
+## How it works
+
+Each serving placement is a **slot**: Failover mode has one, Replicated mode one per replica. For every slot, the Nodes and Relays of the policy keep a **lease**, and only the Node that holds it (the **holder**) runs its copy of the workload.
+
+- **Renewal.** The holder renews its lease every few seconds with a majority of the policy's voters. When it cannot, it stops its own copy before the lease can pass to anyone else. The next candidate then takes the free slot and starts its copy, about 45 seconds after the failure.
+- **Standbys.** Gateway prepares up to two standby placements on other candidate Nodes ahead of time: the image is pulled and the container is created but not started, so a takeover only starts it.
+- **Traffic.** Requests reach only the holder of each slot. Every placement's Secure Link is registered on every Relay that supports lease mode; the links of standbys stay registered but closed until their Node holds the slot, so the new holder is reachable through every Relay right after a takeover. A holder takes traffic only once its workload is ready; see [Routes and database bindings](/en/docker/availability/#routes-and-database-bindings).
+- **Release.** A holder that stopped its copy for a local reason (its lease timer, a lost watchdog, a detected freeze, a closed lease) releases the slot as soon as the container is confirmed stopped, so the next candidate starts within seconds instead of waiting for the lease to expire.
+- **One slot per Node.** In Replicated mode, a Node never holds two slots of the same policy. A Node that comes back takes its own previous slot back first.
+
+A Docker Engine (dockerd) that hangs on the holder does not stop traffic to the running copy, and it is not taken as a reason to stop it. If the holder's lease runs out meanwhile, the lease watchdog stops the copy.
+
+### Lease watchdog
+
+Every Docker Node that can hold a slot runs the lease watchdog, a small service named `gateway-lease-watchdog` with its own release line. It stops a lease-mode container once its lease deadline has passed, even when the Docker daemon or dockerd hangs. The Docker node installer installs it, on existing Nodes the Docker daemon installs it itself when it runs as root, and the watchdog keeps itself updated. A daemon that cannot install it makes the policy list that Node with `watchdog_missing`: re-run the node installer there.
+
+A watchdog that is slow for a few seconds (up to about 8) never stops a workload. When its heartbeat has been missing for about 10 seconds, the holder stops its copy and releases the slot to the next candidate. If a Docker daemon is rolled back to a release without lease support, the watchdog removes the deadlines left behind after 10 minutes, so it does not stop containers the older daemon runs.
+
+### Voters and witness
+
+Each policy has its own voters: its candidate Nodes, one per physical host, in takeover order, plus witnesses so that the count is odd and at least 3, at most 7. Only Nodes and Relays that advertise `availability_lease_v2` and have reported a lease identity vote. A policy with three candidates needs no witness.
+
+A witness is a Relay or Docker Node on a different host from every candidate. Choose it under **Witness** in the policy: **Auto (farthest by latency)** picks the eligible member with the largest round trip to every candidate, which is least likely to share a site with them; you can also select a specific Relay or Node. The automatic witness is never Gateway's local Relay while another Relay or Node can witness, because the local Relay stops together with Gateway. It stays until it can no longer vote, so round-trip jitter never changes the voters. The summary warns when the witness is probably on the same site as a candidate (under 2 ms), when no eligible witness exists, or when the configured witness cannot vote and an automatic one is used instead.
+
+Voters must reach each other without Gateway. Every Node of a lease-mode policy connects to every Relay for its lease traffic, and one live Relay is enough while a majority of the voters can reach each other through it. The summary warns "Voter reachability margin is insufficient" when losing one more voter would leave no majority; Gateway's local Relay does not count toward this margin. A policy with two candidates and a Relay on another host has a margin of one voter.
+
+## Network splits
+
+**Allow available mode** (`partitionMode` in the API) decides what happens when the network splits the voters:
+
+- **Off (`strict`, the default).** Two copies of a slot never run at once. Only the side that keeps a majority of voters serves; a holder on the other side stops its copy.
+- **On (`available`).** Both sides of a split keep serving, and two copies may run for a short time. Never allow it for singletons such as indexers, queue consumers, or scheduled jobs.
+
+## Frozen hosts and clock changes
+
+Lease timers use each host's monotonic clock. A change of the wall clock, such as an NTP correction in either direction and of any size, never stops a copy.
+
+If the holder's host or virtual machine is paused, frozen, or suspended for more than about 2 seconds, its lease may have passed to another Node meanwhile. After it resumes, the Node sees the time it lost from the clocks of the first Relay or voter it hears from and stops its copy at once, without a grace period when its lease time has run out. The Docker daemon logs this as a fence with the reason `host_frozen`. A lease the Node acquires after the freeze is never stopped because of it, and shorter pauses stay within the normal timing margins. A holder that reaches nobody after resuming stops its copy on its own lease timer.
+
+## Excluded Nodes
+
+A condition of one Node never changes the policy's mode. Instead, the Node is listed under **Excluded nodes** in the summary (`lease.excludedNodes` in the API) with one of these reasons:
+
+| Reason | Summary label | Meaning and fix |
+| --- | --- | --- |
+| `offline` | offline | The Node has no control connection to Gateway. Restore the host or its daemon. |
+| `watchdog_missing` | lease watchdog not running | The lease watchdog does not run. Start `gateway-lease-watchdog` or re-run the node installer. |
+| `daemon_outdated` | daemon outdated | The Docker daemon does not advertise `availability_lease_v2`. Update it. |
+| `identity_pending` | no lease identity yet | The daemon has not reported its lease identity yet, usually right after an update. |
+
+An excluded Node gets no new standby, no failback or other planned move goes to it, and its daemon does not take a slot; the next candidate does. Gateway never cuts off a Node that holds a slot for this reason: a Node without a watchdog stops its own copy, and an outdated holder keeps its slot until it is updated or hands over. An outdated or unidentified Node leaves the voters and the candidate list only after the condition has lasted 2 minutes, so a daemon restart or a rolling update changes nothing. A failback to a Node that was excluded waits **Return to the primary after** from the end of the exclusion.
+
+## Entering lease mode
+
+A policy on backend failover enters lease mode only when every participant it needs has run `availability_lease_v2` for 2 minutes without a break and without a restart: every candidate Docker Node with its lease watchdog and identity, the Ingress Nodes of its Routes, the Relays that carry it, and its witnesses. Until then its reason is `participants_settling` and names the Nodes or Relays still settling, so a fleet in the middle of an update never switches halfway. After a Gateway restart the 2 minutes start again.
+
+Lease mode also waits for a running enable or rollout of the policy to finish. The first holder of each slot is the Node where the workload serves at that moment, whatever the priority order says; a priority failback moves it afterwards as a planned handoff.
+
+## Leaving lease mode
+
+A policy leaves lease mode only when lease mode has become impossible:
+
+| Reason | Cause |
+| --- | --- |
+| `insufficient_voters` | Fewer members that can vote than a majority needs; update the candidates or add a Relay as witness |
+| `ingress_not_capable` | An Ingress Node of the workload's Routes runs an nginx daemon without `availability_lease_v2` |
+| `relays_not_capable` | A Relay that carries the workload runs a version without `availability_lease_v2` |
+| `candidates_not_capable`, `watchdog_missing` | No candidate can hold a slot, and no slot is held |
+| `controller_unsupported` | The license or edition does not include data-plane failover |
+| `signing_key_pending` | No Relay policy signing key can sign lease data yet |
+
+Except for disabling Availability and lifecycle operations such as **Stop**, which leave at once, the condition must last 2 minutes without a break. Meanwhile the lease keeps working, the API shows since when in `lease.reason.since`, and the summary warns: "Data-plane failover is impossible right now: … The policy goes back to backend failover at …".
+
+The policy then passes through **Closing**. Gateway publishes a closed lease, the holders stop their copies, and Gateway starts nothing on the backend path until every slot's lease has been released (no copy runs and every candidate has seen the close) or has expired, about 47 seconds after a majority of voters saw the close. The last holders then become the serving placements again and backend failover starts them, so leaving lease mode interrupts the workload for that time. When the cause is fixed, the policy returns to lease mode by itself after the usual 2 minutes of settling.
+
+## What Gateway still does
+
+Gateway plans every move and keeps the records; the Nodes only decide who serves when something fails.
+
+- **Planned moves are handoffs.** A failback, drain, manual move, change of the priority order, or rollout moves a slot as a handoff: the serving Node stops its copy and releases the lease, and only then does the next Node start its own. The slot serves nothing for the old copy's stop plus the new copy's start and readiness, usually 5–15 seconds. In Failover mode with **Allow available mode** off, requests fail for that time; in Replicated mode the other replicas keep serving.
+- **Healing.** A policy with fewer serving copies or standbys than it needs, and eligible online capacity, gets maintenance every 15 seconds and whenever a Node connects. A Node that comes back gets its free slot back: its placement is kept, and a missing one is created again. A Node that ends up holding two slots hands one to a standby elsewhere, with a short gap for that copy.
+- **After a partition or outage.** When a Node returns, Gateway reads the state of its placements from its daemon: a copy that was stopped becomes a ready standby, and a priority failback runs as after any outage.
+- **Records.** Within seconds of starting, Gateway learns the actual holders from its local Relay, before the Nodes reconnect. An autonomous takeover appears in the audit log as `docker.availability.lease_failover`, a planned move as `docker.availability.lease_handoff`. Both are dated with the takeover time the voters saw, which can be earlier than the moment Gateway noticed it; their details carry `takeoverAt` and `noticedAt`. The holder time in the summary (`holderSince` in the API) is the same takeover time.
+
+## Updates and mixed versions
+
+Update Gateway first, then the Node daemons and the Relay Pool; see [Relay updates](/en/nodes/relay-pool/#drain-update-and-remove) for why the daemons should go first when coming from 2.10 or an earlier 2.11 release candidate. A policy on backend failover stays there while any participant still runs an older release and enters lease mode once, 2 minutes after the last participant was updated. A policy already in lease mode keeps it while only candidate Docker Nodes are outdated; they are excluded and an outdated holder keeps serving until it is updated. An Ingress Node or Relay left on an older release for more than 2 minutes sends the policy to backend failover through **Closing**; it returns by itself once they are updated.
+
+Gateway orders daemon updates of lease participants itself. An update of a Docker daemon or Relay that votes in, or can hold, a lease-mode policy waits until the other voters and candidates of that policy are back online, have reported their lease state, and vote again. Meanwhile the Node shows as updating, and the API reports `updatePhase: waiting_for_lease_peers` with the peers in `updateWaitingFor`. Updates requested together run standbys first, then holders; Nodes that share no policy update in parallel. A peer that has not settled 3 minutes after its restart stops blocking, and an update that waited 30 minutes fails with an error naming the peers.
+
+The wait matters mostly once: when a Node is updated from rc.19 or older, and after a reboot or with fresh state, its first restart abstains from voting for about 33 seconds. Expect "waiting for lease peers" for up to about a minute per peer then. Later restarts on the same boot keep voting at once, and a holder whose daemon restarts keeps its slot: it keeps renewing until 2 seconds before its watchdog deadline.
+
+A Node rolled back to any release since 2.10.0 still starts: daemons keep their state files in a form older releases can read.
+
+## Lease details in the API
+
+`get` of `manage_docker_availability` and the Availability API return a `lease` object:
+
+- `mode`: `legacy`, `bootstrapping`, `lease`, or `closing`;
+- `reason`: why the policy is on backend failover, or why lease mode is impossible right now, with `code`, `message`, `nodeIds` or `relayIds` to fix, and `since` while a lease-mode policy waits out the 2 minutes;
+- `excludedNodes`: `[{ nodeId, reason }]`;
+- `holders`: per slot, `holderNodeId`, `placementId`, and `holderSince`;
+- `voters` and `witness`, with `warning` set to `witness_near_candidate`, `no_eligible_witness`, or `configured_witness_unavailable`;
+- `voterMargin`: `voters`, `reachable`, `required`, and `margin`. When `margin` is 0 or less, losing one more voter stops autonomous failover.
+
+## Limits
+
+- Data-plane failover protects the workload's placements, not Gateway, nginx, database engines, registry storage, or shared volumes.
+- A copy that cannot renew its lease stops. With **Allow available mode** off, a network split therefore stops the workload on the side without a majority.
+- Planned moves have a short gap for a singleton in Failover mode, as described above.

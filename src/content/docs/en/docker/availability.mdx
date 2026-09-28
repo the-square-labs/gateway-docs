@@ -5,12 +5,14 @@ section: Docker
 order: 5
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-09-28
 ---
 
 Availability adds placements on independent Docker nodes to an existing Container, Deployment, or Compose Project. Gateway preserves the resource identity, configuration, and relationships while creating and replacing runtime instances according to its availability policy.
 
 The feature is available on Business and Enterprise. Manage instances through the owning resource rather than as individual Containers: the policy owns placement count, generations, routing membership, and cleanup.
+
+Failover runs in one of two ways. When every Docker Node, Ingress Node, and Relay of the workload runs a release that supports it, the Nodes fail over by themselves, without Gateway; see [Data-plane failover](/en/docker/data-plane-failover/). Otherwise Gateway replaces lost placements itself (backend failover), as described on this page.
 
 ## Choose a mode
 
@@ -43,6 +45,17 @@ Gateway pins images by repository and digest in its internal registry and pre-pu
 
 Changing the switch alone does not apply the policy: **Save** is required. A successful save means desired state was accepted, not that instance creation has completed.
 
+### Enabling on a running workload
+
+Enabling Availability on a workload that already serves does not interrupt it and never starts a second copy beside it. The running Container, Deployment, or Compose Project becomes the first placement on the Node where it runs:
+
+- A **Container** is never recreated. Managed database networks it needs are attached while it runs.
+- A **Deployment** or **Compose Project** that already runs the image Gateway mirrored into its registry is adopted as it runs. An adopted Deployment keeps its router's port binding, and an adopted Compose Project its published ports, until a rollout recreates them.
+- A Deployment or Compose Project that cannot be adopted as it runs, because it needs the managed database connection settings or runs another image, is replaced without a serving gap where the policy allows two copies (Replicated, or Failover with **Allow available mode**): a Deployment deploys the new configuration to its inactive slot and switches after readiness; a Compose Project first gets a copy on another Node, the Routes move to it, then the original is recreated and, in Failover mode, the extra copy is removed. If no other Node can serve the copy, the original stays as it is and the enable retries.
+- A Failover singleton with **Allow available mode** off never runs two copies, so it takes a short planned gap instead: a Deployment creates its new slot with the image already pulled before the old slot stops, and switches back if the new slot does not become ready; a Compose Project pulls every image before any service is recreated.
+
+The Node where the workload runs keeps serving it even when **Priority mode** puts another Node first; failback moves it afterwards.
+
 ## Replacement and rollout settings
 
 - **Replacement grace** — time to wait after losing the node control connection before creating a replacement. The default is 15 seconds; image preparation, startup, and health checks take additional time.
@@ -60,7 +73,7 @@ Serving placements go to the first available nodes in the order. When a higher-p
 - Failback runs only while the policy is healthy and no other operation is active; replacement, rollout, and scaling come first.
 - A failed failback leaves the backup serving and is tried again after 15 minutes. Use **Retry** in **Operations** to try sooner.
 - Failback needs **Maximum surge** of at least 1 so that a placement keeps serving during the move; in Replicated mode, **Maximum unavailable** of at least 1 is also enough. Otherwise **Check eligibility** warns, and the workload stays on the backup.
-- When the nodes run the failover themselves (data-plane lease mode), a failback is a handoff instead: the serving node stops its copy before the next node starts its own, because the default strict partition mode never runs two copies at once. In Failover mode the workload does not serve while the old copy stops and the new one starts and becomes ready, usually 5–15 seconds; in Replicated mode the other replicas keep serving.
+- When the nodes run the failover themselves ([data-plane failover](/en/docker/data-plane-failover/)), a failback is a handoff instead: the serving node stops its copy before the next node starts its own, because the default strict partition mode never runs two copies at once. In Failover mode the workload does not serve while the old copy stops and the new one starts and becomes ready, usually 5–15 seconds; in Replicated mode the other replicas keep serving.
 - After a Gateway restart, every node's healthy time starts again, so no failback runs until the delay has passed.
 
 In the API and MCP (`manage_docker_availability`), the policy fields are `priorityMode`, `nodePriority` (node IDs in order, primary first), and `failbackDelaySeconds`.
@@ -69,23 +82,35 @@ In the API and MCP (`manage_docker_availability`), the policy fields are `priori
 
 Proxy Hosts, Additional Routes, and Advanced Secure Links can target the logical workload. Gateway projects healthy placement endpoints and balances new ingress connections using least connections. Existing connections do not move between replicas.
 
+A placement takes traffic only once its workload is ready: its image health check reports healthy if the image has one; otherwise its port accepts connections. For a Deployment, the application of the active slot must answer through the Deployment router, not only the router itself. Route health is checked through the placements' Secure Links, so a healthy Availability Route is shown online.
+
+If a placement fails anyway, the Ingress Node retries the next placement: on connection errors for every request, and on `502`, `503`, and `504` responses for requests that are safe to repeat, such as `GET` and `HEAD`, up to 5 tries within 10 seconds. `POST`, `PATCH`, and `LOCK` requests are not sent again once they reached a placement.
+
 Managed database bindings receive per-placement connections. Keep relationships attached to the logical resource rather than temporary Container names. To diagnose a particular instance, use the placement selector in logs, console, and monitoring where available.
 
 ## Updates and replica health
 
 A rolling update that fails for good, or keeps failing for 3 attempts or 15 minutes, is rolled back automatically: replicas that were already updated return to the previous image and settings, and the policy keeps the original error. Changing a setting no longer recreates every replica.
 
+Availability works with multi-platform images on Docker 29 and later, which use the containerd image store. After a Gateway update, a heal that finds the internal registry still starting retries instead of failing.
+
 Gateway checks replica health every 30 seconds. A replica that is missing, stopped, restart-looping, or unhealthy on two checks in a row is removed from routing and healed; it returns after two healthy checks. A standalone Container that already has a Route can enable Availability, and Availability can be disabled even when no replica is healthy.
 
 ## Node loss and recovery
 
-After losing a node control connection, Gateway waits for **Replacement grace** and creates a replacement on an available eligible node. When the lost Node reconnects, Gateway heals the policy immediately. If the requested count is not restored, inspect the operation phase, node compatibility and capacity, image pull, application health, and private dependencies.
+In lease mode, the Nodes replace a lost holder themselves; see [Data-plane failover](/en/docker/data-plane-failover/). On backend failover, a Node whose control connection drops is shown offline after 5 seconds, and its placements leave routing after 10 seconds, so a short Relay restart does not move traffic. After **Replacement grace**, Gateway creates a replacement on an available eligible node. When the lost Node reconnects, Gateway heals the policy immediately.
 
-An unreachable host may still run its old process. Gateway excludes stale generations from managed routing and reconciles them on reconnect. This is not physical node fencing or a single-writer guarantee for an external system.
+In both modes, a policy with fewer serving placements than requested and eligible online capacity is healed without an edit: Gateway checks every 15 seconds, outside a Node's offline grace, and whenever a Node connects. An `update` that sets the current serving count or node selection again also repairs missing placements. If the requested count is still not restored, inspect the operation phase, node compatibility and capacity, image pull, application health, and private dependencies.
 
-Replacement requires a functioning Gateway control plane. Availability does not provide HA for Gateway itself, nginx, database engines, registry storage, or shared volumes. Verify Relay-path resilience and each dependency separately.
+On backend failover, an unreachable host may still run its old process. Gateway excludes stale generations from managed routing and reconciles them on reconnect. This is not physical node fencing or a single-writer guarantee for an external system; only data-plane failover makes a cut-off Node stop its own copy.
+
+Backend failover requires a functioning Gateway control plane. Availability does not provide HA for Gateway itself, nginx, database engines, registry storage, or shared volumes. Verify Relay-path resilience and each dependency separately.
 
 After recovery, verify serving count, real customer traffic, database access, and stale-placement cleanup. Do not manually delete child Containers to force the operation to complete.
+
+## Stop and start
+
+**Stop** on a workload with Availability stops every copy and removes none. The original workload is never deleted: not when a lease closes, not by stale-placement cleanup, and not as a surplus standby. On a Node that is no longer selected it stays, stopped. **Start** starts one copy, preferring the original, and removes other surplus copies; the policy then restores its serving count.
 
 ## Disable Availability
 
