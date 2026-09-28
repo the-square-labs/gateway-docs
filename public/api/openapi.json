@@ -31159,7 +31159,12 @@
                       "relayGrantTtlHours": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 48
+                        "maximum": 224
+                      },
+                      "relayPolicyLeaseHours": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 168
                       },
                       "features": {
                         "type": "object",
@@ -58248,6 +58253,21 @@
                     "minimum": 0,
                     "maximum": 3600,
                     "default": 300
+                  },
+                  "partitionMode": {
+                    "type": "string",
+                    "enum": [
+                      "strict",
+                      "available"
+                    ],
+                    "default": "strict"
+                  },
+                  "witness": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
                   }
                 },
                 "required": [
@@ -58414,6 +58434,20 @@
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 3600
+                            },
+                            "partitionMode": {
+                              "type": "string",
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "witness": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "uuid"
                             }
                           },
                           "required": [
@@ -58657,6 +58691,20 @@
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 3600
+                            },
+                            "partitionMode": {
+                              "type": "string",
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "witness": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "uuid"
                             },
                             "status": {
                               "type": "string",
@@ -59067,6 +59115,365 @@
                                 "updatedAt",
                                 "completedAt"
                               ]
+                            },
+                            "lease": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "enum": [
+                                    "legacy",
+                                    "bootstrapping",
+                                    "lease",
+                                    "closing"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "message": {
+                                      "type": "string"
+                                    },
+                                    "nodeIds": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      }
+                                    },
+                                    "relayIds": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      }
+                                    },
+                                    "since": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "required": [
+                                    "code",
+                                    "message"
+                                  ]
+                                },
+                                "manifestVersion": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "epoch": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "publishedPartitionMode": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "strict",
+                                    "available"
+                                  ]
+                                },
+                                "holders": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 31
+                                      },
+                                      "holderNodeId": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "format": "uuid"
+                                      },
+                                      "placementId": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "format": "uuid"
+                                      },
+                                      "ballot": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "round": {
+                                            "type": "string"
+                                          },
+                                          "incarnation": {
+                                            "type": "string"
+                                          },
+                                          "proposerId": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "round",
+                                          "incarnation",
+                                          "proposerId"
+                                        ]
+                                      },
+                                      "observedAt": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "holderSince": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "source": {
+                                        "type": "string",
+                                        "enum": [
+                                          "daemon",
+                                          "acceptor",
+                                          "relay"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "slot",
+                                      "holderNodeId",
+                                      "placementId",
+                                      "ballot",
+                                      "observedAt",
+                                      "holderSince",
+                                      "source"
+                                    ]
+                                  }
+                                },
+                                "bootstrap": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 31
+                                      },
+                                      "holderNodeId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      }
+                                    },
+                                    "required": [
+                                      "slot",
+                                      "holderNodeId"
+                                    ]
+                                  }
+                                },
+                                "surgeSlots": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 32
+                                },
+                                "strictPending": {
+                                  "type": "boolean"
+                                },
+                                "copiesStoppedAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "excludedNodes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "nodeId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                          "offline",
+                                          "watchdog_missing",
+                                          "daemon_outdated",
+                                          "identity_pending"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "nodeId",
+                                      "reason"
+                                    ]
+                                  }
+                                },
+                                "voters": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "witness": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "memberId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "uuid"
+                                    },
+                                    "kind": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "relay",
+                                        "docker"
+                                      ]
+                                    },
+                                    "auto": {
+                                      "type": "boolean"
+                                    },
+                                    "minRttMs": {
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ],
+                                      "minimum": 0
+                                    },
+                                    "warning": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "witness_near_candidate",
+                                        "no_eligible_witness",
+                                        "configured_witness_unavailable"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "memberId",
+                                    "kind",
+                                    "auto",
+                                    "minRttMs",
+                                    "warning"
+                                  ]
+                                },
+                                "witnesses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "memberId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "relay",
+                                          "docker"
+                                        ]
+                                      },
+                                      "auto": {
+                                        "type": "boolean"
+                                      },
+                                      "minRttMs": {
+                                        "type": [
+                                          "number",
+                                          "null"
+                                        ],
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "memberId",
+                                      "kind",
+                                      "auto",
+                                      "minRttMs"
+                                    ]
+                                  }
+                                },
+                                "voterMargin": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "epoch": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "joint": {
+                                      "type": "boolean"
+                                    },
+                                    "voters": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "reachable": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "required": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "margin": {
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "epoch",
+                                    "joint",
+                                    "voters",
+                                    "reachable",
+                                    "required",
+                                    "margin"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "reason",
+                                "manifestVersion",
+                                "epoch",
+                                "publishedPartitionMode",
+                                "holders",
+                                "bootstrap",
+                                "surgeSlots",
+                                "strictPending",
+                                "copiesStoppedAt",
+                                "excludedNodes",
+                                "voters",
+                                "witness",
+                                "witnesses",
+                                "voterMargin"
+                              ]
                             }
                           },
                           "required": [
@@ -59092,6 +59499,8 @@
                             "priorityMode",
                             "nodePriority",
                             "failbackDelaySeconds",
+                            "partitionMode",
+                            "witness",
                             "status",
                             "lastErrorCode",
                             "lastErrorMessage",
@@ -59100,7 +59509,8 @@
                             "createdAt",
                             "updatedAt",
                             "placements",
-                            "latestOperation"
+                            "latestOperation",
+                            "lease"
                           ]
                         }
                       },
@@ -59543,6 +59953,21 @@
                     "minimum": 0,
                     "maximum": 3600,
                     "default": 300
+                  },
+                  "partitionMode": {
+                    "type": "string",
+                    "enum": [
+                      "strict",
+                      "available"
+                    ],
+                    "default": "strict"
+                  },
+                  "witness": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
                   }
                 },
                 "required": [
@@ -59709,6 +60134,20 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 3600
+                        },
+                        "partitionMode": {
+                          "type": "string",
+                          "enum": [
+                            "strict",
+                            "available"
+                          ]
+                        },
+                        "witness": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
                         },
                         "status": {
                           "type": "string",
@@ -60119,6 +60558,365 @@
                             "updatedAt",
                             "completedAt"
                           ]
+                        },
+                        "lease": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "legacy",
+                                "bootstrapping",
+                                "lease",
+                                "closing"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "nodeIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "relayIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "since": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            },
+                            "manifestVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "epoch": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "publishedPartitionMode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "holders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "placementId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "ballot": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "round": {
+                                        "type": "string"
+                                      },
+                                      "incarnation": {
+                                        "type": "string"
+                                      },
+                                      "proposerId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "round",
+                                      "incarnation",
+                                      "proposerId"
+                                    ]
+                                  },
+                                  "observedAt": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "holderSince": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "daemon",
+                                      "acceptor",
+                                      "relay"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "placementId",
+                                  "ballot",
+                                  "observedAt",
+                                  "holderSince",
+                                  "source"
+                                ]
+                              }
+                            },
+                            "bootstrap": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId"
+                                ]
+                              }
+                            },
+                            "surgeSlots": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 32
+                            },
+                            "strictPending": {
+                              "type": "boolean"
+                            },
+                            "copiesStoppedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "excludedNodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "nodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                      "offline",
+                                      "watchdog_missing",
+                                      "daemon_outdated",
+                                      "identity_pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "reason"
+                                ]
+                              }
+                            },
+                            "voters": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "witness": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "memberId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid"
+                                },
+                                "kind": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "relay",
+                                    "docker"
+                                  ]
+                                },
+                                "auto": {
+                                  "type": "boolean"
+                                },
+                                "minRttMs": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "warning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "witness_near_candidate",
+                                    "no_eligible_witness",
+                                    "configured_witness_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "memberId",
+                                "kind",
+                                "auto",
+                                "minRttMs",
+                                "warning"
+                              ]
+                            },
+                            "witnesses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "memberId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relay",
+                                      "docker"
+                                    ]
+                                  },
+                                  "auto": {
+                                    "type": "boolean"
+                                  },
+                                  "minRttMs": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "memberId",
+                                  "kind",
+                                  "auto",
+                                  "minRttMs"
+                                ]
+                              }
+                            },
+                            "voterMargin": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "epoch": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "joint": {
+                                  "type": "boolean"
+                                },
+                                "voters": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "reachable": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "required": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "margin": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "epoch",
+                                "joint",
+                                "voters",
+                                "reachable",
+                                "required",
+                                "margin"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "reason",
+                            "manifestVersion",
+                            "epoch",
+                            "publishedPartitionMode",
+                            "holders",
+                            "bootstrap",
+                            "surgeSlots",
+                            "strictPending",
+                            "copiesStoppedAt",
+                            "excludedNodes",
+                            "voters",
+                            "witness",
+                            "witnesses",
+                            "voterMargin"
+                          ]
                         }
                       },
                       "required": [
@@ -60144,6 +60942,8 @@
                         "priorityMode",
                         "nodePriority",
                         "failbackDelaySeconds",
+                        "partitionMode",
+                        "witness",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -60152,7 +60952,8 @@
                         "createdAt",
                         "updatedAt",
                         "placements",
-                        "latestOperation"
+                        "latestOperation",
+                        "lease"
                       ]
                     }
                   },
@@ -60632,6 +61433,20 @@
                           "minimum": 0,
                           "maximum": 3600
                         },
+                        "partitionMode": {
+                          "type": "string",
+                          "enum": [
+                            "strict",
+                            "available"
+                          ]
+                        },
+                        "witness": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -61041,6 +61856,365 @@
                             "updatedAt",
                             "completedAt"
                           ]
+                        },
+                        "lease": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "legacy",
+                                "bootstrapping",
+                                "lease",
+                                "closing"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "nodeIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "relayIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "since": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            },
+                            "manifestVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "epoch": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "publishedPartitionMode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "holders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "placementId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "ballot": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "round": {
+                                        "type": "string"
+                                      },
+                                      "incarnation": {
+                                        "type": "string"
+                                      },
+                                      "proposerId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "round",
+                                      "incarnation",
+                                      "proposerId"
+                                    ]
+                                  },
+                                  "observedAt": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "holderSince": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "daemon",
+                                      "acceptor",
+                                      "relay"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "placementId",
+                                  "ballot",
+                                  "observedAt",
+                                  "holderSince",
+                                  "source"
+                                ]
+                              }
+                            },
+                            "bootstrap": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId"
+                                ]
+                              }
+                            },
+                            "surgeSlots": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 32
+                            },
+                            "strictPending": {
+                              "type": "boolean"
+                            },
+                            "copiesStoppedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "excludedNodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "nodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                      "offline",
+                                      "watchdog_missing",
+                                      "daemon_outdated",
+                                      "identity_pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "reason"
+                                ]
+                              }
+                            },
+                            "voters": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "witness": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "memberId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid"
+                                },
+                                "kind": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "relay",
+                                    "docker"
+                                  ]
+                                },
+                                "auto": {
+                                  "type": "boolean"
+                                },
+                                "minRttMs": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "warning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "witness_near_candidate",
+                                    "no_eligible_witness",
+                                    "configured_witness_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "memberId",
+                                "kind",
+                                "auto",
+                                "minRttMs",
+                                "warning"
+                              ]
+                            },
+                            "witnesses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "memberId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relay",
+                                      "docker"
+                                    ]
+                                  },
+                                  "auto": {
+                                    "type": "boolean"
+                                  },
+                                  "minRttMs": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "memberId",
+                                  "kind",
+                                  "auto",
+                                  "minRttMs"
+                                ]
+                              }
+                            },
+                            "voterMargin": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "epoch": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "joint": {
+                                  "type": "boolean"
+                                },
+                                "voters": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "reachable": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "required": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "margin": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "epoch",
+                                "joint",
+                                "voters",
+                                "reachable",
+                                "required",
+                                "margin"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "reason",
+                            "manifestVersion",
+                            "epoch",
+                            "publishedPartitionMode",
+                            "holders",
+                            "bootstrap",
+                            "surgeSlots",
+                            "strictPending",
+                            "copiesStoppedAt",
+                            "excludedNodes",
+                            "voters",
+                            "witness",
+                            "witnesses",
+                            "voterMargin"
+                          ]
                         }
                       },
                       "required": [
@@ -61066,6 +62240,8 @@
                         "priorityMode",
                         "nodePriority",
                         "failbackDelaySeconds",
+                        "partitionMode",
+                        "witness",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -61074,7 +62250,8 @@
                         "createdAt",
                         "updatedAt",
                         "placements",
-                        "latestOperation"
+                        "latestOperation",
+                        "lease"
                       ]
                     }
                   },
@@ -61519,6 +62696,20 @@
                           "minimum": 0,
                           "maximum": 3600
                         },
+                        "partitionMode": {
+                          "type": "string",
+                          "enum": [
+                            "strict",
+                            "available"
+                          ]
+                        },
+                        "witness": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -61928,6 +63119,365 @@
                             "updatedAt",
                             "completedAt"
                           ]
+                        },
+                        "lease": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "legacy",
+                                "bootstrapping",
+                                "lease",
+                                "closing"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "nodeIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "relayIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "since": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            },
+                            "manifestVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "epoch": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "publishedPartitionMode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "holders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "placementId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "ballot": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "round": {
+                                        "type": "string"
+                                      },
+                                      "incarnation": {
+                                        "type": "string"
+                                      },
+                                      "proposerId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "round",
+                                      "incarnation",
+                                      "proposerId"
+                                    ]
+                                  },
+                                  "observedAt": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "holderSince": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "daemon",
+                                      "acceptor",
+                                      "relay"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "placementId",
+                                  "ballot",
+                                  "observedAt",
+                                  "holderSince",
+                                  "source"
+                                ]
+                              }
+                            },
+                            "bootstrap": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId"
+                                ]
+                              }
+                            },
+                            "surgeSlots": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 32
+                            },
+                            "strictPending": {
+                              "type": "boolean"
+                            },
+                            "copiesStoppedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "excludedNodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "nodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                      "offline",
+                                      "watchdog_missing",
+                                      "daemon_outdated",
+                                      "identity_pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "reason"
+                                ]
+                              }
+                            },
+                            "voters": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "witness": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "memberId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid"
+                                },
+                                "kind": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "relay",
+                                    "docker"
+                                  ]
+                                },
+                                "auto": {
+                                  "type": "boolean"
+                                },
+                                "minRttMs": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "warning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "witness_near_candidate",
+                                    "no_eligible_witness",
+                                    "configured_witness_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "memberId",
+                                "kind",
+                                "auto",
+                                "minRttMs",
+                                "warning"
+                              ]
+                            },
+                            "witnesses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "memberId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relay",
+                                      "docker"
+                                    ]
+                                  },
+                                  "auto": {
+                                    "type": "boolean"
+                                  },
+                                  "minRttMs": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "memberId",
+                                  "kind",
+                                  "auto",
+                                  "minRttMs"
+                                ]
+                              }
+                            },
+                            "voterMargin": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "epoch": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "joint": {
+                                  "type": "boolean"
+                                },
+                                "voters": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "reachable": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "required": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "margin": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "epoch",
+                                "joint",
+                                "voters",
+                                "reachable",
+                                "required",
+                                "margin"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "reason",
+                            "manifestVersion",
+                            "epoch",
+                            "publishedPartitionMode",
+                            "holders",
+                            "bootstrap",
+                            "surgeSlots",
+                            "strictPending",
+                            "copiesStoppedAt",
+                            "excludedNodes",
+                            "voters",
+                            "witness",
+                            "witnesses",
+                            "voterMargin"
+                          ]
                         }
                       },
                       "required": [
@@ -61953,6 +63503,8 @@
                         "priorityMode",
                         "nodePriority",
                         "failbackDelaySeconds",
+                        "partitionMode",
+                        "witness",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -61961,7 +63513,8 @@
                         "createdAt",
                         "updatedAt",
                         "placements",
-                        "latestOperation"
+                        "latestOperation",
+                        "lease"
                       ]
                     }
                   },
@@ -62328,6 +63881,20 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 3600
+                  },
+                  "partitionMode": {
+                    "type": "string",
+                    "enum": [
+                      "strict",
+                      "available"
+                    ]
+                  },
+                  "witness": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
                   }
                 }
               }
@@ -62488,6 +64055,20 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 3600
+                        },
+                        "partitionMode": {
+                          "type": "string",
+                          "enum": [
+                            "strict",
+                            "available"
+                          ]
+                        },
+                        "witness": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
                         },
                         "status": {
                           "type": "string",
@@ -62898,6 +64479,365 @@
                             "updatedAt",
                             "completedAt"
                           ]
+                        },
+                        "lease": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "legacy",
+                                "bootstrapping",
+                                "lease",
+                                "closing"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "nodeIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "relayIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "since": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            },
+                            "manifestVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "epoch": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "publishedPartitionMode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "holders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "placementId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "ballot": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "round": {
+                                        "type": "string"
+                                      },
+                                      "incarnation": {
+                                        "type": "string"
+                                      },
+                                      "proposerId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "round",
+                                      "incarnation",
+                                      "proposerId"
+                                    ]
+                                  },
+                                  "observedAt": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "holderSince": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "daemon",
+                                      "acceptor",
+                                      "relay"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "placementId",
+                                  "ballot",
+                                  "observedAt",
+                                  "holderSince",
+                                  "source"
+                                ]
+                              }
+                            },
+                            "bootstrap": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId"
+                                ]
+                              }
+                            },
+                            "surgeSlots": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 32
+                            },
+                            "strictPending": {
+                              "type": "boolean"
+                            },
+                            "copiesStoppedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "excludedNodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "nodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                      "offline",
+                                      "watchdog_missing",
+                                      "daemon_outdated",
+                                      "identity_pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "reason"
+                                ]
+                              }
+                            },
+                            "voters": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "witness": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "memberId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid"
+                                },
+                                "kind": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "relay",
+                                    "docker"
+                                  ]
+                                },
+                                "auto": {
+                                  "type": "boolean"
+                                },
+                                "minRttMs": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "warning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "witness_near_candidate",
+                                    "no_eligible_witness",
+                                    "configured_witness_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "memberId",
+                                "kind",
+                                "auto",
+                                "minRttMs",
+                                "warning"
+                              ]
+                            },
+                            "witnesses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "memberId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relay",
+                                      "docker"
+                                    ]
+                                  },
+                                  "auto": {
+                                    "type": "boolean"
+                                  },
+                                  "minRttMs": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "memberId",
+                                  "kind",
+                                  "auto",
+                                  "minRttMs"
+                                ]
+                              }
+                            },
+                            "voterMargin": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "epoch": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "joint": {
+                                  "type": "boolean"
+                                },
+                                "voters": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "reachable": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "required": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "margin": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "epoch",
+                                "joint",
+                                "voters",
+                                "reachable",
+                                "required",
+                                "margin"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "reason",
+                            "manifestVersion",
+                            "epoch",
+                            "publishedPartitionMode",
+                            "holders",
+                            "bootstrap",
+                            "surgeSlots",
+                            "strictPending",
+                            "copiesStoppedAt",
+                            "excludedNodes",
+                            "voters",
+                            "witness",
+                            "witnesses",
+                            "voterMargin"
+                          ]
                         }
                       },
                       "required": [
@@ -62923,6 +64863,8 @@
                         "priorityMode",
                         "nodePriority",
                         "failbackDelaySeconds",
+                        "partitionMode",
+                        "witness",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -62931,7 +64873,8 @@
                         "createdAt",
                         "updatedAt",
                         "placements",
-                        "latestOperation"
+                        "latestOperation",
+                        "lease"
                       ]
                     }
                   },
@@ -64408,6 +66351,20 @@
                           "minimum": 0,
                           "maximum": 3600
                         },
+                        "partitionMode": {
+                          "type": "string",
+                          "enum": [
+                            "strict",
+                            "available"
+                          ]
+                        },
+                        "witness": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -64817,6 +66774,365 @@
                             "updatedAt",
                             "completedAt"
                           ]
+                        },
+                        "lease": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "legacy",
+                                "bootstrapping",
+                                "lease",
+                                "closing"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "nodeIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "relayIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "since": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            },
+                            "manifestVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "epoch": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "publishedPartitionMode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "strict",
+                                "available"
+                              ]
+                            },
+                            "holders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "placementId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "uuid"
+                                  },
+                                  "ballot": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "round": {
+                                        "type": "string"
+                                      },
+                                      "incarnation": {
+                                        "type": "string"
+                                      },
+                                      "proposerId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "round",
+                                      "incarnation",
+                                      "proposerId"
+                                    ]
+                                  },
+                                  "observedAt": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "holderSince": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "daemon",
+                                      "acceptor",
+                                      "relay"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId",
+                                  "placementId",
+                                  "ballot",
+                                  "observedAt",
+                                  "holderSince",
+                                  "source"
+                                ]
+                              }
+                            },
+                            "bootstrap": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 31
+                                  },
+                                  "holderNodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "slot",
+                                  "holderNodeId"
+                                ]
+                              }
+                            },
+                            "surgeSlots": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 32
+                            },
+                            "strictPending": {
+                              "type": "boolean"
+                            },
+                            "copiesStoppedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "excludedNodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "nodeId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                      "offline",
+                                      "watchdog_missing",
+                                      "daemon_outdated",
+                                      "identity_pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "reason"
+                                ]
+                              }
+                            },
+                            "voters": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "witness": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "memberId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid"
+                                },
+                                "kind": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "relay",
+                                    "docker"
+                                  ]
+                                },
+                                "auto": {
+                                  "type": "boolean"
+                                },
+                                "minRttMs": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "warning": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "witness_near_candidate",
+                                    "no_eligible_witness",
+                                    "configured_witness_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "memberId",
+                                "kind",
+                                "auto",
+                                "minRttMs",
+                                "warning"
+                              ]
+                            },
+                            "witnesses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "memberId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relay",
+                                      "docker"
+                                    ]
+                                  },
+                                  "auto": {
+                                    "type": "boolean"
+                                  },
+                                  "minRttMs": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "memberId",
+                                  "kind",
+                                  "auto",
+                                  "minRttMs"
+                                ]
+                              }
+                            },
+                            "voterMargin": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "epoch": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "joint": {
+                                  "type": "boolean"
+                                },
+                                "voters": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "reachable": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "required": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "margin": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "epoch",
+                                "joint",
+                                "voters",
+                                "reachable",
+                                "required",
+                                "margin"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "reason",
+                            "manifestVersion",
+                            "epoch",
+                            "publishedPartitionMode",
+                            "holders",
+                            "bootstrap",
+                            "surgeSlots",
+                            "strictPending",
+                            "copiesStoppedAt",
+                            "excludedNodes",
+                            "voters",
+                            "witness",
+                            "witnesses",
+                            "voterMargin"
+                          ]
                         }
                       },
                       "required": [
@@ -64842,6 +67158,8 @@
                         "priorityMode",
                         "nodePriority",
                         "failbackDelaySeconds",
+                        "partitionMode",
+                        "witness",
                         "status",
                         "lastErrorCode",
                         "lastErrorMessage",
@@ -64850,7 +67168,8 @@
                         "createdAt",
                         "updatedAt",
                         "placements",
-                        "latestOperation"
+                        "latestOperation",
+                        "lease"
                       ]
                     }
                   },
