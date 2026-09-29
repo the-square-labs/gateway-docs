@@ -27,7 +27,7 @@ In 2.10, Docker, nginx, monitoring, and the Relay supervisor gained a separate l
 
 Local readiness does not prove Relay connectivity or application health. Continue to verify version, reconnect, Node capabilities, and a real operation after updating. If launcher bootstrap is unavailable and the daemon runs directly, launcher rollback protection is unavailable.
 
-In 2.11, a candidate daemon that declares control-connection readiness must also receive its first command from Gateway within 3 minutes, otherwise the launcher rolls the update back. After a healthy update, the launcher refreshes its own copy.
+In 2.11, a candidate daemon that declares control-connection readiness must also receive its first command from Gateway within 3 minutes, otherwise the launcher rolls the update back. Since 2.11 rc.20, daemon updates of Docker, nginx, and Relay supervisor Nodes also replace the launcher; before, it stayed at the version it was installed with. The updated daemon stages a new launcher once any running launcher trial has finished, the launcher tries it at its next start, and keeps it once the trial is stable, so the installed launcher follows the daemon one update behind.
 
 ## Certificate renewal
 
@@ -88,7 +88,7 @@ Restarting or updating the Docker daemon does not stop containers, and it interr
 - The holder of an Availability lease keeps serving across a restart on the same boot: its lease is still valid, so its copy takes traffic again as soon as the new process registers.
 - A daemon that crashes, or whose host becomes unreachable, is not held: the Relays drop its connection within about 3.5 seconds, and requests move to other placements where there are any.
 - After a host reboot, each Secure Link is restored on its own: a link whose target did not come back stays unbound until its target runs, and does not block the others.
-- A hung Docker Engine (dockerd) does not stop traffic to containers and Deployments that are running: Secure Link connections do not wait on it for more than a second, and [Deployment routers](/en/docker/deployments/#deployment-router) no longer depend on Docker's DNS.
+- A hung Docker Engine (dockerd) does not stop traffic to containers and Deployments that are running: Secure Link, managed database, and storage connections wait at most 300 milliseconds for it and then use the last address it named, links stay bound when it does not answer a sync, and [Deployment routers](/en/docker/deployments/#deployment-router) use neither Docker's DNS nor an access log. An application that writes every request to its container output can still stall while dockerd is frozen.
 - A Storage or database Node starts even when one of its managed containers is missing; that storage or database shows as not running instead of taking the Node offline.
 
 Nodes that vote in or can hold [data-plane failover](/en/docker/data-plane-failover/) leases are updated one at a time per Availability policy: a daemon update of such a Node may wait for its lease peers, and the Node shows as updating meanwhile. See [Updates and mixed versions](/en/docker/data-plane-failover/#updates-and-mixed-versions). On Docker Nodes that can hold leases, the lease watchdog runs as its own service, `gateway-lease-watchdog`, and updates itself.
@@ -99,7 +99,7 @@ A Node rolled back to any daemon release since 2.10.0 still starts: daemons keep
 
 Restarting or updating the nginx daemon on an Ingress Node does not close its Secure Link sockets. The launcher that supervises the daemon keeps a copy of every listening socket and hands them to the next daemon process; with systemd it also keeps them in the unit's file descriptor store, so they survive `systemctl restart`. While no daemon process runs, new connections wait in the socket's queue and are served by the next process. On shutdown the daemon stops accepting, finishes requests in flight for up to 1.5 seconds, and closes connections idle between requests so that nginx reconnects into the queue.
 
-- **The first restart after upgrading is still visible.** The Node starts the new launcher only at the unit's next start after the daemon staged its launcher refresh (the daemon log shows "staged launcher refresh; it is tried on the next launcher start"), and the systemd file descriptor store needs a unit drop-in that the daemon writes at its first start. The restart that brings in the new launcher therefore still interrupts Secure Link routes briefly; later restarts and updates do not.
+- **The update from rc.19 or older is visible once.** The old daemon hands nothing over when it stops, so that one update interrupts Secure Link routes through the Node for about a second. From then on, restarts and updates keep the sockets, including the restart in which the launcher tries its new version: while an older launcher that keeps no sockets still runs, the daemon stores its listeners in systemd's file descriptor store itself.
 - Requests that run longer than the 1.5-second drain, and long-lived streams such as WebSocket or server-sent events, are cut at a restart.
 - On Nodes without systemd (OpenRC), restarts for updates and after a crash are covered by the launcher, but a service restart is not. Routes whose configuration still uses a loopback TCP listener instead of a Secure Link socket refuse connections during a restart, as before.
 

@@ -71,7 +71,7 @@ An excluded Node gets no new standby, no failback or other planned move goes to 
 
 A policy on backend failover enters lease mode only when every participant it needs has run `availability_lease_v2` for 2 minutes without a break and without a restart: every candidate Docker Node with its lease watchdog and identity, the Ingress Nodes of its Routes, the Relays that carry it, and its witnesses. Until then its reason is `participants_settling` and names the Nodes or Relays still settling, so a fleet in the middle of an update never switches halfway. After a Gateway restart the 2 minutes start again.
 
-Lease mode also waits for a running enable or rollout of the policy to finish. The first holder of each slot is the Node where the workload serves at that moment, whatever the priority order says; a priority failback moves it afterwards as a planned handoff.
+Lease mode also waits for a running enable or rollout of the policy to finish. The first holder of each slot is the Node where the workload serves at that moment, whatever the priority order says; a priority failback moves it afterwards as a planned handoff. If that Node is not ready to take its slot, for example because it finds no copy of the workload, its lease watchdog does not run, or the copy's restart policy is not `no`, its Docker daemon logs the reason once per reason.
 
 Entering lease mode does not interrupt the workload. The serving copies keep running and keep their Secure Links: only a lease formed after the switch counts for a slot, so an old lease from an earlier lease period never makes a Node stop its own copy, and the links of serving copies change their role in place instead of being registered again.
 

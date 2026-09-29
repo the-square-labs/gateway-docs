@@ -5,7 +5,7 @@ section: Docker
 order: 3
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-09-29
 ---
 
 
@@ -54,7 +54,9 @@ Each Deployment has a small nginx router container on its Node. The router recei
 
 - **It comes back after a reboot.** Routers run with the `unless-stopped` restart policy. When the Docker daemon starts, it repairs the router of every serving Deployment: a router created by an older release, or left with the restart policy `no`, gets the current policy or is recreated from the configuration it serves, with its routes and published ports, and is pointed at the application slot that actually runs. The daemon repeats the repair every minute until it succeeds. A Deployment that was deliberately stopped or killed keeps its router stopped.
 - **Operations start a stopped router.** A deploy, slot switch, router update, or start brings up a router that was stopped by a kill or stop instead of failing on it, and a Deployment whose active slot cannot start no longer stays stuck.
-- **It does not depend on Docker's DNS.** The router configuration names the address of the active slot's container, and the daemon keeps it current every 5 seconds; with nginx 1.27.3 or later the router also resolves the slot name in the background. A hung Docker Engine (dockerd) therefore does not stop traffic to a running Deployment. Existing routers are updated in place, without being recreated.
+- **It does not depend on Docker's DNS.** The router configuration names the address of the active slot's container and proxies to it directly on every nginx version, without a resolver; the daemon checks the address every 5 seconds and rewrites the configuration when it changes. Only a configuration written before the slot's address was known resolves the slot name through Docker's DNS. Existing routers are updated in place, without being recreated.
+- **It writes no access log.** The Ingress Node already logs every request. A router therefore never blocks on its container output, which dockerd drains, so a hung Docker Engine (dockerd) does not stop traffic to a running Deployment.
+- **Applications that log every request.** Container output goes through Docker's log pipeline, which stops draining while dockerd is frozen. An application that writes a line to stdout or stderr for every request can therefore stall once that pipe is full, even though the router and the Secure Links keep working. Keep per-request logging out of container output, or accept that such an application may stall during a dockerd freeze.
 - **Request bodies are not limited.** The router passes request bodies of any size (the Route decides the limit) and streams them to the slot instead of buffering them on disk. Routers created before this change pick it up at their next deploy, slot switch, or restart.
 - **Its own errors are marked.** When the router cannot reach the active slot, it answers `502` or `504` with the header `X-Gateway-Deployment-Router: upstream-unavailable`, which tells a router error from an application error. [Workload Availability](/en/docker/availability/#routes-and-database-bindings) uses it to decide whether a Deployment placement is ready.
 
