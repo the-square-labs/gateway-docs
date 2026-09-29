@@ -5,7 +5,7 @@ section: Integrations
 order: 5
 audience: [operator, platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-09-29
 ---
 
 The Cloudflare connector discovers DNS zones available to its API token and supports Gateway's managed Domains and DNS-01 certificate workflows. It is not a hosting provider and does not replace Gateway Relay or a managed ingress node.
@@ -41,6 +41,8 @@ A connection test and zone discovery do not prove DNS write permission or public
 ## Certificates and transport
 
 DNS-01 validation needs the correct zone and permission to manage challenge records. Verify credential availability for renewal, not just the initial certificate issuance. See [SSL certificates](/en/certificates/ssl-certificates/).
+
+For a Domain served by an [ingress group](/en/ingress/ingress-groups/), the connector publishes the address of every active member and issues and renews the group's certificates with DNS-01. It never creates, changes, or deletes Cloudflare load balancers, pools, or monitors; set up Cloudflare Load Balancing in front of a group yourself.
 
 The web hostname's Cloudflare proxy setting is separate from daemon enrollment. Do not assume a proxied HTTPS hostname can carry Gateway's direct gRPC connection; use the generated address and requirements in [Add your first node](/en/getting-started/first-node/).
 

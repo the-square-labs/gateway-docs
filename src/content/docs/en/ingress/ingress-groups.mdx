@@ -1,0 +1,86 @@
+---
+title: Ingress groups
+description: Serve a Route, Domain, or Pages site from several nginx Ingress Nodes at once, and put a load balancer in front.
+section: Ingress
+order: 3
+audience: [operator, platform-engineer, network-engineer]
+status: ready
+lastReviewed: 2026-09-29
+---
+
+An ingress group is a set of nginx Ingress Nodes, normally one per site, that serve the same Routes and Domains. Every member renders every Route of the group itself and keeps its own copy of every certificate those Routes use, so a member keeps serving while Gateway or another member is down. Routes to Docker workloads, Pages sites, and the public status page can all be served from a group.
+
+A group decides which Nodes serve a hostname. It does not choose which member a client reaches: that is up to DNS or a load balancer in front of the members; see [DNS](#dns) and [Put a load balancer in front](#put-a-load-balancer-in-front).
+
+## Requirements and permissions
+
+- Members are nginx Nodes whose daemon reports the `ingress_group_v1` capability, which the nginx daemon of 2.11 rc.20 and later does. A Node can belong to several groups.
+- Creating a group, and anything that grows it (adding or reordering members, changing its settings, placing Routes or Domains on it), needs Business or Enterprise, like [Workload Availability](/en/docker/availability/). Existing groups keep serving without it, and removing members or deleting a group is always allowed.
+- Groups use Node permissions. Viewing needs `nodes:details` or `nodes:manage`, broadly or on the group's Node folder; changes need `nodes:manage` on that folder, and adding a Node also needs `nodes:manage` on that Node.
+- Placing a Route or Domain on a group needs `proxy:create` or `domains:create` covering every member: broadly, in the destination folder, or through a grant on each member Node.
+
+## Create a group
+
+1. Open **Ingress → Ingress Groups** and select **New Group**.
+2. Enter a name, an optional description and folder, and select the member Nodes in site-preference order.
+3. Open the group to follow each member's **State**, **Ingress health**, and delivery of the group's Routes.
+
+On the group page you can add, remove, and reorder members, and see for each Route what every member applied: the configuration hash, the certificate version, or the reason it failed. The page also shows the addresses DNS publishes for the group's Domains.
+
+The same operations are available through `/api/ingress-groups` and the MCP tool `manage_ingress_group`.
+
+## Serve Routes and Domains from a group
+
+When you create a Route or Domain, the Ingress Node list also offers **Ingress groups (served by every member)**. A Route created for a Domain on a group goes to that group. Through the API and MCP, pass `ingressGroupId` instead of `nodeId` (`nginxNodeId` for Domains).
+
+To move an existing Route or Domain, use its details in the Console, or `convert_route` and `convert_domain`. Moving onto a group is done without downtime: every new member receives the configuration and certificates first, and DNS changes last. Moving back to one Node (`ingressGroupId: null` plus the member Node) changes DNS first and cleans up the other members afterwards. A hostname must be unique across every Node and group member it is served on.
+
+A Route of a group lists the Nodes that serve it (`servingNodeIds`), its group, and the delivery on every member (`ingressDelivery`).
+
+## Members
+
+| State | Meaning |
+| --- | --- |
+| Joining | The Node receives every Route configuration, certificate, and Secure Link source of the group. It is not published in DNS yet. An offline Node stays joining until it reconnects. |
+| Active | The Node serves and is published in DNS. |
+| Draining | The Node still serves but has been withdrawn from DNS. It is removed once no public name of the group resolves to it and the DNS TTL has passed, at most 24 hours. |
+
+Removing a member withdraws it from DNS first and lets it drain. For a draining member, **Remove now** (`force` in the API) removes it at once, while cached DNS answers may still send clients to it. The last active member of a group that still serves Routes or Domains cannot be removed, and only a group without Routes and Domains can be deleted.
+
+## Delivery and offline members
+
+Gateway delivers every change to every member. Editing a Route of a group works while a member is offline: that member is recorded as pending and catches up when it reconnects. Gateway repairs missing or outdated configurations and certificate copies every minute and whenever a member reconnects. If an update is rejected after some members took it, those members get the previous Route back.
+
+## Certificates
+
+Every member holds a copy of every certificate its Routes use, and renewals reach every member. HTTP-01 challenges are placed on every online member. Because DNS may send a validation request to any member, including an offline one, certificates for names on a Cloudflare-managed group Domain are issued and renewed with DNS-01 through the Cloudflare connector, which does not depend on any Ingress Node.
+
+## Health and logs
+
+Route health is checked through every member: a Route is **degraded** when some member fails the check and **offline** when no member serves it. Each member writes its own nginx logs; the Route's log view and history merge the lines of every member by time.
+
+### Ingress health endpoint
+
+Every Gateway-rendered server block, and the default server, answers the reserved path `/.well-known/gateway-ingress-health`. The answer comes from the Node itself, so it keeps working while Gateway is unreachable:
+
+| Status | Meaning |
+| --- | --- |
+| `200` with JSON `"status": "serving"` | nginx runs the configuration of the daemon's last successful reload, and, on a Node that carries Secure Links, at least one Relay transport is usable |
+| `503` with JSON `"status": "unavailable"` and `reasons` | nginx does not run the current configuration, or no Relay transport is connected for its Secure Links |
+| `502` | the nginx daemon is not running |
+
+For probes that address a member by IP address, the Node also answers the reserved hostname `ingress-health.gateway.invalid` on ports 80 and 443. On port 443 it uses a self-signed certificate. The endpoint is exempt from maintenance mode, Access Lists, and basic auth.
+
+## DNS
+
+The group's DNS failover mode is **none**: for a Cloudflare-managed group Domain, Gateway publishes the address of every active member, so clients are spread round robin. These records are not health-checked, so an unreachable member keeps receiving its share of clients until it is removed from the group. Members without a detected public ingress address are not published. External DNS stays yours to manage; Gateway only checks that it points at members.
+
+## Put a load balancer in front
+
+For failover between members, put a load balancer that checks health in front of them. With Cloudflare Load Balancing:
+
+1. Create a pool whose origins are the public addresses of the group's active members.
+2. Attach a health monitor for the path `/.well-known/gateway-ingress-health` that expects `200`. Use HTTP on port 80 with the Host header `ingress-health.gateway.invalid` or a hostname the group serves; for an HTTPS monitor to the reserved hostname, turn certificate verification off, because that name uses a self-signed certificate.
+3. Create the load balancer for the hostname your Routes serve, with that pool.
+
+Gateway's Cloudflare connector never creates, changes, or deletes Cloudflare load balancers, pools, or monitors. When you add or remove members, update the pool yourself. For a Cloudflare-managed group Domain, Gateway still maintains the plain DNS records described above.

@@ -284,6 +284,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'ingress/overview' },
 						{ slug: 'ingress/domains-routes-tls' },
+						{ slug: 'ingress/ingress-groups' },
 						{ slug: 'ingress/access-maintenance' },
 						{ slug: 'ingress/secure-upstreams' },
 						{ slug: 'ingress/troubleshooting' },

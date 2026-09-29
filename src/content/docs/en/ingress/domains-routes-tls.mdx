@@ -5,7 +5,7 @@ section: Ingress
 order: 2
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-09-29
 ---
 
 For managed Cloudflare DNS, configure the [Cloudflare integration](/en/integrations/cloudflare/) before selecting zones and creating Domain records. A DNS connector does not replace the ingress node or its TLS configuration.
@@ -37,7 +37,7 @@ Two enabled Routes on the same node cannot serve the same name, because nginx wo
 
 ## Choose the Ingress Node
 
-A Route runs on one nginx Ingress Node. In the **Create Route** dialog, choosing a registered Domain fills in its node. Users who may create Routes broadly or in a folder can also select **Automatic (from the registered domain)** and let Gateway choose; if it cannot, the error lists the nodes to pick from. Through the API and MCP, `nodeId` is optional on `POST /api/proxy-hosts` and `create_route`, and Gateway resolves the node in this order:
+A Route runs on one nginx Ingress Node, or on every member of an [ingress group](/en/ingress/ingress-groups/). In the **Create Route** dialog, choosing a registered Domain fills in its node. Users who may create Routes broadly or in a folder can also select **Automatic (from the registered domain)** and let Gateway choose; if it cannot, the error lists the nodes to pick from. Through the API and MCP, `nodeId` is optional on `POST /api/proxy-hosts` and `create_route`, and Gateway resolves the node in this order:
 
 1. An explicit `nodeId` is used as given.
 2. Registered Domains among the Route's names pin their Ingress Node, matched exactly or through a covering wildcard. Registered Domains on different nodes cannot share one Route: `409 DOMAIN_NGINX_NODE_MISMATCH`.

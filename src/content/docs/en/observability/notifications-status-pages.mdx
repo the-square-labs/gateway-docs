@@ -5,7 +5,7 @@ section: Observe and notify
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-09-29
 ---
 
 [Hosting integrations](/en/integrations/hosting-providers/) also expose VM power changes, operation failures, synchronization, and supported account-balance thresholds. Billing alerts require billing access and a currency; a running VM is not proof that its Gateway daemon is online.
@@ -60,7 +60,7 @@ Maintenance mode on a managed Route can surface as planned maintenance. Confirm 
 
 ### While Gateway is unavailable
 
-Gateway serves the public status page through an Ingress Node, and that Node keeps the last good copy of the page, its assets, and the status data the page polls. While Gateway restarts, is updated, or is unreachable, visitors get that copy, the last one fetched while Gateway answered, so it shows the state from just before the interruption. A page that was never loaded before shows a short "Back in a moment" page that reloads by itself. Browsers never store the page, so live data returns as soon as Gateway answers; while it answers, the data a visitor sees is at most 5 seconds old. By default the status page uses an upstream the Ingress Node can reach.
+Gateway serves the public status page through an Ingress Node, and that Node keeps the last good copy of the page, its assets, and the status data the page polls. While Gateway restarts, is updated, or is unreachable, visitors get that copy, the last one fetched while Gateway answered, so it shows the state from just before the interruption. A page that was never loaded before shows a short "Back in a moment" page that reloads by itself. Browsers never store the page, so live data returns as soon as Gateway answers; while it answers, the data a visitor sees is at most 5 seconds old. By default the status page uses an upstream the Ingress Node can reach. In the status page settings you can also choose an [ingress group](/en/ingress/ingress-groups/) under **Ingress groups (served by every member)**, so every member serves the page.
 
 Ingress Nodes pick this up when they reconnect to an updated Gateway. The first Gateway update to a release with this behavior still interrupts the page, because the cache is empty when the old Gateway stops; every later update is covered.
 
