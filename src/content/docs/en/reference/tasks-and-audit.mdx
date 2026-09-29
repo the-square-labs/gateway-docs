@@ -5,7 +5,7 @@ section: Reference
 order: 4
 audience: [operator, security-admin, developer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-09-29
 ---
 
 
@@ -80,6 +80,8 @@ Two categories added in 2.11 are on by default:
 Other categories cover nginx logs, dismissed alerts, notification deliveries, structured logs, ClickHouse system tables, orphaned AI artifacts, the internal registry, orphaned volumes, retired system PKI keys, ACME challenge files, and old Gateway images.
 
 ## Retention and external evidence
+
+Audit rows are not lost when Gateway stops. On shutdown, Gateway writes the rows still in flight before it closes the database connection. When the database has already gone away, as at a host shutdown where every container stops at once, a row that cannot be written is appended to a spool file on the application's data volume (`/var/lib/gateway/audit-spool`) and stored at the next start with its original ID, so a replay that stops halfway never adds a row twice; SIEM export picks up the rows it stores. New installations also stop PostgreSQL with a smart shutdown, which waits up to 75 seconds for Gateway to close its connections; existing installations get this when their PostgreSQL container is next recreated.
 
 Keep audit records according to security and compliance policy, and export to independently controlled SIEM storage when the evidence must survive a Gateway outage or administrator compromise. Operational Task logs may have different retention and sensitivity. Do not expand audit payloads with secrets or raw request bodies merely to make debugging easier.
 
