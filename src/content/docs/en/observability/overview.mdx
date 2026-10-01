@@ -5,7 +5,7 @@ section: Observe and notify
 order: 1
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -57,6 +57,19 @@ Use the Dashboard for triage, then open the affected resource. Compare live heal
 For database monitoring, collection starts in the background after Gateway bootstrap and when a managed database becomes ready; opening the database page is not a prerequisite. A first page visit may briefly wait for history or the first real snapshot, but it must not manufacture a healthy state from absent data.
 
 During an incident, begin with the affected customer journey and move inward: public DNS and TLS, Route and Ingress, workload, private dependencies, storage, and external services. Use Tasks to distinguish an operation that was accepted from one that completed. Use audit to understand configuration changes, not as a substitute for runtime logs.
+
+## Gateway diagnostics
+
+Gateway reports on its own health as well. The AI assistant and MCP clients read it with `manage_gateway_diagnostics`:
+
+- **`snapshot`:** the host's CPU, memory, load, and data-volume disk; the backend process memory, CPU, and event-loop delay; PostgreSQL and Redis reachability, latency, connection pool, size, and long queries; the stack containers (`app`, `postgres`, `redis`, `relay`, `registry`) with state, health, restarts, CPU, and memory; failing background jobs; and API latency and 5xx;
+- **`history`:** one-minute samples kept for 48 hours;
+- **`requests`** and **`jobs`:** per-route counts, p95, and 5xx, and the last run and errors of every background job;
+- **`logs`:** the logs of the app, PostgreSQL, Redis, Relay, and registry containers and of the last Gateway update run.
+
+Reading the state needs `diagnostics:view`; reading logs needs `diagnostics:logs`, which includes it. The built-in admin groups hold both; custom groups need them granted. CPU figures cover the CPUs Gateway may actually use, with `kernelCpuCount` as the kernel's count. Memory is the container's cgroup limit when one is set (`memoryScope: "cgroup"`) and otherwise the kernel's view (`"kernel"`), as inside an LXC guest, whose own limit is not visible from the app container.
+
+Alert rules in the **Gateway** category watch the same signals: host CPU, memory, and disk, backend memory, event-loop delay, the API 5xx rate and p95 latency, PostgreSQL latency and pool waits, and Redis latency. They also fire when PostgreSQL or Redis is unavailable, when a stack container is down or unhealthy, and when a background job keeps failing. A PostgreSQL outage alert is sent straight to the webhooks of its rules while PostgreSQL is down and is recorded once it is back. `/health` checks PostgreSQL over a connection of its own, so a busy connection pool does not read as an outage.
 
 ## Verify observability itself
 

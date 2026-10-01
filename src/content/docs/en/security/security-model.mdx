@@ -5,7 +5,7 @@ section: Operations and security
 order: 4
 audience: [security-admin, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -51,11 +51,11 @@ Administrators and anyone able to control the Gateway host Docker socket are tru
 
 Human sessions, API tokens, OAuth, MCP, daemon certificates, service identities, database binding principals, logging tokens, and inference tokens are separate credential families. They are not interchangeable. The backend rechecks scopes, resource ownership, entitlements, and current state even when the UI hides an action.
 
-Resource-scoped permissions limit which objects a user can see or mutate. Sensitive actions such as credential reveal, private-key export, host file access, console access, and secret mutation require distinct authority from ordinary read access.
+Resource-scoped permissions limit which objects a user can see or mutate. Sensitive actions such as credential reveal, private-key export, host file access, console access, and secret mutation require distinct authority from ordinary read access. Credentials are not revealed during impersonation, Node console sessions and Node file reads are audited, and API tokens and the assistant cannot change their own account's sign-in, MFA, or sessions, grant impersonation, or restore into groups beyond the caller's permissions. The AI assistant asks for approval before it reveals or rotates credentials or exports private keys.
 
 ## Secret handling
 
-Secrets are encrypted at rest and masked in normal responses. Write-only values must be replaced rather than retrieved. Keep master keys outside database backups, redact logs and screenshots, and avoid passing credentials through command arguments or repository URLs.
+Secrets are encrypted at rest and masked in normal responses. Write-only values must be replaced rather than retrieved. Keep master keys outside database backups, redact logs and screenshots, and avoid passing credentials through command arguments or repository URLs. The audit log redacts connection strings, secret URLs, webhook headers, and secret values, and container inspect, environment views, and archive export never show the passwords and keys of database and storage links.
 
 Managed database workloads receive binding-specific identities, not owner credentials. The target Docker daemon owns the private listener and allows only the intended stable workload identity on the binding network.
 
@@ -79,7 +79,7 @@ Gateway makes these outbound connections on its own. Everything else depends on 
 
 | Destination | Purpose | Data sent |
 | --- | --- | --- |
-| License service (`license.thesqlabs.com`) | Registration after the first start, heartbeats every 15 minutes with a paid key or every 30 minutes on Community, key activation and deactivation, release authorization before every update on every plan, and commercial-core downloads for licensed installations | Installation ID, installation name, Gateway version, entitlements schema version, installation token, a random request nonce, and the pinned signing key IDs; a one-time registration nonce at registration, the paid key at activation, and the target version, release ID, and file path for updates. See [Plans and entitlements](/en/reference/plans-and-entitlements/#license-service-communication) |
+| License service (`license.thesqlabs.com`) | Registration after the first start, heartbeats every 15 minutes with a paid key or every 30 minutes on Community, key activation and deactivation, release authorization before an update, and commercial-core downloads for licensed installations | Installation ID, installation name, Gateway version, entitlements schema version, installation token, a random request nonce, and the pinned signing key IDs; a one-time registration nonce at registration, the paid key at activation, and the target version, release ID, and file path for updates. See [Plans and entitlements](/en/reference/plans-and-entitlements/#license-service-communication) |
 | Update service (`updates.thesqlabs.com`) | Release checks at startup and every 4 hours by default (`UPDATE_CHECK_INTERVAL_HOURS`), and signed release downloads | Release channel, component, and current version |
 | Container registries such as `ghcr.io` | Pulling Gateway release images | Standard image pull requests |
 | Public IP lookup services | Detecting the public addresses of Gateway and managed Nodes | Standard HTTPS requests; the Gateway backend skips the lookup when both `PUBLIC_IPV4` and `PUBLIC_IPV6` are set |

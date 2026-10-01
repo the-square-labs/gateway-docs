@@ -5,7 +5,7 @@ section: Automation
 order: 3
 audience: [developer, platform-engineer]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
 
@@ -50,7 +50,7 @@ Work inside the listed grants:
 - List endpoints and tools return only what the caller may access; an empty list is not a denial.
 - `list_resource_folders` shows every folder the caller holds any grant on, including empty ones, with `access.actions` and `access.canCreate`.
 - A create without `folderId` targets the root. Pass `folderId`, and `nodeId` where the operation takes one, when create access is limited.
-- A refused create names the folders and Nodes where the caller may create and says to pass `folderId`. MCP and AI Workspace tool errors add this list for every resource type; REST responses include it for Docker resources. Treat a permission as missing only when the summary shows no grant for the action anywhere.
+- A refusal of a limited caller—a create at the root or a read of a resource outside its grants—names the folders, Nodes, and resources the caller may use and says to pass `folderId`, in REST responses and in MCP and AI Workspace tool errors alike. Treat a permission as missing only when the summary shows no grant for the action anywhere.
 
 ## Connect Codex or Claude Code through MCP
 
@@ -184,6 +184,16 @@ MCP create tools take an optional `idempotencyKey` argument with the same rules.
 
 Tools that return a secret or echo sensitive input—`create_node`, `create_access_list`, `create_webhook`, binding creation, token and access-key creation, and `issue_certificate`—do not take the argument. The Compose lifecycle operations of `manage_docker_compose` keep their own `idempotencyKey` argument with its previous meaning.
 
+## Move large payloads through one-time links
+
+Tool calls are a poor channel for files. For large payloads, MCP tools return a one-time link with a ready `curl` command that a shell on the agent's side runs; the bytes stream through Gateway, never through the model:
+
+- **Pages:** the `link` operation of `upload_pages_artifact` accepts an archive, a packed build folder, or a single HTML file. The upload may be as large as the **File upload limit** (100 MB by default, at most 500 MB); see [Pages overview](/en/pages/overview/#publish-from-git-or-manually). Without a shell, the begin, chunk, and finalize operations take at most 1 MiB per chunk.
+- **Container archives:** the `link` operations of `download_docker_archive` and `upload_docker_container_archive` export and import `.gwca` archives.
+- **Storage objects:** `download_storage_object` returns a link, valid for 15 minutes, that downloads an object of any size, and `upload_storage_object` uploads in chunks that Gateway verifies.
+
+A link works once, belongs to the token that requested it, and is checked again against the owner's current permissions when it is used. Treat it like a short-lived credential.
+
 ## Error handling
 
 - `400` or `422`: correct request shape or validation input;
@@ -194,11 +204,15 @@ Tools that return a secret or echo sensitive input—`create_node`, `create_acce
 - `429`: apply bounded backoff and respect server guidance;
 - `5xx` or node offline: preserve request IDs and check durable task state before retrying.
 
+MCP and AI Workspace tool errors start with the same code as the REST response, for example `NOT_FOUND`, `STORAGE_NOT_FOUND`, or `NGINX_CONFIG_FAILED`, followed by the message and details; a schema error reads `VALIDATION_ERROR` with the failing fields. A request to an unknown `/api` path returns a JSON `404 NOT_FOUND` instead of the Console page.
+
 ## MCP operating rules
 
 In 2.11, MCP tools cover every resource and management operation that the OAuth grant's scopes allow, including Node configuration and files, Docker migrations, the logging backend, Gateway settings, users and groups, Relay Pool and update operations, inference administration, hosting, and the GitLab, GitHub, generic Git, Cloudflare, and external SSH connectors. MCP does not expose AI Workspace internals such as conversations, plans, and sandboxes, or tools that mint API tokens or OAuth authorizations. See [What tokens can and cannot do](/en/identity/scopes-tokens-oauth/#what-tokens-can-and-cannot-do-in-211).
 
 Creating Routes and Domains does not require Node permissions: `create_route` and `create_domain` can omit the Node when a registered Domain or the only eligible Ingress Node decides it (for Routes, that node must be online), and `list_route_ingress_nodes` lists the Nodes the caller may create Routes on. See [Choose the Ingress Node](/en/ingress/domains-routes-tls/#choose-the-ingress-node).
+
+The MCP server reports the Gateway release as its version. `manage_gateway_diagnostics` inspects Gateway itself; see [Gateway diagnostics](/en/observability/overview/#gateway-diagnostics). When an MCP tool sets the environment of a Deployment, it merges with the saved environment, unlike the REST deploy route; see [Release a new version](/en/docker/deployments/#release-a-new-version).
 
 Use MCP for goal-oriented operations where the tool schema adds safety and resource context. Read tool descriptions and returned warnings, pass exact resource identifiers, and treat external content as untrusted input. MCP calls are audited and must not be used to bypass confirmation, permission, entitlement, or lifecycle checks.
 

@@ -5,7 +5,7 @@ section: End-to-end journeys
 order: 4
 audience: [developer, platform-engineer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 Gateway Pages publishes a static site as an immutable artifact with an explicit promotion pointer. A **Deployment** is one fixed set of files; a **Tag** is a movable name such as `production`; a **Route** sends a public domain to that Tag. This separation lets a team review a release and roll back by moving a pointer rather than changing files in place.
@@ -41,7 +41,7 @@ Do not include source maps, test fixtures, environment files, private repository
 1. Enable Pages in feature settings and confirm the current plan allows Pages management.
 2. Create a Pages Project and select an eligible Ingress Node.
 3. Configure project quotas, retention, and access before uploading a production artifact.
-4. Upload the prepared artifact through the resumable deployment API or the authenticated remote MCP upload workflow.
+4. Upload the prepared artifact through the Console, the resumable deployment API, or the authenticated remote MCP upload link. An artifact may be as large as the **File upload limit**, 100 MB by default and at most 500 MB; see [Pages overview](/en/pages/overview/#publish-from-git-or-manually).
 5. Finalize the upload. Gateway validates and creates a new immutable Deployment rather than modifying an older one.
 6. Open the immutable preview and verify the exact artifact.
 7. Move the system-managed `latest` Tag or a custom release Tag to that Deployment only after approval.
