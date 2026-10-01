@@ -5,7 +5,7 @@ section: End-to-end journeys
 order: 3
 audience: [platform-engineer, developer, database-operator]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-10-02
 ---
 
 This journey gives an application private database access without publishing the database port and without sharing the database owner credential. Gateway creates a durable **binding**—the managed relationship between one workload and one database—and provisions a dedicated engine identity for that relationship.
@@ -63,7 +63,7 @@ Use the application or a controlled diagnostic inside the workload to open a con
 - the hostname, port, database name, and credentials come from the binding rather than copied owner credentials; the binding connects over the private binding network and does not add TLS settings;
 - the connection succeeds without publishing the database host port;
 - the engine sees the binding-specific user;
-- connection and query behavior matches the application's pool settings;
+- connection and query behavior matches the application's pool settings, and all pools of one container together stay at 32 connections or fewer, because the link carries 64 that both Deployment slots share during a rollout ([Link capacity](/en/databases/bindings/#link-capacity-and-connection-pools));
 - binding runtime telemetry becomes healthy and shows expected streams/traffic;
 - workload logs do not print the secret values.
 
