@@ -5,7 +5,7 @@ section: Docker
 order: 6
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-10-02
 ---
 
 
@@ -40,6 +40,8 @@ If transfer, target startup, or cutover fails, inspect the operation stage. Use 
 GWCA archives can be self-contained or registry-backed. They include the supported container configuration and can optionally include environment values, secrets, and writable-layer changes. They never include volume contents. On import, each archived volume is created empty under a new name, or you map it to an existing Gateway-managed volume.
 
 Export supports a portable subset of container settings. Containers with host bind mounts, anonymous volumes, privileged mode or changed capabilities, devices or GPUs, host namespaces, healthchecks, custom logging (Gateway's default log limit does not count), or other host-specific settings are rejected, and the error lists the unsupported settings. Containers that belong to a Compose project—any container with a `com.docker.compose.project` label—cannot be exported: the REST API and MCP refuse them with `DOCKER_ARCHIVE_COMPOSE_CONTAINER` (HTTP 409) and the Console hides **Export archive**. Manage them through their [Compose Project](/en/docker/compose/). Blue/green Deployment slots are also rejected.
+
+An archive never carries the credentials of the container's database or storage links. An import cannot attach the container to the host network, to another container's network namespace, or to Gateway's internal networks, and it drops Compose and Gateway labels. MCP clients export and import archives through one-time links with a ready `curl` command—the `link` operation of `download_docker_archive` and `upload_docker_container_archive`—instead of base64 chunks in tool calls.
 
 Before export, decide whether including secrets is necessary and ensure the archive is handled as sensitive material when it is. Before import, review the target node, image availability, runtime compatibility, network mapping, and occupied ports. Restore volumes separately, then verify the imported workload before routing traffic to it.
 

@@ -5,7 +5,7 @@ section: Docker
 order: 5
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
 Configure the connector using [Git hosting](/en/integrations/source-control/). That guide also separates repository permissions from the target permissions needed to start saved builds and read their history. Registry credentials are covered under [Container registries](/en/docker/registries/).
@@ -37,6 +37,8 @@ Build Secrets are source-scoped and mounted as secrets during the build. Do not 
 
 While a build is rolled out to a Container, Deployment, or Compose Project, Gateway locks that target: lifecycle and configuration changes, secret changes, Availability changes, and migrations are refused with `BUILD_ROLLOUT_IN_PROGRESS` until the rollout succeeds, fails, or is cancelled, and the Console shows a banner on the target. The lock survives a Gateway restart. If the target is busy with another operation when the rollout starts, the rollout waits up to 5 minutes and then fails with `BUILD_ROLLOUT_TARGET_BUSY`. Pages releases are not locked this way. During a Gateway update, builds triggered by webhooks or polling are deferred and start once after the update.
 
+**Sync now** on the Git source of a Container, Deployment, Compose Project, or Pages Project checks the branch right away and builds when it moved and automatic builds are on. The source's vulnerability policy rejects artifacts with findings at or above the selected severity (Critical by default, or High, Medium, or Low); **None** approves every scanned artifact, and **Disabled** approves artifacts without requiring a scan. Build results are pushed to the registry without being kept in the worker's own image store, so builds do not fill the worker's disk.
+
 Automatic build and automatic deploy are independent controls. Keep automatic deployment disabled until the health and rollback path is proven for that workload. A successful build only proves that an artifact exists; it does not prove that the application starts correctly on a target node.
 
 ## Folder placement of built workloads
@@ -51,9 +53,13 @@ If a build cannot start, check source authorization, worker availability, entitl
 
 When the worker or source automation is unavailable, existing history remains useful for diagnosis, but new builds must not be assumed to run. Do not substitute a mutable image tag for the missing immutable artifact; wait for a verified build or use a separately approved image.
 
+### Readiness after a rollout
+
+When a build is rolled out to a Container, Gateway recreates it with the new image and waits up to 60 seconds for it to become ready: healthy when the image has a health check, otherwise running for 10 seconds without a restart. A container that crash-loops, exits, or turns unhealthy is returned to its previous image, and the build fails with `BUILD_ROLLOUT_ROLLED_BACK`, or `BUILD_ROLLOUT_ROLLBACK_FAILED` when the previous image could not be restored. The error names the container state, exit code, and restart count, followed by the last lines of its log, and the deployed commit stays the previous one. Other rollout failures are reported as `BUILD_ROLLOUT_FAILED`. A Deployment uses its own health-checked blue/green path: a candidate that fails is stopped and traffic stays on the serving slot. A Compose revision built from Git whose published port another workload already holds on the Node fails with `COMPOSE_HOST_PORT_IN_USE`, and no revision is created.
+
 ## Cleanup and rollback
 
-Removing a source connection prevents future source-driven work but does not delete an already deployed runtime or its artifact automatically. Before revoking the connection, decide which artifacts remain required for a rollback. Artifact retention is governed by the registry and the owning resource's active, rollback, in-progress, pinned, and recent-successful history.
+Removing a source connection prevents future source-driven work but does not delete an already deployed runtime or its artifact automatically. Removing a container removes its Git source, and when the repository webhook of a removed container cannot be deleted, its source stops building and deploying, so a new commit cannot recreate the container; the cleanup is retried later. Build images of deleted Containers, Deployments, and Compose Projects are removed from their Nodes automatically, usually within a minute, and Nodes that were offline are checked again every 10 minutes. An unused build image can also be removed by hand from the Node's images; one that a container on the Node still uses is refused with `409 GATEWAY_INTERNAL_IMAGE`. Before revoking the connection, decide which artifacts remain required for a rollback. Artifact retention is governed by the registry and the owning resource's active, rollback, in-progress, pinned, and recent-successful history.
 
 ## Success criteria
 

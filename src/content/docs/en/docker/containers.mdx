@@ -5,7 +5,7 @@ section: Docker
 order: 2
 audience: [operator, developer]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
 
@@ -38,7 +38,7 @@ You need access to the target Docker node and permission to create or change the
 
 New host bind mounts are rejected. Use Gateway-managed local volumes for new persistent data. Legacy bind mounts can remain during an ordinary update, but once removed they cannot be added back through Gateway.
 
-A workload with legacy host bind mounts keeps them through changes that do not change its image, such as environment edits, database or storage links, and deployment slot switches; these need no `docker:containers:mounts`. A new image gets the same host access, so changing it requires that scope: from the person who starts the change, and for automatic Git deploys and webhooks from the account that last saved the source or the webhook, checked at deploy time. Webhooks saved before v2.11.0-rc.14 have no recorded account and are refused on such workloads until someone holding the scope saves them again.
+A workload with legacy host bind mounts keeps them through changes that do not change its image, such as environment edits, database or storage links, and deployment slot switches; these need no `docker:containers:mounts`. A new image gets the same host access, so changing it requires that scope: from the person who starts the change, and for automatic Git deploys and webhooks from the account that last saved the source or the webhook, checked at deploy time. Webhooks saved before 2.11 have no recorded account and are refused on such workloads until someone holding the scope saves them again.
 
 The Default runtime is available on supported Docker nodes. The secure gVisor runtime requires a healthy reported capability and cannot be combined with GPUs, devices, host bind mounts, migration, or archive export.
 
@@ -56,11 +56,13 @@ On a Docker Node whose default log driver is `json-file`, Gateway limits the log
 
 To find containers whose logs still grow without a limit, create a Container alert on **Log Size (MB)**. It counts the container's log file and its rotated copies on the node; a Docker daemon that has not been updated yet reports zero.
 
-Use **Recreate** when a runtime configuration change requires a replacement process. Gateway preserves the stable resource identity while creating the intended runtime again. Use **Duplicate** when you need a separate resource with independent access grants and lifecycle history. Use **Rename** only after reviewing dependent Routes, bindings, and integrations. A name held by a Git source whose container is still waiting for its first build cannot be taken by creating, duplicating, renaming, or importing another container: the request fails with `409 NAME_IN_USE`.
+Use **Recreate** when a runtime configuration change requires a replacement process. Gateway preserves the stable resource identity while creating the intended runtime again. Use **Duplicate** when you need a separate resource with independent access grants and lifecycle history. Use **Rename** only after reviewing dependent Routes, bindings, and integrations. A name held by a Git source whose container is still waiting for its first build cannot be taken by creating, duplicating, renaming, or importing another container: the request fails with `409 NAME_IN_USE`. Removing a container also removes its Git source, and renaming it moves the source to the new name.
+
+**Duplicate** copies the container's own secrets but not its database or storage links: the variables those links inject are left out of the copy. Inspect, the **Environment** tab, and archive export never reveal link passwords or storage link keys. Updating a container's image needs `docker:containers:environment` and `docker:containers:secrets`, because the new runtime receives the container's environment and secrets, and attaching a container to networks needs edit access to those networks.
 
 ## Verify and operate
 
-The detail view is the operational record: confirm the desired and observed state, health result, image identity, recent Tasks, and logs. Use console or file access only for the scopes granted to you, and avoid using an interactive console as the normal deployment path.
+The detail view is the operational record: confirm the desired and observed state, health result, image identity, recent Tasks, and logs. The Overview names the container's runtime profile, for example **Secure · gVisor**, and monitoring shows its memory and PID limits next to the usage. **Stop** on a container that runs nothing—created, exited, or dead—finishes at once. Use console or file access only for the scopes granted to you, and avoid using an interactive console as the normal deployment path.
 
 After a restart or daemon reconnection, Gateway should reconcile the saved desired state. If the Container is running but cannot serve traffic, check its health check, listening port, Route target, environment, and application log in that order.
 

@@ -5,7 +5,7 @@ section: Docker
 order: 7
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-10-02
 ---
 
 
@@ -21,13 +21,19 @@ An **unused** label means the current synchronized Docker inventory has no activ
 
 Images are node-local inventory. Pull an image when a workload needs it, inspect its digest and provenance before production use, and prefer immutable digests for releases. Repository-built artifacts should be tracked by digest rather than by a mutable tag.
 
-Before removing an image or running a prune, check active Containers, inactive Deployment rollback slots, in-progress Tasks, and any expected recovery action. A node-local cleanup can make a later restart fail until the image is pulled again. Remove only images that are confirmed unused, and wait for daemon synchronization before judging whether a cleanup completed.
+Before removing an image or running a prune, check active Containers, inactive Deployment rollback slots, in-progress Tasks, and any expected recovery action. A node-local cleanup can make a later restart fail until the image is pulled again. Remove only images that are confirmed unused, and wait for daemon synchronization before judging whether a cleanup completed. Images that Gateway built from Git for Containers, Deployments, and Compose Projects that no longer exist are removed from the Node automatically; an unused build image can also be removed by hand, and one that a container on the Node still uses is refused with `409 GATEWAY_INTERNAL_IMAGE`.
 
 ## Volumes
 
 Gateway-managed local volumes are the supported destination for new persistent mounts. A volume outlives a Container unless it is deleted separately, which is useful for planned recreation but dangerous when the data is no longer backed up.
 
-Renaming, relabeling, resizing, and adopting a volume need `docker:volumes:edit`, which can be restricted to one volume, Node, or folder.
+Renaming, relabeling, resizing, and adopting a volume need `docker:volumes:edit`, which can be restricted to one volume, Node, or folder. A host path typed where a volume name is expected is refused with a clear message, and every volume name is checked before any volume is created.
+
+### Disk image volumes
+
+On Personal and higher, a volume can be a **Disk image**: fixed-capacity ext4 storage that can be expanded later. New disk image volumes are writable by applications that do not run as root. Each one holds one loop device on its Docker Node while it exists, so size the loop-device pool of an LXC Docker Node accordingly.
+
+The Docker daemon mounts disk image volumes before Docker starts, through a boot step named `gateway-volume-images` that it installs for systemd or OpenRC. If a volume's image cannot be mounted at boot, its mount point gets a read-only, empty placeholder, so a container writes nothing to the Node's root filesystem and fails with `Read-only file system` instead. The daemon mounts the image as soon as it can, at its start or on its check every 10 minutes, and then restarts the containers that use the volume so they see their data. A volume that cannot be mounted no longer disables disk image volumes on the whole Node.
 
 Before moving, recreating, exporting, or deleting a workload, identify all attached volumes and make an engine-appropriate backup of stateful data. Deleting a volume is destructive and cannot be undone by recreating the workload. Container archive exports do not include volume contents, so volume restore is a separate recovery step.
 
@@ -35,7 +41,7 @@ Before moving, recreating, exporting, or deleting a workload, identify all attac
 
 Networks provide workload-to-workload connectivity and may be private implementation resources. A network created by a managed workload or a higher-level owner must not be removed manually: Routes, database bindings, service discovery, and reconciliation can depend on it.
 
-Networks that Gateway creates for managed storage (`gateway-storage-*`) are internal: they cannot be connected, disconnected, removed, or used by new containers. Compose-owned non-external networks stay under the external Compose workflow. External or intentionally shared networks remain global resources and should be removed only after every referenced workload has been detached. Check node state and references first; an apparent unused network on an offline node is not sufficient evidence for deletion.
+Attaching a container to a network needs edit access to that network. Compose projects and imported container archives cannot use the host network or Gateway's internal networks: `gateway-secure-links`, the managed database link networks `gateway-db-*`, and `gateway-storage-*`. Networks that Gateway creates for managed storage (`gateway-storage-*`) are internal: they cannot be connected, disconnected, removed, or used by new containers. Compose-owned non-external networks stay under the external Compose workflow. External or intentionally shared networks remain global resources and should be removed only after every referenced workload has been detached. Check node state and references first; an apparent unused network on an offline node is not sufficient evidence for deletion.
 
 ## Safe cleanup checklist
 

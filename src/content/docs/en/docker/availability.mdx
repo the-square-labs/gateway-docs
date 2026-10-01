@@ -5,7 +5,7 @@ section: Docker
 order: 5
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-29
+lastReviewed: 2026-10-02
 ---
 
 Availability adds placements on independent Docker nodes to an existing Container, Deployment, or Compose Project. Gateway preserves the resource identity, configuration, and relationships while creating and replacing runtime instances according to its availability policy.
@@ -39,7 +39,7 @@ Gateway pins images by repository and digest in its internal registry and pre-pu
 2. Select **Check eligibility** and resolve incompatibilities.
 3. Turn on **Enable** and choose **Mode**. For Replicated, set **Serving placements**.
 4. Under **Eligible nodes**, choose **All compatible nodes** or **Selected nodes** with an explicit node list.
-5. Review replacement and rollout settings, then select **Save**. On first enablement, read the **Tech Preview** warning and confirm **Enable Tech Preview**.
+5. Review replacement and rollout settings, then select **Save**.
 6. Follow the operation and **Placements** list until the requested serving count is reached.
 7. Verify a real request through the Route, database access, and application logs.
 
@@ -116,7 +116,7 @@ After recovery, verify serving count, real customer traffic, database access, an
 
 ## Stop and start
 
-**Stop** on a workload with Availability stops the copies that are running and keeps every placement: standbys stay prepared, and the policy stays healthy while the workload is stopped. **Start** starts the copies that served last, never a standby, and keeps the standbys, so no placement is removed, recreated, or failed by a stop and a start. The original workload is never deleted: not when a lease closes, not by stale-placement cleanup, and not as a surplus standby. On a Node that is no longer selected it stays, stopped. A Docker daemon that is busy with long-running commands delays a stop, start, or heal (`AVAILABILITY_DAEMON_BUSY`, retried automatically) instead of marking placements failed.
+**Stop** on a workload with Availability stops the copies that are running and keeps every placement: standbys stay prepared, and the policy stays healthy while the workload is stopped. **Start** starts the copies that served last, never a standby, and keeps the standbys, so no placement is removed, recreated, or failed by a stop and a start. The original workload is never deleted: not when a lease closes, not by stale-placement cleanup, and not as a surplus standby. On a Node that is no longer selected it stays, stopped. A Docker daemon that is busy with long-running commands delays a stop, start, or heal (`AVAILABILITY_DAEMON_BUSY`, retried automatically) instead of marking placements failed. A start, stop, or restart requested while the policy's previous operation still runs is queued and runs after it; Containers, Deployments, and Compose Projects behave the same.
 
 ## Operations of several policies
 

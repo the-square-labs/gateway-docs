@@ -5,7 +5,7 @@ section: Docker
 order: 3
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-29
+lastReviewed: 2026-10-02
 ---
 
 
@@ -34,25 +34,29 @@ Use an immutable image digest or an approved build artifact. Before starting a r
 5. Allow the traffic switch to complete, then verify a real request, application logs, and metrics.
 6. Keep the previous slot intact until the agreed rollback window has passed.
 
+Saving a new image tag, command, mounts, labels, or runtime in the Deployment's settings rolls it out this way; the button reads **Save & Deploy**. Saving environment variables of a running Deployment deploys them to the standby slot. Resource limits are saved with the configuration. Deploying or updating a Deployment with a new image, command, or environment needs `docker:containers:environment` and `docker:containers:secrets` on it, because the new slot receives the environment and secrets of the Deployment. Deploy commands wait for the image pull, the startup grace period, and the deploy timeout before they report a result.
+
+Through the API, `POST /api/docker/nodes/{nodeId}/deployments/{deploymentId}/deploy` with `env` replaces the whole environment of the Deployment and saves it as its configuration, so send every variable the Deployment should keep. The MCP tool `deploy_docker_deployment` and the assistant instead set `env` over the saved environment and remove the keys listed in `removeEnv`; every other saved variable stays. Both need `docker:containers:environment`.
+
 Webhook-triggered releases use the same authorization and health-gating path. A webhook request does not bypass the Deployment's ownership or turn a failed build into a public release.
 
 ## Failure and rollback
 
-If preparation or health validation fails before traffic switches, the existing active slot remains the serving version. Inspect the operation for image-pull, startup, health, secret, volume, or capacity errors; correct the cause and begin a new release rather than modifying the failed slot in place.
+If preparation or health validation fails before traffic switches, the existing active slot remains the serving version. Inspect the operation for image-pull, startup, health, secret, volume, or capacity errors; correct the cause and begin a new release rather than modifying the failed slot in place. A candidate slot that fails its health check is stopped and kept for its logs, so it cannot crash-loop and take database connections from the serving slot; a later switch to that slot recreates it from its recorded release.
 
-If a customer-visible regression appears after cutover, use the explicit rollback action. It restores traffic to the retained known-good slot and records the event in the Deployment history. Verify the Route, application health, and logs after rollback. Do not delete the newer slot until the incident record and the desired follow-up are clear.
+If a customer-visible regression appears after cutover, use the explicit rollback action. It restores traffic to the retained known-good slot and records the event in the Deployment history. Verify the Route, application health, and logs after rollback. A slot switch keeps the version of the standby slot, and rollback returns to the previous release. Do not delete the newer slot until the incident record and the desired follow-up are clear.
 
 ## Operations during restarts, updates, and builds
 
 Deployment operations survive Gateway restarts. A durable sweep finishes the drain of the previous slot, and an interrupted release is reconstructed from the slot that the Node's router actually serves. If the Node cannot be inspected within 5 minutes, the release is marked failed with a reason such as a stopped router or a daemon that cannot report its serving slot; update the Docker daemon in the latter case.
 
-While a release is running, the Deployment's settings are locked: saving returns `DEPLOYMENT_BUSY` and the Console disables **Save** until the release finishes. While a Git build is being rolled out to the Deployment, lifecycle and configuration changes return `BUILD_ROLLOUT_IN_PROGRESS`; wait for the rollout to finish. During a Gateway update, new Deployment operations are refused with `GATEWAY_UPDATING` until the update completes; see [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
+While a release is running, the Deployment's settings are locked: saving returns `DEPLOYMENT_BUSY` and the Console disables **Save** until the release finishes. While a Git build is being rolled out to the Deployment, lifecycle and configuration changes return `BUILD_ROLLOUT_IN_PROGRESS`; wait for the rollout to finish. A Deployment comes back on its active slot after **Stop** and then **Start**, or after a Node restart, and a Gateway restart in the middle of a deploy does not lose the release. During a Gateway update, new Deployment operations are refused with `GATEWAY_UPDATING` until the update completes; see [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
 
 ## Deployment router
 
 Each Deployment has a small nginx router container on its Node. The router receives the Deployment's traffic and forwards it to the active slot; a switch or rollback changes only the router's target.
 
-- **It comes back after a reboot.** Routers run with the `unless-stopped` restart policy. When the Docker daemon starts, it repairs the router of every serving Deployment: a router created by an older release, or left with the restart policy `no`, gets the current policy or is recreated from the configuration it serves, with its routes and published ports, and is pointed at the application slot that actually runs. The daemon repeats the repair every minute until it succeeds. A Deployment that was deliberately stopped or killed keeps its router stopped.
+- **It comes back after a reboot.** Routers run with the `unless-stopped` restart policy. When the Docker daemon starts, it repairs the router of every serving Deployment: a router created by an older release, or left with the restart policy `no`, gets the current policy or is recreated from the configuration it serves, with its routes and published ports, and is pointed at the application slot that actually runs. The daemon repeats the repair every minute until it succeeds; while a Deployment operation holds the Deployment, the repair waits for it and runs once it is done. A Deployment that was deliberately stopped or killed keeps its router stopped.
 - **Operations start a stopped router.** A deploy, slot switch, router update, or start brings up a router that was stopped by a kill or stop instead of failing on it, and a Deployment whose active slot cannot start no longer stays stuck.
 - **It does not depend on Docker's DNS.** The router configuration names the address of the active slot's container and proxies to it directly on every nginx version, without a resolver; the daemon checks the address every 5 seconds and rewrites the configuration when it changes. Only a configuration written before the slot's address was known resolves the slot name through Docker's DNS. Existing routers are updated in place, without being recreated.
 - **It writes no access log.** The Ingress Node already logs every request. A router therefore never blocks on its container output, which dockerd drains, so a hung Docker Engine (dockerd) does not stop traffic to a running Deployment.
@@ -62,7 +66,7 @@ Each Deployment has a small nginx router container on its Node. The router recei
 
 ## Retirement consequences
 
-Removing a Deployment removes its managed slots and can remove access relationships that belong only to that resource. First detach or migrate Routes, database bindings, and persistent data that must survive. A Deployment rollback protects a prior runtime slot; it is not a substitute for backing up mutable volume data.
+Removing a Deployment removes its managed slots and can remove access relationships that belong only to that resource. A Deployment can be deleted while its standby slot still runs an older image. First detach or migrate Routes, database bindings, and persistent data that must survive. A Deployment rollback protects a prior runtime slot; it is not a substitute for backing up mutable volume data.
 
 ## Success criteria and rollout policy
 
@@ -72,6 +76,6 @@ Set an explicit rollback window. During that window, keep the previous artifact 
 
 ## Operator details: capacity and failed releases
 
-The inactive slot needs enough CPU, memory, storage, ports, and image-pull access to start alongside the active slot. Capacity planning must include this temporary overlap. A release that cannot allocate its inactive slot should fail before traffic changes, leaving the active service untouched.
+The inactive slot needs enough CPU, memory, storage, ports, and image-pull access to start alongside the active slot. During the overlap both slots also share each database and storage link of the Deployment, which carries up to 64 concurrent connections; size connection pools so the new slot can open its pools while the serving slot holds its own. See [Link capacity and connection pools](/en/databases/bindings/#link-capacity-and-connection-pools). Capacity planning must include this temporary overlap. A release that cannot allocate its inactive slot should fail before traffic changes, leaving the active service untouched.
 
 When health never becomes ready, inspect the inactive slot's logs and exact health response. Correct the image or release configuration and create a new release attempt; do not mutate the managed child Container. If promotion completed but verification fails, use the recorded rollback action and then verify both the service path and the final active-slot identity.
