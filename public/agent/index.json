@@ -36,7 +36,7 @@
   },
   {
     "name": "observability",
-    "description": "Work with Gateway observability, including structured-logging environments, schemas, ingest tokens, and log search, alert rules and notification webhooks, SIEM audit export, public status pages and incidents, and the audit log. Use when asked to search logs, set up log ingestion, create or debug an alert or webhook, export audit events to a SIEM, manage a status page or incident, or find who changed something. Use after using-gateway has confirmed the Gateway MCP connection.",
+    "description": "Work with Gateway observability, including Gateway's own health, resources and logs, structured-logging environments, schemas, ingest tokens, and log search, alert rules and notification webhooks, SIEM audit export, public status pages and incidents, and the audit log. Use when asked to search logs, set up log ingestion, create or debug an alert or webhook, export audit events to a SIEM, manage a status page or incident, or find who changed something. Use after using-gateway has confirmed the Gateway MCP connection.",
     "url": "/agent/observability/SKILL.md"
   },
   {

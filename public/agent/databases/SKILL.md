@@ -26,13 +26,13 @@ Each binding gets its own engine identity, never the owner account: a login role
 
 The workload need not run. `create_binding` and `delete_binding` on a stopped, crash-looping, failed, or not yet deployed workload save the link and return without waiting; `list_bindings` shows `observedState: "target_applied"` until the workload next starts or finishes its rollout, then `active`. For a Deployment whose first Git build failed, retry the source build; never set its image by hand to force the link. A Git-source Container before its first build is linked by its name, and a Compose service before the first revision (or during a build rollout) by a service name the next revision defines; the link fails with the reason if that revision lacks the service. Rollbacks, slot switches, and older Compose revisions keep the current links. The target Docker Node must be online (`NODE_OFFLINE` otherwise).
 
-For TLS-enabled PostgreSQL, the plain `connectionUri` works: the database Node's daemon (2.11.0-rc.14 or later) opens TLS to PostgreSQL for a client that connects without it, and a client that requests TLS itself keeps end-to-end TLS.
+For TLS-enabled PostgreSQL, the plain `connectionUri` works: the database Node's daemon (2.11.0 or later) opens TLS to PostgreSQL for a client that connects without it, and a client that requests TLS itself keeps end-to-end TLS.
 
 ## Lifecycle is not one operation
 
 Provisioning, `restart`, `pause`, `unpause`, `retry`, `update`, credential rotation, certificate rotation, and `delete` are distinct operations; follow each returned Task and the reported state. `delete_binding` revokes one application's access; `delete` removes the managed database and its storage. A request to disconnect, redeploy, or remove an application never authorizes deleting its database. Delete bindings before deleting a database or workload when possible.
 
-- `list_bindings`, `get_binding_runtime` (relay telemetry: throughput, admission rejects), and `logs` (`tailLines`) help diagnosis.
+- `list_bindings`, `get_binding_runtime` (link telemetry: `activeStreams` are the link's open connections out of its 64, `throughput`, `throttledTotal` the connections refused at that limit, `connections.lastRejectionReason` why the latest one was refused), and `logs` (`tailLines`) help diagnosis.
 - `certificate_status` reads certificate state; `rotate_certificate` reloads in place and needs `allowRestart: true` when the engine cannot hot-reload.
 
 ## Credentials
