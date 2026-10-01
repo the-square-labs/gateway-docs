@@ -5,7 +5,7 @@ section: Ingress
 order: 3
 audience: [operator, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -13,7 +13,7 @@ Access Lists and maintenance mode answer two management questions: **who may rea
 
 The service owner decides the intended audience and maintenance window. The security owner reviews reusable access policy and credential handling. The operator applies and verifies the change. Success means allowed clients retain access, denied clients are consistently blocked, and maintenance presents a deliberate `503` state without losing the hostname, TLS, or Route configuration.
 
-Access lists combine IP rules and optional HTTP basic authentication. Apply the narrowest list that meets the requirement and test both an allowed and denied client. Treat stored basic-auth secrets as credentials and rotate them when membership changes.
+Access lists combine IP rules and optional HTTP basic authentication. Apply the narrowest list that meets the requirement and test both an allowed and denied client. Treat stored basic-auth secrets as credentials and rotate them when membership changes. Deleting a list, or turning its basic authentication off, removes its password file from every connected Ingress Node, and a Node's full sync after it reconnects removes password files that no configuration uses any more.
 
 Maintenance mode is available for enabled managed Routes that are not using raw configuration. It preserves the HTTP/HTTPS virtual host, returns HTTP 503, pauses managed health checks, and exposes maintenance state to alerts and status pages.
 

@@ -5,7 +5,7 @@ section: Ingress
 order: 5
 audience: [operator]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-10-02
 ---
 
 
@@ -37,7 +37,8 @@ Common mistakes include cross-node Domain/Route placement, stale external DNS af
 | Managed `503` | maintenance or unhealthy upstream | Maintenance state and health history |
 | `502`/`504` | upstream transport | Secure Link, target port, workload health, timeout settings |
 | WebSocket disconnects | protocol forwarding | WebSocket option, application path, proxy/read timeouts |
-| Changes never appear | apply/reconciliation | task state, nginx revision, node connection, validation error; a rejected change reports the `nginx -t` output |
+| Changes never appear | apply/reconciliation | task state, nginx revision, node connection, validation error; a rejected change fails with `422 NGINX_CONFIG_FAILED` and reports the `nginx -t` output |
+| `502` from a Docker Route in Raw Config Mode | raw configuration | The raw configuration must keep proxying to the Route's Secure Link upstream; see [Routes](/en/ingress/domains-routes-tls/#routes) |
 | `502` from a Deployment | Deployment router | Header `X-Gateway-Deployment-Router: upstream-unavailable` means the [router](/en/docker/deployments/#deployment-router) could not reach the active slot |
 
 ## Collect evidence before changing state
