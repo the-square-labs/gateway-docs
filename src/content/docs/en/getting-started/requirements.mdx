@@ -5,7 +5,7 @@ section: Start here
 order: 4
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-10-02
 ---
 
 Plan the control plane separately from the hosts that run customer workloads. Gateway coordinates identity, desired state, certificates, operations, and audit history; it does not remove the need to size, patch, back up, and monitor the underlying Linux hosts.
@@ -60,6 +60,11 @@ The public installation normally needs inbound HTTP/HTTPS for the user interface
 
 Outbound access depends on enabled features. Typical destinations include identity providers, ACME and DNS providers, source-control systems, container registries, release and license services, email/webhook endpoints, SIEM receivers, and configured AI providers. Build Workers may need a different and more restrictive egress policy than the control plane.
 
+Some Node roles need more:
+
+- **Storage Nodes** pull the backup runner from GitHub Container Registry, so they need outbound HTTPS to `ghcr.io`. Managed engines (SeaweedFS, PostgreSQL, Redis, ClickHouse) and the Compose sidecar of Docker Nodes are pulled by digest from the Gateway mirror on `ghcr.io` first, with Docker Hub as a fallback.
+- **Workload Availability in lease mode:** every Docker Node of a policy and every Ingress Node of its Routes must reach every Relay of the pool on its advertised port; see [Data-plane failover](/en/docker/data-plane-failover/).
+
 Review [Ports and network](/en/reference/ports-and-network/) before changing firewalls. Validate paths from the actual host and network namespace that will initiate the connection; a successful request from an administrator laptop is not evidence that Gateway or a node can reach the same endpoint.
 
 ## Node roles and trust boundaries
@@ -72,6 +77,12 @@ Choose only the roles you need:
 - **Build Worker:** isolated BuildKit/containerd execution without exposing a Docker Engine socket;
 - **monitoring node:** monitoring-specific collection for supported targets;
 - **Relay Pool member:** additional Secure Link data-plane capacity and resilience.
+
+### Storage Node and Docker Node prerequisites
+
+A Storage Node runs the Docker daemon as root and keeps every managed database, object storage cluster, and backup workspace in a fixed-size ext4 image on a loop device, so its disk use is bounded. The installer checks this before enrollment: it formats, mounts, grows, and detaches a test image and stops if the host cannot. Each managed database, object storage member, and running backup holds one loop device while it exists. Virtual machines and physical hosts create loop devices as needed. An LXC guest works only when its host passes `/dev/loop-control` and a pool of loop devices and allows loop block devices and mounts; size that pool for every managed instance and concurrent backup the Node will hold. When the pool is exhausted, creating an instance fails with `node has no free loop device`; the daemon releases the devices of deleted instances by itself.
+
+On a Docker Node, a managed disk-image volume also holds one loop device. For [data-plane failover](/en/docker/data-plane-failover/#lease-watchdog), each Docker Node that can hold an Availability lease runs the lease watchdog as a root service under systemd or OpenRC; the Docker node installer installs it.
 
 Role separation is an operational and security decision. A Storage Node should have storage and backup policies appropriate for stateful services. A Build Worker processes repository-controlled build input and should not share a host with unrelated workloads or reusable infrastructure credentials. Treat the worker's outer VM or unprivileged system container as the security boundary; the inner build sandbox is defense in depth, not the only boundary.
 

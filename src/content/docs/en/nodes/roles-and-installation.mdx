@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 2
 audience: [operator]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-10-02
 ---
 
 These role requirements apply both to nodes enrolled on your own servers and to [VMs created through Gateway](/en/integrations/hosting-providers/).
@@ -20,8 +20,8 @@ The platform lead should approve the role, host ownership, failure domain, data 
 Use the generated installer command from the Node creation flow. It contains bounded enrollment material and the pinned Gateway identity.
 
 - **nginx:** requires nginx, public ingress ports where applicable, configuration validation, and log access.
-- **Docker:** requires a supported Docker Engine and permissions for the configured runtime operations. The installer also installs the lease watchdog, `gateway-lease-watchdog`, a separate service that [data-plane failover](/en/docker/data-plane-failover/#lease-watchdog) needs on Nodes that hold Availability leases.
-- **database:** requires dedicated storage and the kernel/storage facilities documented by the installer.
+- **Docker:** requires a supported Docker Engine and permissions for the configured runtime operations. The installer also installs the lease watchdog, `gateway-lease-watchdog`, a separate service that [data-plane failover](/en/docker/data-plane-failover/#lease-watchdog) needs on Nodes that hold Availability leases. On a Node installed before the watchdog existed, a Docker daemon that runs as root with systemd or OpenRC installs it itself; for a daemon installed with `--user <non-root user>`, re-run the Docker node installer with `sudo` and the same `--user`, because a non-interactive run otherwise switches the daemon service to root. Each managed disk-image volume holds one loop device, and the daemon installs a boot step, `gateway-volume-images`, that mounts those volumes before Docker starts.
+- **storage:** runs the Docker daemon as root and requires dedicated storage, loop devices, and mount support; the installer formats, mounts, grows, and detaches a test image before enrollment and stops if the host cannot. Each managed database, object storage member, and running backup holds one loop device, so an LXC guest needs its host to pass `/dev/loop-control` and a loop-device pool sized for all of them. The Node needs outbound HTTPS to `ghcr.io` for the backup runner. The earlier `databases` mode is accepted as an alias. See [Storage Node and Docker Node prerequisites](/en/getting-started/requirements/#storage-node-and-docker-node-prerequisites).
 - **builder:** requires dedicated BuildKit/containerd capacity and should not have a Docker Engine socket.
 - **monitoring:** provides supported monitoring collection.
 - **Relay supervisor/worker:** extends Relay capacity and resilience with explicit placement.
@@ -44,7 +44,7 @@ After installation, validate capability reporting rather than assuming host pack
 3. Enter a stable operator-facing name.
 4. For Relay, enter the address that participating nodes can reach on TCP `9443`.
 5. Create the pending Node.
-6. Copy the generated one-time installation command.
+6. Copy the generated one-time installation command. It belongs to the Gateway that shows it: it downloads the installer from that Gateway's release, runs it only after its checksum matches the release, and pins the newest daemon of the same release line.
 7. Run the command on the intended Linux host.
 8. Keep the result dialog open while the daemon installs and enrolls; it closes automatically when that specific Node becomes online.
 9. Open the Node detail and verify role, hostname, version, capabilities, metrics, and service addresses.
@@ -63,7 +63,7 @@ Enrollment is complete only when the daemon reports the expected capabilities an
 
 ## Installation failure modes
 
-The nginx node installer can be run again on the same host after a failed run. If the command cannot download or start the daemon, verify outbound HTTPS, DNS, system time, package-manager state, architecture, and available disk space. If the daemon starts but enrollment does not complete, verify Relay reachability, the one-time token has not already been consumed, and the command was run for the pending Node shown in the dialog. Do not generate several pending records and try their commands interchangeably.
+The nginx node installer can be run again on the same host after a failed run, and a re-run keeps the Nginx mode of the existing installation. If the command cannot download or start the daemon, verify outbound HTTPS, DNS, system time, package-manager state, architecture, and available disk space. If the daemon starts but enrollment does not complete, verify Relay reachability, the one-time token has not already been consumed, and the command was run for the pending Node shown in the dialog. Do not generate several pending records and try their commands interchangeably.
 
 A Node that enrolls without its expected capability is not ready for that role. Check the role service, socket or storage permissions, required kernel features, and the daemon's bounded startup logs. Correct the host prerequisite and allow capability reporting to refresh; changing the Node Type after installation is not a substitute for installing the correct profile.
 

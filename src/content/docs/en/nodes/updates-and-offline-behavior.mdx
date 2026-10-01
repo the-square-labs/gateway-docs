@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 3
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-29
+lastReviewed: 2026-10-02
 ---
 
 
@@ -27,7 +27,7 @@ In 2.10, Docker, nginx, monitoring, and the Relay supervisor gained a separate l
 
 Local readiness does not prove Relay connectivity or application health. Continue to verify version, reconnect, Node capabilities, and a real operation after updating. If launcher bootstrap is unavailable and the daemon runs directly, launcher rollback protection is unavailable.
 
-In 2.11, a candidate daemon that declares control-connection readiness must also receive its first command from Gateway within 3 minutes, otherwise the launcher rolls the update back. Since 2.11 rc.20, daemon updates of Docker, nginx, and Relay supervisor Nodes also replace the launcher; before, it stayed at the version it was installed with. The updated daemon stages a new launcher once any running launcher trial has finished, the launcher tries it at its next start, and keeps it once the trial is stable, so the installed launcher follows the daemon one update behind.
+In 2.11, a candidate daemon that declares control-connection readiness must also receive its first command from Gateway within 3 minutes, otherwise the launcher rolls the update back. Daemon updates of Docker, nginx, and Relay supervisor Nodes also replace the launcher; in 2.10 it stayed at the version it was installed with. The updated daemon stages a new launcher once any running launcher trial has finished, the launcher tries it at its next start, and keeps it once the trial is stable, so the installed launcher follows the daemon one update behind.
 
 ## Certificate renewal
 
@@ -49,6 +49,16 @@ The system CAs that issue these certificates are valid for 10 years and have no 
 ## Enrollment tokens
 
 Enrollment tokens are single-use and expire after 7 days. For a Node that is still pending, **New enrollment token** issues a replacement installer command. An enrolled Node cannot be re-enrolled in place; only Relay members support re-enrollment. See [Relay and Relay Pool](/en/nodes/relay-pool/#relay-recovery-in-211).
+
+## Daemon updates
+
+Update one Node from its detail page with **Update**, or several at once with **Nodes > Update Nodes**. The dialog lists every Node whose daemon is older than the latest release of its type and updates the selected ones together. Relay Nodes are not listed: they update with the Relay Pool (**Settings > General > Update Relay Pool**), which drains them one at a time. Gateway refuses a daemon update for a Node that is not connected, for a Relay Node, and for a Node that already runs that release or a newer one.
+
+- **Update state.** A Node keeps its update state in the list and on its page, without an update badge or an offline flicker while it updates. A failed, rolled-back, or timed-out update keeps its reason on the Node, shown under **Update Available**, and a Node that comes back on its old version is reported as such right away.
+- **Lease peers.** Nodes that share a lease-mode Availability policy restart one after another; a queued update shows **Queued** with what it waits for. See [Updates and mixed versions](/en/docker/data-plane-failover/#updates-and-mixed-versions).
+- **Gateway restarts.** After a Gateway restart during Node updates, running updates wait for their Nodes to reconnect and finish or fail on time, and queued updates are taken up again. Gateway checks for daemon updates when it starts and after a Gateway update.
+- **Broken connections.** A daemon that staged a self-update restarts into it even when its connection to Gateway broke during the download.
+- **Installers.** Node and Relay setup commands come from the running Gateway's own release and are checked against that release's checksums, and daemon installers pin the newest daemon of the Gateway's release line, so a Gateway never hands out installers from a newer development line.
 
 ## Before an update
 
@@ -90,6 +100,7 @@ Restarting or updating the Docker daemon does not stop containers, and it interr
 - After a host reboot, each Secure Link is restored on its own: a link whose target did not come back stays unbound until its target runs, and does not block the others.
 - A hung Docker Engine (dockerd) does not stop traffic to containers and Deployments that are running: Secure Link, managed database, and storage connections wait at most 300 milliseconds for it and then use the last address it named, links stay bound when it does not answer a sync, and [Deployment routers](/en/docker/deployments/#deployment-router) use neither Docker's DNS nor an access log. An application that writes every request to its container output can still stall while dockerd is frozen.
 - A Storage or database Node starts even when one of its managed containers is missing; that storage or database shows as not running instead of taking the Node offline.
+- Warnings of every daemon component, such as refused link connections, reach the Node's logs in Gateway, not only the host journal.
 
 Nodes that vote in or can hold [data-plane failover](/en/docker/data-plane-failover/) leases are updated one at a time per Availability policy: a daemon update of such a Node may wait for its lease peers, and the Node shows as updating meanwhile. See [Updates and mixed versions](/en/docker/data-plane-failover/#updates-and-mixed-versions). On Docker Nodes that can hold leases, the lease watchdog runs as its own service, `gateway-lease-watchdog`, and updates itself.
 
@@ -99,7 +110,7 @@ A Node rolled back to any daemon release since 2.10.0 still starts: daemons keep
 
 Restarting or updating the nginx daemon on an Ingress Node does not close its Secure Link sockets. The launcher that supervises the daemon keeps a copy of every listening socket and hands them to the next daemon process; with systemd it also keeps them in the unit's file descriptor store, so they survive `systemctl restart`. While no daemon process runs, new connections wait in the socket's queue and are served by the next process. On shutdown the daemon stops accepting, finishes requests in flight for up to 1.5 seconds, and closes connections idle between requests so that nginx reconnects into the queue.
 
-- **The update from rc.19 or older is visible once.** The old daemon hands nothing over when it stops, so that one update interrupts Secure Link routes through the Node for about a second. From then on, restarts and updates keep the sockets, including the restart in which the launcher tries its new version: while an older launcher that keeps no sockets still runs, the daemon stores its listeners in systemd's file descriptor store itself.
+- **The update from 2.10 is visible once.** The old daemon hands nothing over when it stops, so that one update interrupts Secure Link routes through the Node for about a second. From then on, restarts and updates keep the sockets, including the restart in which the launcher tries its new version: while an older launcher that keeps no sockets still runs, the daemon stores its listeners in systemd's file descriptor store itself.
 - Requests that run longer than the 1.5-second drain, and long-lived streams such as WebSocket or server-sent events, are cut at a restart.
 - On Nodes without systemd (OpenRC), restarts for updates and after a crash are covered by the launcher, but a service restart is not. Routes whose configuration still uses a loopback TCP listener instead of a Secure Link socket refuse connections during a restart, as before.
 

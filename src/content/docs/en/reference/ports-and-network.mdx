@@ -5,7 +5,7 @@ section: Reference
 order: 3
 audience: [network-engineer, operator]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -40,15 +40,17 @@ Ingress nodes receive public application traffic on ports 80 and 443 according t
 | --- | --- | --- |
 | User/browser | Gateway HTTPS | Console, REST, OAuth, MCP, WebSockets, Inference |
 | Managed Node | assigned Relay `9443/tcp` | Always for managed control and supported tunnels |
+| Docker Node of an Availability policy in lease mode, and Ingress Node of its Routes | every Relay of the pool, `9443/tcp` by default | [Data-plane failover](/en/docker/data-plane-failover/): lease traffic and member Secure Links use every Relay |
 | Internet/client | Ingress `80/tcp` | HTTP Route or ACME HTTP-01 |
 | Internet/client | Ingress `443/tcp` | HTTPS Routes and Pages |
 | Gateway/Node | DNS and update endpoints | Name resolution and signed update download |
 | Gateway/Build Worker | Git and registry providers | Source discovery, build input, push/pull |
 | Gateway | OIDC, SMTP, DNS, webhook, SIEM, AI providers | Enabled integration only |
 | Application client | published database TLS port | Only when direct access is deliberately enabled |
-| Gateway | License service `license.thesqlabs.com` over HTTPS | Registration and heartbeats; every Gateway update on every plan; paid key activation |
+| Gateway | License service `license.thesqlabs.com` over HTTPS | Registration and heartbeats; paid key activation; Gateway updates of an installation that holds or held a paid plan (Community installations without a key also update while the service is unreachable) |
 | Storage client | managed storage S3 port (9000 by default) | Only when publication is deliberately enabled |
-| Storage Node | `ghcr.io`, then Docker Hub as a fallback | Pulling managed database and storage images and the backup runner |
+| Storage Node | `ghcr.io`, then Docker Hub as a fallback | Pulling managed database and storage images; the backup runner comes from `ghcr.io` only |
+| Docker Node | `ghcr.io`, then Docker Hub as a fallback | Pulling the pinned Compose runtime |
 | Backup executor Storage Node | external databases, storage endpoints, and `ghcr.io` | Database backups and restores |
 | External Redis restore target | executor service IP, TCP 20000–39999 | Only during a restore into an external Redis |
 | External ClickHouse server | S3 staging endpoint | Backups and restores of external ClickHouse |

@@ -5,7 +5,7 @@ section: Nodes and Relay
 order: 4
 audience: [operator, network-engineer]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-10-02
 ---
 
 
@@ -68,7 +68,7 @@ The pool stays `healthy` in steady state. Gateway tells three kinds of rebalance
 
 Gateway signs the policy it pushes to each Relay with a lease. A Relay keeps admitting connections on its last signed policy until that lease expires, so Secure Links and database links keep opening new connections through a remote Relay while Gateway is stopped, updated, or unreachable. Set the lease in **Settings → Relay** under **Policy lease**: 72 hours by default, from 1 hour to 7 days (168 hours).
 
-**Grant lifetime** (1–224 hours, 4 by default) sets how long newly issued endpoint and connection grants are valid. Grants of a Relay Pool member always live at least a third longer than the policy lease (96 hours with the defaults), so a Relay never runs out of grants while it still admits on its last policy. A rotation of the grant signing key waits until every Relay has applied the new key or its lease has run out. A Relay from before 2.11 rc.18 keeps a 15-minute lease and caps its grants at 48 hours until it is updated.
+**Grant lifetime** (1–224 hours, 4 by default) sets how long newly issued endpoint and connection grants are valid. Grants of a Relay Pool member always live at least a third longer than the policy lease (96 hours with the defaults), so a Relay never runs out of grants while it still admits on its last policy. A rotation of the grant signing key waits until every Relay has applied the new key or its lease has run out. A Relay from 2.10 keeps a 15-minute lease and caps its grants at 48 hours until it is updated.
 
 What needs Gateway: new and changed Routes and links, revocations, new grants, enrollment, and every management operation. The local Relay stops with the Gateway host, so only Relays on other hosts carry traffic when the whole host is down. When a Relay reconnects after a gap, the audit log records the time it ran on its last policy as `relay.instance.policy.stale_period`, with `from` and `to`.
 
@@ -91,7 +91,7 @@ When a Route or link is deleted or its target changes, Gateway pushes a policy t
 
 A Relay Pool update performs the rolling procedure itself: it drains each remote member, updates it, verifies it, and returns it to service before moving to the next. It waits up to 30 minutes for streams on a member to end and otherwise pauses the run; a failed run releases the drains it took. The same run updates the local Relay by recreating its container. In 2.11, Relay releases require Gateway 2.11 or newer, and Gateway does not offer an update while its local Relay is two or more minor versions behind the target.
 
-With a single Relay, recreating it briefly interrupts Secure Link traffic: requests that are open through the old Relay at that moment end, and daemons reconnect within a fraction of a second after the new Relay listens. Ingress Nodes hold new Secure Link connections for up to 3 seconds while the Relay or the target daemon is back, so current daemons see added latency rather than `502` responses. A Relay older than 2.11 rc.7 is stopped after 2 seconds instead of waiting for Docker's 10-second stop timeout. When updating from 2.10 or an earlier 2.11 release candidate, update the Node daemons before the Relay Pool so the recreated Relay meets daemons that reconnect quickly. Relay updates without any interruption need a second Relay in the pool.
+With a single Relay, recreating it briefly interrupts Secure Link traffic: requests that are open through the old Relay at that moment end, and daemons reconnect within a fraction of a second after the new Relay listens. Ingress Nodes hold new Secure Link connections for up to 3 seconds while the Relay or the target daemon is back, so current daemons see added latency rather than `502` responses. A Relay from 2.10 is stopped after 2 seconds instead of waiting for Docker's 10-second stop timeout. When updating from 2.10, update the Node daemons before the Relay Pool so the recreated Relay meets daemons that reconnect quickly. Relay updates without any interruption need a second Relay in the pool.
 
 Relays vote in [data-plane failover](/en/docker/data-plane-failover/). Before draining a Relay, the update waits until the other voters and candidates of its Availability policies are back and voting, and after the restart it waits until the Relay votes again (at most 3 minutes), so a Relay update never takes a second vote away from a policy.
 
