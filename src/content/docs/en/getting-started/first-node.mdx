@@ -5,7 +5,7 @@ section: Start here
 order: 8
 audience: [operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-10
+lastReviewed: 2026-10-02
 ---
 
 A **Node** is a Linux host enrolled into Gateway for a specific operational role. The host runs a Gateway-managed daemon that reports its identity and capabilities and receives only the commands allowed for that role. Adding a Node does not move an existing workload automatically; it creates trusted capacity that you can select later.
@@ -42,7 +42,7 @@ Also confirm role-specific ownership:
 
 - Ingress Nodes need the intended public listeners and a clear DNS/TLS operating model.
 - Docker Nodes need a local supported Docker Engine and sufficient capacity for their workloads; the Node installer can prepare supported runtime components on a fresh compatible host.
-- Storage Nodes need eligible durable storage and the required loop/mount capabilities. Do not assume an ordinary restricted LXC guest is sufficient.
+- Storage Nodes need eligible durable storage, the required loop/mount capabilities, and outbound HTTPS to `ghcr.io`. Do not assume an ordinary restricted LXC guest is sufficient: it needs a loop-device pool sized for every managed instance and concurrent backup; see [Storage Node and Docker Node prerequisites](/en/getting-started/requirements/#storage-node-and-docker-node-prerequisites).
 - Build Workers need a dedicated host or outer unprivileged container and an approved egress profile.
 - Relay Nodes need an address and port reachable from participating Gateway, Docker, Ingress, and Storage hosts. Gateway does not open the firewall or traverse NAT for you.
 

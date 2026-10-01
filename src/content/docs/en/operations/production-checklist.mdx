@@ -5,7 +5,7 @@ section: Operations and security
 order: 1
 audience: [operator, sre, security-admin]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -31,6 +31,8 @@ A production-ready installation has known owners, tested recovery, observable cu
 - Every role reports expected capabilities and update channel.
 - Offline behavior, daemon restart, node restart, and reconnect are tested.
 - Firewalls allow only documented traffic.
+- Storage Nodes reach `ghcr.io`, and an LXC Storage Node has a loop-device pool sized for every managed instance and concurrent backup.
+- Docker Nodes that hold Availability leases run the lease watchdog and reach every Relay.
 
 ## Workloads and data
 

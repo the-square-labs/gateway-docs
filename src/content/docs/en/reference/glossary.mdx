@@ -5,7 +5,7 @@ section: Reference
 order: 4
 audience: [all]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -22,6 +22,8 @@ Use these terms in runbooks, support requests, automation, and architecture deci
 **Deployment** — A stable application identity with blue/green runtime slots and rollback state.
 
 **Desired owner** — The Gateway resource or subsystem responsible for creating, reconciling, and retiring a dependent object. Objects with another owner should not be deleted as manual cleanup.
+
+**Ingress group** — A set of nginx Ingress Nodes that serve the same Routes, Domains, and Pages sites, each keeping its own copy of their configuration and certificates. See [Ingress groups](/en/ingress/ingress-groups/).
 
 **Managed node** — A host running a bounded Gateway daemon role.
 
@@ -68,6 +70,10 @@ Use these terms in runbooks, support requests, automation, and architecture deci
 **Fail closed** — Rejecting or deferring an operation when authorization, ownership, identity, entitlement, capability, or compatibility cannot be proven instead of selecting a less secure fallback.
 
 **Immutable artifact** — A build or Pages output identified by content or release identity and not modified in place. Mutable pointers such as Pages Tags select an immutable artifact.
+
+**Lease mode** — Data-plane failover of Workload Availability: the Docker Nodes, Ingress Nodes, and Relays of a workload hold a lease per serving slot and fail over without Gateway. See [Data-plane failover](/en/docker/data-plane-failover/).
+
+**Lease watchdog** — The `gateway-lease-watchdog` service on Docker Nodes that stops a lease-mode container past its lease deadline, even when the Docker daemon or dockerd hangs.
 
 **Managed database** — A PostgreSQL, Redis, or ClickHouse instance provisioned and operated on a Storage Node.
 
