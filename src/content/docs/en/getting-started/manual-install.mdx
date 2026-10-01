@@ -5,7 +5,7 @@ section: Start here
 order: 6
 audience: [operator, power-user]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-10-02
 ---
 
 import LatestGatewayVersion from '../../../../components/LatestGatewayVersion.astro';
@@ -178,7 +178,7 @@ curl -fSLo docker-compose.yml \
 less docker-compose.yml
 ```
 
-You can also [open the Compose file in the browser](/install/docker-compose.manual.yml) before downloading it. Review the images, ports, volumes, health checks, log limits, and Docker socket mount. The file is configuration; it is not executed by the shell.
+You can also [open the Compose file in the browser](/install/docker-compose.manual.yml) before downloading it. Review the images, ports, volumes, health checks, log limits, and Docker socket mount. The file is configuration; it is not executed by the shell. Like the installer, it takes the PostgreSQL, Redis, and registry images from `.env`, pinned by digest, and stops PostgreSQL with a smart shutdown so that Gateway can finish its own shutdown first.
 
 ## 4. Create local secrets and settings
 
@@ -210,6 +210,8 @@ grep -n 'REPLACE_WITH_' .env
 ```
 
 The generated secrets never leave your host unless you copy them elsewhere.
+
+The template pins PostgreSQL, Redis, and the registry by digest to the Gateway image mirror on `ghcr.io`. If the host cannot reach `ghcr.io`, replace those three lines with the Docker Hub references of the same digests listed in the template's comments.
 
 Internal HTTPS is the safe default. If a trusted reverse proxy will terminate TLS and the internal hop is intentionally plaintext, change `WEB_TLS_BOOTSTRAP_MODE=https` to `WEB_TLS_BOOTSTRAP_MODE=http` before the first start.
 
