@@ -5,7 +5,7 @@ section: AI and inference
 order: 2
 audience: [ai-admin, developer, operator]
 status: ready
-lastReviewed: 2026-09-05
+lastReviewed: 2026-10-02
 ---
 
 Gateway Inference gives a team one governed endpoint for approved AI models. Administrators connect provider accounts, combine compatible sources behind stable public model IDs, decide who can use each model, and set per-user limits. Users and coding agents receive one Gateway token instead of credentials for every upstream provider.
@@ -75,7 +75,7 @@ Use the public model ID published by the administrator, not an upstream provider
 
 ## Providers, sources, and public models
 
-A **provider connection** represents one authenticated upstream account or endpoint. Discovery records the models, technical capabilities, and quota information currently reported by that connection.
+A **provider connection** represents one authenticated upstream account or endpoint. Discovery records the models, technical capabilities, and quota information currently reported by that connection, and fills model limits, reasoning levels, and modalities from the provider's live roster. When the inference core cannot read the account or needs it signed in again, the sync reports that reason instead of success, and an old quota reading is not stored as current. When failover runs out of accounts, clients receive the provider's actual error, such as authentication, quota, or refusal. Claude Fable 5.1, Mythos 5.1, and Opus 5.5 are recognized; Fable 5.1 and Opus 5.5 models published before 2.11 have tools disabled and must be saved again.
 
 A **source** connects one discovered provider model to one published Gateway model. A source can override the subscription multiplier when its real capacity cost differs from the model default. Disabling a source removes it from new routing without forcing clients to change the public model ID.
 

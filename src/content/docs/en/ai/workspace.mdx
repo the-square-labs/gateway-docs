@@ -5,7 +5,7 @@ section: AI and inference
 order: 1
 audience: [operator, developer]
 status: ready
-lastReviewed: 2026-08-30
+lastReviewed: 2026-10-02
 ---
 
 
@@ -45,7 +45,7 @@ The Workspace must wait for explicit confirmation before implementing a plan. An
 
 ## Permissions and confirmation
 
-AI does not expand the user's authority. The backend rechecks resource scopes, feature entitlements, validation, ownership, and lifecycle state for every operation. Destructive or consequential actions retain their normal confirmation and audit semantics.
+AI does not expand the user's authority. The backend rechecks resource scopes, feature entitlements, validation, ownership, and lifecycle state for every operation. Destructive or consequential actions retain their normal confirmation and audit semantics. The assistant asks for approval before it reveals or rotates credentials or exports private keys, searches its tool catalog before saying it cannot do something, restores a broken service with reversible steps, and finishes a task before reporting instead of listing steps it could take itself. It cannot change its own user's sign-in methods, MFA, or sessions.
 
 Use a dedicated lower-privilege account for exploratory automation when practical. Do not grant broad administration merely to make a proposed plan executable.
 
