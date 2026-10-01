@@ -5,7 +5,7 @@ section: Start here
 order: 2
 audience: [evaluator, security-admin, platform-engineer]
 status: ready
-lastReviewed: 2026-09-25
+lastReviewed: 2026-10-02
 ---
 
 This page answers the questions buyers and their security reviewers usually ask before choosing Gateway. Each answer is short and links to the page that documents the behavior in detail. Answers describe the current release; roadmap items are labeled in the [plan matrix](/en/reference/plans-and-entitlements/#feature-matrix).
@@ -28,7 +28,7 @@ Protect the Gateway host as a privileged system, and back up the master key sepa
 
 ## What does Gateway send to the license service?
 
-Installation metadata only. Gateway contacts `https://license.thesqlabs.com` to register the installation, to send a heartbeat—every 15 minutes with a paid key and every 30 minutes on Community—to activate or deactivate a key, to authorize the target release before every update on every plan, and, for a licensed installation, to download the signed commercial core.
+Installation metadata only. Gateway contacts `https://license.thesqlabs.com` to register the installation, to send a heartbeat—every 15 minutes with a paid key and every 30 minutes on Community—to activate or deactivate a key, to authorize the target release before an update, and, for a licensed installation, to download the signed commercial core.
 
 Requests carry the installation ID, the installation name (the host name of the configured public URL, or the server host name), the Gateway version, the entitlements schema version, and an installation token. A one-time registration nonce is sent during registration, the paid key when you activate it, and the target version, release ID, and file path during an update. Infrastructure configuration, resource contents, secrets, logs, user or resource counts, prompts, and model responses are not sent.
 
@@ -39,7 +39,7 @@ Permission and entitlement checks use the cached license state stored in your in
 Running infrastructure keeps running. Neither expiry nor an unreachable license service stops or deletes containers, Deployments, Compose Projects, Routes, certificates, managed database engines, or published Pages deployments.
 
 - **Key expiry.** After the expiry date the paid plan stays fully active for a plan-specific grace period: 24 hours on Personal, 3 days on Business, and 7 days on Enterprise. The Dashboard shows a warning during grace. After grace, workloads, the data plane, and data keep running; scheduled backups, restores into existing databases, viewing, logs, monitoring, credential reveal, and deletion of existing paid resources keep working. Creating paid resources and changing their configuration are blocked, and SIEM forwarding and external registry access pause until renewal.
-- **License service unreachable.** A previously valid paid installation keeps its plan for 100 days after the issue time of its last signed license state, with the status **Licensed with warning**. This does not extend a known expiry date. After 100 days the behavior matches an ordinary expiry. Community installations keep running while the service is unreachable. Activating a paid key and updating Gateway on any plan require the service to be reachable; a failed update leaves the current version running. See [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
+- **License service unreachable.** A previously valid paid installation keeps its plan for 100 days after the issue time of its last signed license state, with the status **Licensed with warning**. This does not extend a known expiry date. After 100 days the behavior matches an ordinary expiry. Community installations keep running while the service is unreachable, and a Community installation without a key also updates without it. Activating a paid key, and updating an installation that holds or held a paid plan, require the service to be reachable; a failed update leaves the current version running. See [Update prerequisites in 2.11](/en/operations/updates-backups/#update-prerequisites-in-211).
 - **Resources above Community limits.** Community limits apply only when you create a managed Node, user, or custom permission group. Existing Nodes, users, and groups above the limit keep working and are never deleted.
 - **Downgrade and renewal.** A downgrade to a lower paid plan keeps the higher plan for its grace period. Renewing the key restores full operations without rebuilding resources. Installations that held a paid plan keep receiving updates with the commercial core, so existing paid resources keep running after an update.
 

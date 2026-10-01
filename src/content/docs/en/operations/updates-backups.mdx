@@ -5,7 +5,7 @@ section: Operations and security
 order: 2
 audience: [operator, sre]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-10-02
 ---
 
 
@@ -106,7 +106,7 @@ Use the same release first. Verify sign-in, secret decryption, Relay identity, a
 ## Gateway update procedure
 
 1. Read the release notes and required intermediate versions.
-2. Confirm the active update channel and target version, and that Gateway can reach the license service; see [Update prerequisites in 2.11](#update-prerequisites-in-211).
+2. Confirm the active update channel and target version and, for an installation that holds or held a paid plan, that Gateway can reach the license service; see [Update prerequisites in 2.11](#update-prerequisites-in-211). When updating from 2.10, follow [Updating from 2.10](#updating-from-210) first.
 3. Verify recent PostgreSQL and persistent-volume backups.
 4. Record current Gateway, Relay, and daemon versions and image digests.
 5. Confirm PostgreSQL, Redis, Relay, and disk health.
@@ -120,15 +120,17 @@ Do not treat a running container as a successful update. The application must de
 
 ## Update prerequisites in 2.11
 
-Every Gateway update, on every plan, first authorizes the target release with the license service at `license.thesqlabs.com`. This applies to updates started from the Console and to re-running the installer. Gateway verifies the signed release before it changes the host:
+Every Gateway update first authorizes the target release with the license service at `license.thesqlabs.com`. This applies to updates started from the Console and to re-running the installer. Gateway verifies the signed release before it changes the host:
 
-- **License service unreachable:** the update stops before any change and the current Gateway keeps running. There is no supported offline update path in 2.11, so allow outbound access to the license service during update windows.
-- **Paid installations:** an installation that holds or held a paid activation—including an expired, revoked, transferred, or deactivated one—receives the commercial core for the target version, so its existing paid resources keep running after the update. Gateway verifies the core's signature, version, sizes, and hashes, and accepts the authorization only as a signed license state for that request. If authorization or verification fails, the current Gateway keeps running; Gateway never silently replaces a paid installation with Community. An installation that never held a paid plan updates as Community.
-- **Running operations:** after pulling images and before changing the host, Gateway waits for running and queued orchestration work—Deployments, Compose operations, Workload Availability actions, migrations, and build rollouts—to finish. The wait lasts up to 15 minutes by default, or up to the longest deadline announced by running work, and at most 60 minutes. New orchestration work started during the wait is rejected with `GATEWAY_UPDATING`. An administrator can end the wait early with **Update now**.
+- **Paid installations:** an installation that holds or held a paid activation—including an expired, revoked, transferred, or deactivated one—receives the commercial core for the target version, so its existing paid resources keep running after the update. Gateway verifies the core's signature, version, sizes, and hashes, and accepts the authorization only as a signed license state for that request. Such an installation needs the license service during the update: if the service cannot be reached, refuses the release, or returns a state that fails verification, the update stops before any change and the current Gateway keeps running. Gateway never silently replaces a paid installation with Community, so allow outbound access to the license service during update windows.
+- **Community installations:** an installation that never held a paid plan updates as Community. When it has no license key, no paid plan in its license state, and no commercial core on the host, it also updates while the license service cannot be reached, because it downloads nothing private. A refusal or a license state that fails verification still stops the update.
+- **Running operations:** after pulling images and before changing the host, Gateway waits for running and queued orchestration work—blue/green deploys and the drains of their previous slots, Compose operations, Workload Availability actions, migrations, and build rollouts—to finish. The wait lasts up to 15 minutes by default, or up to the longest deadline announced by running work, and at most 60 minutes. The update screen lists the operations it waits for. New orchestration work started during the wait is rejected with `GATEWAY_UPDATING`. An administrator can end the wait early with **Update now**; Gateway then resumes or reconciles the interrupted operations after the restart.
 
 - **Free disk space:** before it replaces the app, the update takes a snapshot of the Gateway database and needs free space for it on the filesystem that holds the Gateway directory: the database size plus 10% plus 256 MiB. With less, the update stops before any change, and the update container logs say how much space is needed.
 
 The previous image and commercial core are kept so that a failed update can roll back. See [Commercial core](/en/reference/plans-and-entitlements/#commercial-core) for how paid features are delivered.
+
+The wait for running operations, the disk-space check, and the database snapshot below belong to the updater of the version that is running. They apply to updates started from 2.11 on, not to the update from 2.10; see [Updating from 2.10](#updating-from-210).
 
 ### Automatic rollback and the database snapshot
 
@@ -143,6 +145,76 @@ docker compose up -d
 ```
 
 The snapshot protects only the update itself. Keep the PostgreSQL backups of the [recovery set](#build-the-recovery-set) as well.
+
+## Updating from 2.10
+
+The update from 2.10.x is run by the 2.10.x updater. It neither waits for running operations nor snapshots the Gateway database, so prepare it yourself.
+
+### Before you update
+
+1. In the Gateway directory (`/opt/gateway` by default), back up the database and keep a copy of `.env`, which holds `PKI_MASTER_KEY`:
+
+   ```bash
+   docker compose exec -T postgres pg_dump -Fc -U gateway gateway > gateway-2.10.dump
+   cp .env env-2.10.backup
+   ```
+
+2. Avoid deploys, backups, and Docker migrations while the update runs.
+3. On a paid installation, make sure the Gateway host can reach the license service: the update downloads the signed commercial core of 2.11 and stops before the app is replaced if it cannot. Community installations that never held a paid plan update without it.
+4. On Community, read [Upgrading a Community installation from 2.10](/en/reference/plans-and-entitlements/#upgrading-a-community-installation-from-210): from 2.11, databases (including external connections saved in 2.10), storage, GitLab integration, and AI Workspace Plan Mode, Scenarios, and Sandboxes need Personal or higher. Their records stay in the database and become usable again with a Personal or higher key.
+
+The update applies the 2.11 database migrations. Existing data that 2.11 no longer allows, such as two workloads on one host port of a Node, two enabled Routes with the same name on a Node, or duplicate active backup runs, is flagged in the audit log instead of failing the update; see [Conflicts resolved by the 2.11 update](#conflicts-resolved-by-the-211-update).
+
+If the update rolls back, 2.10.x starts again on the already migrated database and keeps its permissions and a valid license; updating again restores everything 2.11 had. Fix the cause shown in the update container logs and update again. To return to the state before the update instead, put the saved `.env` back, stop every service except `postgres` (`docker compose stop app relay registry redis`), restore `gateway-2.10.dump` with the `DROP DATABASE` and `pg_restore` commands from [Automatic rollback and the database snapshot](#automatic-rollback-and-the-database-snapshot), and run `docker compose up -d`.
+
+### Update order
+
+1. Update Gateway.
+2. Update the Node daemons with **Nodes > Update Nodes**, which lists every Docker, Nginx, Storage, and Monitoring Node that has a newer daemon and updates the selected ones together.
+3. Update the Relay Pool with **Settings > General > Update Relay Pool**.
+
+Do not update Node daemons or Relays before Gateway: the 2.11 Relay requires Gateway 2.11, and many 2.11 features and fixes need the 2.11 Docker, Nginx, and Relay releases. Relays from 2.10 keep the 15-minute relay policy lease until they are updated.
+
+After the daemon and Relay updates:
+
+- The first apply of an unchanged Compose revision recreates its services once, because they receive the new log settings; see [Supported Compose configuration](/en/docker/compose/#supported-compose-configuration). Deployment routers stop capping request bodies at their next deploy, slot switch, or restart.
+- Docker Availability policies switch to lease mode by themselves once every Docker Node, Ingress Node, and Relay of the workload has run 2.11 for 2 minutes. Each Docker Node needs the lease watchdog: the Docker node installer installs it, and a 2.11 Docker daemon that runs as root with systemd or OpenRC installs it itself. Otherwise the policy lists the Node under **Excluded nodes**; re-run the Docker node installer there with `sudo` and the same `--user`. In lease mode every Node of the policy must reach every Relay. See [Data-plane failover](/en/docker/data-plane-failover/).
+- Storage Nodes need outbound HTTPS to `ghcr.io` to pull the backup runner. Other third-party runtime images come from the Gateway mirror on `ghcr.io` first and fall back to Docker Hub.
+- External PostgreSQL and Redis connections with TLS created before 2.11 stay unverified and show a warning. Run the one-click check or add the private CA; see [TLS certificate verification](/en/databases/overview/#tls-certificate-verification-for-external-connections).
+- Claude Fable 5.1 and Opus 5.5 models published in Gateway Inference before 2.11 have tools disabled; open and save them again.
+
+### Permissions after the update
+
+- Groups, users, API tokens, and OAuth grants that held a retired scope name received its replacement, and retired names are still accepted on input for two releases. Scripts that read scope names back should expect the new names. See [Retired scope names](/en/identity/scopes-reference/#retired-scope-names).
+- Some replacements are broader than the old scope. Review groups, user permissions, API tokens, and OAuth grants that held any of these:
+  - `integrations:gitlab:ci:edit`, `:variables:edit`, `:variables:delete`, `:webhooks:manage`, and `:registry:manage` became `integrations:gitlab:repo:write`, which also commits repository files and changes CI configuration, CI/CD variables, webhooks, and registry settings. A CI token that only cleaned up the registry can now push commits.
+  - `integrations:gitlab:ci:view` became `integrations:gitlab:repo:read`, which also reads repository files.
+  - `integrations:gitlab:sync`, `:github:sync`, and `:git:sync` became the connector's `manage` permission: settings, tokens, allowlist, test, and delete.
+  - `nodes:config:edit` became `nodes:manage`, which also installs the Secure Runtime, changes service addresses, and powers, resizes, and restores snapshots of hosted VMs.
+  - `proxy:advanced:bypass` and `proxy:raw:bypass` both became `proxy:unrestricted`, so either one now lifts both restrictions.
+  - `proxy:templates:create`, `:edit`, and `:delete` became `proxy:templates:manage`, every nginx template operation.
+  - `notifications:alerts:create`, `:edit`, and `:delete` became `notifications:alerts:manage`, and `notifications:webhooks:create`, `:edit`, and `:delete` became `notifications:webhooks:manage`, which also reveals webhook URLs, headers, and delivery payloads.
+  - `docker:containers:folders:manage` became `docker:folders:manage`, which covers the folders of every Docker resource type.
+- `integrations:gitlab:variables:view` became `integrations:gitlab:repo:read` and no longer reads CI/CD variable values; reading values needs `integrations:gitlab:repo:write`.
+- Every action permission except create now implies the view permission of its family with the same qualifier: a group or token that held only a delete, edit, manage, or run permission can now also list and view those resources. Review delete-only grants.
+- Built-in groups receive the new permissions automatically. Custom groups do not: grant `diagnostics:view` and `diagnostics:logs` for [Gateway diagnostics](/en/observability/overview/#gateway-diagnostics), `databases:backups:view`, `:manage`, `:run`, and `:restore`, `nodes:backups:execute`, and `storage:view`, `:create`, `:edit`, `:delete`, `:iam`, `storage:objects:*`, and `storage:credentials:use` where needed. `storage:credentials:reveal` implies `storage:credentials:use`.
+- Tokens never see more than the account that minted them, and a create permission no longer counts as view when access is delegated: tokens of users whose access shrank lose that access.
+- Git sources saved after the update build automatically only while the account that saved them keeps `use` on the repository; webhooks and automatic deploys check the account that configured them.
+- Deploying or updating a Deployment with a new image, command, or environment, and updating a container's image, need the environment and secrets permissions; attaching a container to networks needs network edit access. Write-scoped SQL on an external PostgreSQL runs one statement at a time, and schema or role changes need the admin permission.
+- Community plan limits are 25 managed Nodes, 3 users, and 1 custom permission group (100, 10, and 5 in 2.10). Nothing existing is removed; creating more is refused.
+
+### Changed behaviour
+
+- **TLS for unknown names.** Ingress Nodes reject TLS handshakes for hostnames that no Route serves. Clients or load balancers that connect by IP over HTTPS without SNI, or rely on a default site, are refused. Nodes whose nginx already has its own default server on port 443 skip this with a warning. See [Routes](/en/ingress/domains-routes-tls/#routes).
+- **Compose restrictions.** Compose projects cannot use the host network or Gateway's internal networks (`gateway-secure-links`, `gateway-db-*`, `gateway-storage-*`), set Gateway's reserved labels, or set Docker client variables such as `DOCKER_HOST`, `DOCKER_CONFIG`, `BUILDKIT_*`, and `COMPOSE_*`. Existing projects that break these rules keep running and can be stopped and removed, but a new revision, apply, start, or restart is refused until they are edited, including the first apply after the Docker daemon update. See [Supported Compose configuration](/en/docker/compose/#supported-compose-configuration).
+- **nginx directive checks.** nginx template content and Additional Route advanced configuration are checked like Route configuration: without `proxy:unrestricted`, denied directives are refused and nginx logs can be written only under `/var/log/nginx`. Templates saved before the update keep rendering as saved.
+- **Relay policy lease.** Relays keep working without Gateway for 72 hours by default (**Settings > Relay**, 1 hour to 7 days); see [Relays without Gateway](/en/nodes/relay-pool/#relays-without-gateway).
+- **Housekeeping.** Operation history—finished builds with their logs, Compose, Availability, and hosting operations, and webhook deliveries—is kept for 90 days, and expired OAuth grants and OAuth clients that never completed authorization are purged. Change **Settings > Features > Housekeeping** before the first run if you need a longer history; see [Housekeeping and retention](/en/reference/tasks-and-audit/#housekeeping-and-retention).
+- **Internal PKI renewal.** Internal PKI certificates linked to Routes are reissued automatically before expiry when Gateway holds the private key; auto-renew is turned on for existing links.
+- **GitLab token rotation.** GitLab tokens with the `api` or `self_rotate` scope that expire within 14 days are rotated by Gateway, which revokes the old token. Give Gateway a token of its own if the same token is used elsewhere; see [Token expiry and rotation](/en/integrations/source-control/#token-expiry-and-rotation).
+- **Settings.** Saving settings restarts Gateway only when internal HTTPS is switched, or when the Public URL changes while internal HTTPS is on. Sign-in methods, MFA, the OIDC provider, and identity provisioning moved to **Settings > Authentication**, structured logging is on **Settings > Features**, and **Authentication email (SMTP)** is now **SMTP configuration**.
+- **API.** Node reads no longer include enrollment token material, an empty Node update returns `400`, and a malformed ID returns `404`. Environment, recreation, and Compose revision changes return `409` while a build rollout owns the target. An unknown `/api` path returns a JSON `404`.
+- Docker Availability is no longer labelled Tech Preview, and builds can no longer be pinned to the Dashboard or sidebar.
 
 ## Conflicts resolved by the 2.11 update
 
@@ -164,7 +236,7 @@ The update does not delete Routes, workloads, storage, or backups, and does not 
 
 Update one failure domain at a time. For Relay Pool members, drain, update, verify, and return each member before moving to the next. For ordinary Nodes, verify role-specific resources after reconnect. Do not update every Ingress, Storage, or Relay member simultaneously unless the environment has an independently tested recovery path.
 
-After a Gateway update, update the Node daemons before the Relay Pool, especially when coming from 2.10 or an earlier 2.11 release candidate: the Relay Pool update also recreates the local Relay, and current daemons reconnect to it within a fraction of a second; see [Relay and Relay Pool](/en/nodes/relay-pool/#drain-update-and-remove). Daemon and Relay updates of Nodes that take part in [data-plane failover](/en/docker/data-plane-failover/#updates-and-mixed-versions) are sequenced by Gateway, one member of each Availability policy at a time, so an update can wait for its lease peers.
+**Nodes > Update Nodes** updates the daemons of several Nodes together, and Gateway refuses daemon updates for disconnected Nodes, Relay Nodes, and Nodes that already run the release; see [Daemon updates](/en/nodes/updates-and-offline-behavior/#daemon-updates). After a Gateway update, update the Node daemons before the Relay Pool, especially when coming from 2.10: the Relay Pool update also recreates the local Relay, and current daemons reconnect to it within a fraction of a second; see [Relay and Relay Pool](/en/nodes/relay-pool/#drain-update-and-remove). Daemon and Relay updates of Nodes that take part in [data-plane failover](/en/docker/data-plane-failover/#updates-and-mixed-versions) are sequenced by Gateway, one member of each Availability policy at a time, so an update can wait for its lease peers.
 
 ## Restore procedure
 

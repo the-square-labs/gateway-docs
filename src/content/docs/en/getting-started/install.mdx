@@ -5,7 +5,7 @@ section: Start here
 order: 5
 audience: [operator]
 status: ready
-lastReviewed: 2026-08-31
+lastReviewed: 2026-10-02
 ---
 
 
@@ -25,7 +25,7 @@ Both methods deploy the same Gateway foundation. Choose [manual installation wit
 Choose a dedicated Linux host or VM that meets the [capacity requirements](/en/getting-started/requirements/). The automatic Docker setup supports Debian, Ubuntu, Fedora, CentOS, and RHEL families. You also need:
 
 - an account with root access or working `sudo`;
-- outbound internet access to the Gateway update service, the license service (`license.thesqlabs.com`), container registries, and Docker package repositories; Gateway registers with the license service after its first start, and every update authorizes the target release there;
+- outbound internet access to the Gateway update service, the license service (`license.thesqlabs.com`), container registries, and Docker package repositories; Gateway registers with the license service after its first start, and an installation that holds or held a paid plan authorizes every update there;
 - `curl` and OpenSSL;
 - a plan for the final Gateway URL and DNS record;
 - inbound access to the web listener and Relay path described in [Ports and network paths](/en/reference/ports-and-network/).
@@ -63,7 +63,7 @@ curl -sSL https://thesqlabs.com/gateway/install.sh | bash -s -- --dry-run
 
 ## What the installer changes
 
-The default installation directory is `/opt/gateway`. The installer verifies the selected release, writes the environment and Compose foundation, pulls immutable application and Relay images, creates persistent storage, and starts Gateway, PostgreSQL, Redis, the local Relay member, and the private internal registry required by supported build workflows.
+The default installation directory is `/opt/gateway`. The installer verifies the selected release, writes the environment and Compose foundation, pulls immutable application and Relay images, creates persistent storage, and starts Gateway, PostgreSQL, Redis, the local Relay member, and the private internal registry required by supported build workflows. PostgreSQL, Redis, and the registry are pinned by digest and pulled from the Gateway image mirror on `ghcr.io` first, with Docker Hub as a fallback.
 
 Treat this host as part of Gateway's trusted computing base. The application intentionally receives Docker-host control for signed updates, recovery, housekeeping, and optional managed services. Isolate Gateway in its own VM or dedicated trusted host; do not colocate unrelated workloads or credentials on it.
 
@@ -76,7 +76,7 @@ When the stack becomes healthy, the terminal prints:
 - a one-time setup code valid for 24 hours;
 - a reset command that issues a replacement code if setup expires.
 
-The plaintext setup code is shown once and is not stored in `.env` or the database. Enter it only in the Gateway setup page; do not paste it into chat, tickets, logs, or screenshots. The browser wizard configures the canonical URL, node-network endpoints, authentication, the first administrator, structured logging, and optional AI Workspace.
+The plaintext setup code is shown once and is not stored in `.env` or the database. Enter it only in the Gateway setup page; do not paste it into chat, tickets, logs, or screenshots. The browser wizard configures the canonical URL, node-network endpoints, authentication, the first administrator, structured logging, and optional AI Workspace. Setup does not need a paid license; structured logging stays off until the license includes it (Business and Enterprise).
 
 Continue with [Initial setup](/en/getting-started/initial-setup/) after the installer finishes.
 
@@ -101,6 +101,6 @@ Do not add production nodes until the wizard is complete, the canonical URL is c
 
 ## If installation fails
 
-Read `/tmp/gateway-install.log` and the final installer message before retrying. A retry is safe after fixing a network, package, disk, or registry problem; the installer detects an existing installer-managed deployment and preserves persisted Gateway configuration during updates.
+Read `/tmp/gateway-install.log` and the final installer message before retrying. A retry is safe after fixing a network, package, disk, or registry problem; the installer detects an existing installer-managed deployment and preserves persisted Gateway configuration during updates. A fresh installation that stopped before it showed the setup code is resumed by the next run instead of being treated as an existing deployment.
 
 If services were created but Gateway did not become healthy, inspect bounded Compose status and logs from `/opt/gateway` rather than deleting volumes or regenerating credentials. Preserve `.env`, PostgreSQL, Relay identity/state, `gateway_data`, and the master encryption key. Removing these artifacts turns a recoverable install problem into data or identity loss.
