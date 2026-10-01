@@ -5,7 +5,7 @@ section: Docker
 order: 4
 audience: [platform-engineer, developer]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-10-02
 ---
 
 
@@ -54,7 +54,7 @@ Confirm that the submitted YAML matches the running application's services, volu
 - **Containers.** Gateway adds its own management labels to each service, so expect the first apply to recreate the service containers. Plan a short maintenance window.
 - **Environment and secrets.** `env_file` and a project `.env` file are not used. Declare variables in each service's `environment:` and reference values with `${NAME}`. Gateway supplies non-secret variables and encrypted project secrets for interpolation when it applies a revision. In the Console, the **Variables** and **Secrets** tabs become available after adoption; use `${NAME}` placeholders for values that you will add there.
 - **Host bind mounts.** Bind mounts are rejected, including relative paths such as `./config:/etc/app`, `~` paths, and sources built from variables. Move configuration files into the image or a named volume before adoption.
-- **One-off jobs.** Gateway has no equivalent of `docker compose run`, and no pre-deploy or release hook. For a migration step, either run the command in a service container through the console, which requires `docker:containers:console`, or model it as a service with `restart: "no"` that other services wait for through `depends_on`. Use `condition: service_completed_successfully` when other services must wait for the job to finish. Gateway expects revision services to keep running, so a finished one-shot service is reported as not running and the project can show **degraded**.
+- **One-off jobs.** Gateway has no equivalent of `docker compose run`, and no pre-deploy or release hook. For a migration step, either run the command in a service container through the console, which requires `docker:containers:console`, or model it as a service with `restart: "no"` that other services wait for through `depends_on`. Use `condition: service_completed_successfully` when other services must wait for the job to finish. A one-shot service that exits with code 0 counts as complete, so it does not mark the project **degraded**.
 
 ### Supported Compose configuration
 
@@ -72,16 +72,22 @@ Other rules:
 - `depends_on` accepts a list of services or a long-syntax mapping; in the mapping form, each entry can set only `condition`, which is required and must be `service_started`, `service_healthy`, or `service_completed_successfully`; every dependency must be a service in the same file;
 - top-level volumes and networks can set only `external`, `name`, `driver`, and `labels`, so `driver_opts` is rejected;
 - `logging` can set only `driver` and `options`; the driver must be `json-file`, `local`, or `none`, and options are limited to `max-size`, `max-file`, and `compress` (`none` takes no options);
-- labels that start with `com.docker.compose.` or `wiolett.gateway.compose.` are reserved;
+- labels that start with `com.docker.compose.`, `wiolett.gateway.`, `net.wiolett.gateway.`, or `com.wiolett.gateway.`, and the label `gateway.sandbox`, are reserved, and a label key built from a variable is refused;
+- a network cannot be the host network (`host` or `none`) or one of Gateway's internal networks (`gateway-secure-links`, `gateway-db-*`, `gateway-storage-*`), and a network name built from a variable is refused;
+- variables and secrets cannot use the names the Compose client reads itself: `PATH`, `DOCKER_HOST`, `DOCKER_CONTEXT`, `DOCKER_CONFIG`, `DOCKER_CERT_PATH`, `DOCKER_TLS_VERIFY`, `DOCKER_TLS`, `DOCKER_API_VERSION`, `DOCKER_DEFAULT_PLATFORM`, `DOCKER_BUILDKIT`, and every name that starts with `BUILDKIT_` or `COMPOSE_`; other `DOCKER_*` names stay ordinary variables;
 - every `${NAME}` reference needs a provided variable or secret.
 
-On a node whose default log driver is `json-file`, the Docker daemon gives every service without `logging` json-file rotation at 50 MB × 3, the same limit single containers get. To keep a service's logs longer, set your own `max-size` and `max-file`; `driver: json-file` without options keeps Docker's unlimited default. Docker cannot change the log settings of an existing container, so the first apply after the Docker daemon update recreates each service once. Applying a new revision already recreates every service, so this matters only when you re-apply an unchanged revision. A node whose Docker daemon has not been updated yet applies revisions without their `logging` sections and keeps Docker's defaults.
+A project saved before these network, label, and variable rules existed keeps running and can still be stopped and brought down, but creating a revision, applying, starting, and restarting it are refused until its configuration follows them. That includes the first apply after the Docker daemon update.
+
+On a node whose default log driver is `json-file`, the Docker daemon gives every service without `logging` json-file rotation at 50 MB × 3, the same limit single containers get. To keep a service's logs longer, set your own `max-size` and `max-file`; `driver: json-file` without options keeps Docker's unlimited default. Docker cannot change the log settings of an existing container, so the first apply after the Docker daemon update recreates each service once, even for an unchanged revision. Later applies recreate only the services whose own configuration changed. A node whose Docker daemon has not been updated yet applies revisions without their `logging` sections and keeps Docker's defaults.
 
 Gateway and the Docker daemon apply the same rules, so a revision that passes validation is not rejected later when it is applied. Business and Enterprise projects with a Git source can additionally use a bounded `build` section; see [Create a managed project](#create-a-managed-project). The same rules apply to revisions created through the API, MCP, or AI Workspace. Rewriting a Compose file to fit these rules is part of adoption planning, so do it in staging first.
 
 ## Revisions and lifecycle
 
 Editing configuration creates a new immutable revision. Use **Pull & Apply** to pull required images and apply the active revision, **Start** or **Stop** for project lifecycle, and **Change revision** to reapply an earlier valid revision. Inactive revisions can be removed when no operation uses them; the active revision cannot be deleted.
+
+Applying a revision recreates only the services whose own configuration changed; services whose image and settings are unchanged keep running. An apply without a pull fetches only the images that are missing on the Node. A revision whose published TCP port is already held on the Node by a Deployment, an Availability replica, a managed database, or managed storage is refused when it is created, with `409 COMPOSE_HOST_PORT_IN_USE`; for a project built from Git, the build fails with that message and no revision is created. A project shows **degraded** when one of its services stops outside Gateway, and the status page reports it. On a project with Workload Availability, a start, stop, or restart requested while the previous Availability operation still runs is queued and runs after it.
 
 ![Managed Compose Project overview with desired state, runtime state, drift, and recent operations](/screenshots/product-tour/compose-overview.png)
 
@@ -93,7 +99,9 @@ Lifecycle work is represented by durable operations and Tasks. Reloading the pag
 
 Routes and Secure Links can target a managed Compose service by stable project and service identity rather than an ephemeral container name. Managed database bindings update the project's revision while preserving authored configuration and protected secrets. Removing a service or binding must go through a new revision so Gateway can reconcile dependent relationships safely. Applying an older revision keeps the current bindings; a revision that does not define a bound service is refused until that binding is deleted. Through the API, MCP, or the assistant, a service can be bound before the project's first revision; see [Workloads that are not running](/en/databases/bindings/#workloads-that-are-not-running).
 
-Bindings are available only for [managed databases](/en/databases/managed-databases/). To reach an external database, pass its connection values through variables and secrets; see [Managed and external databases](/en/databases/overview/#managed-and-external-databases-at-a-glance).
+A new revision carries each database link whole—its network, variables, and the host alias of the link's private endpoint—so applying it starts the service with the link already resolvable, in one operation. Adding, removing, or repairing a link on a running project applies the project once without pulling its images and without recreating its other services. A project built from a Git source can take and drop links too: Gateway applies a copy of the built revision that keeps the repository's Compose file and its Git lineage, and a later push keeps the link and its secrets. The project overview shows each link's runtime: its open connections against the link's capacity of 64 and the connections it refused; see [Link capacity](/en/databases/bindings/#link-capacity-and-connection-pools).
+
+Bindings are available only for [managed databases](/en/databases/managed-databases/). To reach an external database, pass its connection values through variables and secrets; see [Managed and external databases](/en/databases/overview/#managed-and-external-databases-at-a-glance). Managed storage links are not available for Compose services; give a service S3 credentials from an [access key](/en/storage/overview/#access-keys-and-workload-links) through variables and secrets instead.
 
 ## Drift and troubleshooting
 

@@ -5,7 +5,7 @@ section: Databases
 order: 5
 audience: [database-operator, operator, platform-engineer]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
 Gateway creates native backups of PostgreSQL, Redis, and ClickHouse databases and writes them to a [storage connection](/en/storage/overview/). Backups work for both [managed databases and external connections](/en/databases/overview/#managed-and-external-databases-at-a-glance) and are available on Personal and higher. Each backup and restore runs as a job on a Storage Node that you choose as the executor, not on the Gateway host.
@@ -19,7 +19,7 @@ A backup protects application data. It does not replace the Gateway control-plan
 - A managed storage destination with TLS must serve a certificate that includes `localhost` and `127.0.0.1`. Gateway adds those names automatically to clusters created with an earlier release; until the new certificate is served, runs wait in the queue with the reason shown and retry on their own, and fail with `BACKUP_STORAGE_CERTIFICATE_OUTDATED` after 7 hours. See [TLS certificate renewal](/en/storage/overview/#tls-certificate-renewal).
 - While a managed storage destination has its writes frozen for a [migration](/en/storage/overview/#migrating-from-minio), backups and restores that would write to it are refused with `STORAGE_WRITES_FROZEN`; move or pause their policies first.
 - For an external database that uses TLS, the backup and restore jobs apply the connection's [certificate verification setting](/en/databases/overview/#tls-certificate-verification-for-external-connections) and its custom CA. An executor whose Docker daemon is older than 2.11 cannot verify certificates, so a run for a verified connection fails with `BACKUP_EXECUTOR_TLS_VERIFICATION_UNSUPPORTED`; update the Storage Node, or turn verification off for that connection.
-- The Storage Node must be able to pull the backup runner image from GitHub Container Registry. The runner is started only for a backup or restore and, like other Gateway-internal containers, is hidden from container lists and user lifecycle actions. It contains fixed native tools; API clients cannot supply commands, scripts, SQL, or other images.
+- The Storage Node must be able to pull the backup runner image from GitHub Container Registry. The runner ships with the Gateway release and is pinned by digest; for PostgreSQL it picks the client tools that match the server version. The runner is started only for a backup or restore and, like other Gateway-internal containers, is hidden from container lists and user lifecycle actions. It contains fixed native tools; API clients cannot supply commands, scripts, SQL, or other images.
 - Permission to manage backup policies on the database, `nodes:backups:execute` for the executor Node, and the storage permissions listed in [Permissions](#permissions). The built-in **operator** group does not include them all.
 
 ## Create a backup policy
@@ -71,7 +71,7 @@ Scheduled runs and retention act as the policy owner—the user who last saved t
 
 Restore from the Console creates a new managed database on the executor Storage Node and never overwrites existing databases. It requires permission to create databases on that Node or in the chosen folder. Gateway uses the newest catalog version with the backup's major engine version and fails if none exists. The new database gets 1 CPU, 1024 MB of memory (2048 MB for ClickHouse), no swap, no TCP publication, TLS enabled, and storage of 20 GB or three times the backup size, whichever is larger; resize it afterwards if needed. The restore job itself uses the default resource limits—20 GiB of workspace and a one-hour timeout—rather than the policy's limits; the API can override them.
 
-Through the API you can also restore a managed or external backup into an existing, empty database connection of the same engine that is not the source. This requires restore permission on the backup's database and edit permission on the target. A native preflight check confirms that the target is empty, and Gateway checks again immediately before restoring.
+Through the API you can also restore a managed or external backup into an existing, empty database connection of the same engine that is not the source. This requires restore permission on the backup's database and edit permission on the target. A native preflight check confirms that the target is empty, and Gateway checks again immediately before restoring. A restore into the backup's own source connection is refused before a run is created, with `409 BACKUP_RESTORE_SOURCE_REJECTED`; restore into another empty connection or a new managed database instead.
 
 ## Permissions
 

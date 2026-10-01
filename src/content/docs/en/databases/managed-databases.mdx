@@ -5,7 +5,7 @@ section: Databases
 order: 2
 audience: [database-operator, operator]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-10-02
 ---
 
 
@@ -56,7 +56,7 @@ Provisioning failures commonly result from unavailable nodes, capacity limits, s
 
 Pause and unpause control compute while retaining the database data. Expect normal health, metrics, Explorer, and Console actions to be unavailable while the instance is paused. Restart creates a brief service interruption and should be announced to dependent applications when they cannot reconnect automatically.
 
-Resize only within the engine and storage constraints. Storage can grow but cannot shrink, and resize and settings changes are unavailable while the instance is paused. Back up before a substantial capacity change, follow the resize operation, then verify storage reporting and application behavior.
+Resize only within the engine and storage constraints. Storage can grow but cannot shrink, and resize and settings changes are unavailable while the instance is paused. A change cannot be saved while a previous change is still being applied. Monitoring history survives a period when the database or its Node was offline. Back up before a substantial capacity change, follow the resize operation, then verify storage reporting and application behavior.
 
 Gateway keeps the engine owner credential internal and never returns it to users. **Reveal credentials** and credential rotation apply to a separate direct-access user that exists while TCP publication is enabled; rotation affects direct clients that use it. Application bindings retain their own engine identities and are not affected.
 
@@ -70,7 +70,9 @@ Deletion is destructive. First remove or migrate dependent bindings—Gateway re
 
 ## Operator details: storage and direct TLS
 
-The Storage Node must pass the same storage preflight used by the runtime. Gateway-managed databases use fixed-size preallocated ext4 images rather than an unbounded Docker volume. VM and bare-metal hosts normally provide the required loop and mount capabilities. Containerized hosts require explicit loop-device and mount support; an unsupported host is rejected instead of silently falling back to weaker storage isolation.
+The Storage Node must pass the same storage preflight used by the runtime. Gateway-managed databases use fixed-size preallocated ext4 images rather than an unbounded Docker volume. VM and bare-metal hosts normally provide the required loop and mount capabilities. Containerized hosts require explicit loop-device and mount support; an unsupported host is rejected instead of silently falling back to weaker storage isolation. Each managed database holds one loop device while it exists, so size the loop-device pool of an LXC Storage Node for every instance, object storage member, and concurrent backup; see [Storage Node and Docker Node prerequisites](/en/getting-started/requirements/#storage-node-and-docker-node-prerequisites). Deleting an instance releases its mount and loop device before Gateway reports the deletion, and the daemon repairs devices left behind by earlier releases on its own.
+
+The Docker daemon, not Docker's restart policy, starts the managed engines on a Storage Node. After a reboot it mounts each instance's disk image first and starts the engine only then, so an engine never writes into the empty mount directory on the root filesystem. An engine that stops unexpectedly is started again with a growing delay of up to one minute; an instance you stopped stays stopped. A Storage Node starts even when one of its managed containers is missing; that database shows as not running.
 
 Direct publication uses native TLS. Gateway issues the server certificate from its separate Database CA and keeps the private key in daemon-owned storage outside the database image. PostgreSQL and Redis expose one TLS endpoint; ClickHouse exposes HTTPS and its native TLS endpoint. Clients must trust the displayed Database CA and should follow the documented hostname or certificate-fingerprint policy rather than disabling verification.
 

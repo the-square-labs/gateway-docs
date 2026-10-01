@@ -5,7 +5,7 @@ section: Databases
 order: 3
 audience: [platform-engineer, developer, security-admin]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-10-02
 ---
 
 
@@ -45,7 +45,7 @@ Before creating a binding, confirm that the managed database is **Ready**, the t
 
 Use private bindings for workload access even when direct TCP publication is enabled for an external client. Publication is opt-in and does not replace binding isolation.
 
-Bindings can target an eligible standalone Container, Deployment, or Compose service on an online Docker Node, and the database must be **Ready**. Gateway delivers the values you select—connection URI, host, port, database, username, and password—under the environment variable names you choose; at least one value is required. The Console suggests names such as `DATABASE_URL` or `REDIS_URL`, or engine-specific names for individual values. The URI uses the engine's plain protocol on the private binding network (`postgresql://`, `redis://`, or `http://` for ClickHouse); bindings do not add TLS settings. The plain URI also works for PostgreSQL with TLS enabled: when a client connects without TLS, the daemon on the database's Storage Node (2.11.0-rc.14 or later) opens the TLS connection to PostgreSQL and verifies the instance's certificate. A client that requests TLS itself, for example with `sslmode=require`, keeps its own end-to-end TLS session. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
+Bindings can target an eligible standalone Container, Deployment, or Compose service on an online Docker Node, and the database must be **Ready**. Gateway delivers the values you select—connection URI, host, port, database, username, and password—under the environment variable names you choose; at least one value is required. The Console suggests names such as `DATABASE_URL` or `REDIS_URL`, or engine-specific names for individual values. The URI uses the engine's plain protocol on the private binding network (`postgresql://`, `redis://`, or `http://` for ClickHouse); bindings do not add TLS settings. The plain URI also works for PostgreSQL with TLS enabled: when a client connects without TLS, the daemon on the database's Storage Node (2.11 or later) opens the TLS connection to PostgreSQL and verifies the instance's certificate. A client that requests TLS itself, for example with `sslmode=require`, keeps its own end-to-end TLS session. Treat every delivered value as a secret even though the listener itself is private. Do not copy the URI into Compose source, image layers, screenshots, logs, or Pages runtime configuration.
 
 One database can serve multiple workloads through separate bindings. That is preferable to reusing one shared account: each binding can be audited, rotated, and retired independently. Gateway rejects conflicting environment-variable assignments rather than silently replacing an existing application value; the only exception is an explicit opt-in to replace existing values on a standalone Container.
 
@@ -72,11 +72,30 @@ After creation or workload recreation, verify all of the following:
 - recreating the workload preserves the same binding relationship and does not create an additional engine role;
 - an unrelated workload cannot reach the private listener or reuse the binding identity.
 
-Credential reveal is an exceptional diagnostic action. It requires explicit access and should be followed by normal secret-handling controls; avoid revealing credentials merely to prove that a binding works when an application query and telemetry provide safer evidence.
+Container inspect, environment views, archive export, and duplicate do not reveal link passwords or storage link keys, and a duplicate does not inherit the source's links. Credential reveal is an exceptional diagnostic action. It requires explicit access and should be followed by normal secret-handling controls; avoid revealing credentials merely to prove that a binding works when an application query and telemetry provide safer evidence.
+
+## Link capacity and connection pools
+
+A managed database link carries up to 64 concurrent connections, and so does a [managed storage link](/en/storage/overview/#access-keys-and-workload-links). The capacity belongs to the link, not to a container: every container the link serves shares it, and during a blue/green rollout the old and the new slot share it until the old slot stops. [Workload Availability](/en/docker/availability/) gives each placement its own link. The engine's own limit applies on top: a managed PostgreSQL instance keeps PostgreSQL's default of 100 connections for all its links together.
+
+Size the connection pools of one container at no more than half the capacity, 32, and count every pool in the process—ORM, job queue, migrations, and separate drivers—so that a new slot can open its pools while the serving slot still holds its own. S3 SDKs keep large keep-alive pools by default (50 sockets per client in the AWS SDK for JavaScript), so cap them as well.
+
+The Node that runs the workload enforces the capacity for the link as a whole: its listener for the link (for a storage link, the connector's socket on the Node) holds the link at 64 open connections whichever Relay of the pool carries each one, and every Relay caps the link's route at the same 64. A connection over the capacity is accepted and closed at once, so clients report errors such as `Connection terminated unexpectedly` or `ECONNRESET`, and an S3 client of a storage link gets a connection error. The Node logs `managed link connection rejected` with `reason=link_limit` once a minute per link, with the count since the previous line; the line appears in the Node's logs in Gateway, not only in the host journal.
+
+### Link runtime
+
+The overview of a linked Container, Deployment, or Compose Project shows each link's runtime: open connections against the limit of 64, throughput, connection setup latency, completion health, and admission rejects with the reason of the latest refusal. Storage links of Containers and Deployments appear next to database links, marked **S3**. The runtime of an Availability link is the sum of its placements.
+
+| Interface | Database link | Storage link |
+| --- | --- | --- |
+| REST | `GET /api/databases/managed/{id}/bindings/{bindingId}/runtime` | `GET /api/managed-storage/{id}/bindings/{bindingId}/runtime` |
+| MCP and assistant | `manage_managed_database` `get_binding_runtime` | `manage_managed_storage` `get_binding_runtime` |
+
+`activeStreams` is the number of open connections as the Node running the workload counts them, `openedTotal` and the byte counters are what the link carried through that Node whichever Relays carried it, `throttledTotal` counts connections refused at the capacity by the Node or a Relay, and `connections` adds the limit, the Node's refusals, and the reason and time of the latest refused connection. Completions, failures, setup latency, and duration come from the Relays. `connections` is `null` while that Node runs a Docker daemon older than 2.11, and the other figures then come from the Relays as well. Sustained admission rejects mean the pools of the containers behind the link are too large.
 
 ## Reconciliation and failure handling
 
-Desired binding state remains durable through workload recreation, Docker daemon restart, node reconnection, and Relay restart. Reconciliation restores the daemon-owned listener and confirms the engine identity without creating a new identity for every transient runtime. This is how Gateway avoids orphan roles after normal restart and recreation paths.
+Desired binding state remains durable through workload recreation, Docker daemon restart, node reconnection, and Relay restart. A link keeps its connections while Docker's API is briefly slow and when Availability takes over or hands back a workload, and reconciliation runs only for the workload an event concerns. Reconciliation restores the daemon-owned listener and confirms the engine identity without creating a new identity for every transient runtime. This is how Gateway avoids orphan roles after normal restart and recreation paths.
 
 For a failed binding, diagnose in this order: managed database readiness; target Storage Node; target Docker node; binding desired state; daemon listener state; engine identity and permissions; then application configuration. Inspect the binding operation and telemetry before retrying. Do not delete the engine role, bridge network, or listener manually as a general repair tactic, because that can desynchronize the durable record from the database and daemon.
 
