@@ -5,13 +5,13 @@ section: Identity and access
 order: 1
 audience: [security-admin, operator]
 status: ready
-lastReviewed: 2026-09-27
+lastReviewed: 2026-10-02
 ---
 
 
 This area answers two management questions: how people prove who they are, and how Gateway limits what they can change. The identity owner maintains sign-in and recovery; resource owners define operational groups; security administrators review privileged access. Success means people can recover access without bypassing controls, and a role change can be applied and audited without rewriting every resource.
 
-Gateway supports independent OIDC, local-password, and email one-time-code authentication. Passkeys are enrolled after account creation. MFA policy can require enrollment before a user receives a normal session.
+Gateway supports independent OIDC, local-password, and email one-time-code authentication. Passkeys are enrolled after account creation. MFA policy can require enrollment before a user receives a normal session. Sign-in methods, multi-factor authentication, the OIDC provider, and identity provisioning are configured under **Settings > Authentication**.
 
 Use groups as the normal permission boundary. Keep a small, auditable administrator group and separate operators, developers, observers, and automation. Blocking or deleting a user revokes access while preserving historical attribution. Restoring a deleted user leaves the account blocked until explicitly enabled.
 
@@ -44,7 +44,7 @@ Blocking stops new use without erasing attribution. Deletion remains visible in 
 An invitation email tells a new user that an administrator created their Gateway account and links to the sign-in page, with one hint for their sign-in method: the identity provider, an email code, or the separate email that sets their password. Sending needs verified [SMTP](/en/integrations/dns-email-webhooks/#email) and the Gateway public URL.
 
 - **Send invitation email** in **Administration > Users > Configure User**, in the **Account** panel, sends it by hand. It is offered once per user and only until their first sign-in; after sending, the panel shows when it was sent. It needs `admin:users` on that user.
-- **Settings > Advanced > Identity provisioning > Send an invitation email when an account is created** sends it for every account created in the Console, the API, or MCP. It is off by default and needs `settings:gateway:edit` to change. If sending fails, the account is still created and the invitation can be sent later by hand.
+- **Settings > Authentication > Identity provisioning > Send an invitation email when an account is created** sends it for every account created in the Console, the API, or MCP. It is off by default and needs `settings:gateway:edit` to change. If sending fails, the account is still created and the invitation can be sent later by hand.
 
 API: `POST /api/admin/users/{id}/invitation`; MCP and assistant: `manage_user` operation `send_invitation`. The user list returns `lastLoginAt` and `invitationSentAt` for each user.
 

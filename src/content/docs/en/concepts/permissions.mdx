@@ -5,7 +5,7 @@ section: Concepts
 order: 3
 audience: [security-admin, operator]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
 Gateway uses explicit scopes. A scope has a capability base and may include a resource suffix.
@@ -65,7 +65,7 @@ What the user sees:
 - Containers and Deployments created from a Git source go into the chosen folder, also when the first build creates them later. While one waits for its first build it is listed in that folder and can be moved with **Move to folder...** or by dragging; the first build then creates it in the folder it is in at that moment. See [Folder placement of built workloads](/en/docker/git-builds/#folder-placement-of-built-workloads).
 - A refused create names the folders and Nodes where the user may create instead, for example `Missing docker:containers:create at the root (no folder). Your docker:containers:create access is limited to folder 'MyProject' (<id>): pass folderId for one of them.` Docker creates return this message in the Console and the REST API; for other resource types, MCP and AI Workspace tool errors add the same list of folders and Nodes.
 
-**Settings > Advanced > Auto-assign permissions for created resources** is on by default. It adds grants for each new resource to its creator's additional permissions: view of the new resource always, and other per-resource scopes only when the creator already holds them broadly or on the destination folder or Node. A user with only a creation scope therefore sees exactly the resources they created. A folder-limited creator therefore keeps the same access if the resource is later moved out of the folder, but gains nothing new: view and create on a folder do not turn into console or secret access. Turning the setting off affects new resources only; existing grants stay and can be changed in **Assign permissions**.
+**Settings > Authentication > Identity provisioning > Auto-assign permissions for created resources** is on by default. It adds grants for each new resource to its creator's additional permissions: view of the new resource always, and other per-resource scopes only when the creator already holds them broadly or on the destination folder or Node. A user with only a creation scope therefore sees exactly the resources they created. A folder-limited creator therefore keeps the same access if the resource is later moved out of the folder, but gains nothing new: view and create on a folder do not turn into console or secret access. Turning the setting off affects new resources only; existing grants stay and can be changed in **Assign permissions**.
 
 API tokens and OAuth grants accept the same folder restrictions. Their folders are resolved first and the result is then limited by the owner's own access, so a token never sees more than its owner; see [Restrict tokens and OAuth grants](/en/identity/scopes-tokens-oauth/#restrict-tokens-and-oauth-grants).
 
@@ -120,7 +120,9 @@ Create automation credentials with an owner, purpose, expected rotation, and kno
 
 Session, API, MCP, and protected WebSocket operations revalidate access. Revoking a group, token, or resource grant must stop new privileged actions and terminate protected streams where required. A previously loaded page or discovered tool does not preserve authority after revocation.
 
-When a user's responsibilities change, review group membership, direct grants, active sessions, API tokens, OAuth grants, and automation dependencies together. Blocking a user stops new use without erasing attribution. Deleting a user preserves historical audit records, and restoring a deleted record does not silently reactivate it.
+When a user's responsibilities change, review group membership, direct grants, active sessions, API tokens, OAuth grants, and automation dependencies together. Blocking a user stops new use without erasing attribution. Deleting a user preserves historical audit records, and restoring a deleted record does not silently reactivate it. Removing the last administrator is refused.
+
+Deleting a resource—a Node, Route, Domain, certificate, CA, Access List, template, group, folder, connector, Pages Project, database, storage, logging environment, Deployment, Compose Project, or another resource—removes every permission that names it from users, groups, API tokens, and OAuth and MCP grants, so a later resource with the same name never inherits them. Permissions left on resources deleted before 2.11 are removed at startup and every hour.
 
 For credential rotation, create the replacement, update the dependent system, verify successful use, then revoke the old credential. After suspected disclosure, revoke first when operationally safe, inspect audit activity and request IDs, invalidate related sessions separately, and rotate any downstream secret that may have been exposed.
 

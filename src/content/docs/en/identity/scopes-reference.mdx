@@ -5,10 +5,10 @@ section: Identity and access
 order: 3
 audience: [security-admin, developer]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
-Gateway 2.11 defines 225 permission scopes. The tables below list their exact names and the actions they authorize. Assign permissions through groups or a user's additional permissions; see [users and groups](/en/identity/auth-users-groups/), [Restrict access to a folder](/en/concepts/permissions/#restrict-access-to-a-folder), and [API tokens, OAuth, and MCP](/en/identity/scopes-tokens-oauth/) for setup. Scopes renamed or removed in 2.11 are listed under [Retired scope names](#retired-scope-names).
+Gateway 2.11 defines 231 permission scopes. The tables below list their exact names and the actions they authorize. Assign permissions through groups or a user's additional permissions; see [users and groups](/en/identity/auth-users-groups/), [Restrict access to a folder](/en/concepts/permissions/#restrict-access-to-a-folder), and [API tokens, OAuth, and MCP](/en/identity/scopes-tokens-oauth/) for setup. Scopes renamed or removed in 2.11 are listed under [Retired scope names](#retired-scope-names).
 
 ## How to read this reference
 
@@ -59,11 +59,15 @@ Each resource type has its own folder tree. A folder in **Routes** does not cove
 | Storage: storage connections and managed storage | Yes | `storage:folders:manage` |
 | Logging environments; logging schemas | Yes | `logs:environments:folders:manage`; `logs:schemas:folders:manage` |
 | Users; permission groups | Yes | `admin:users:folders:manage`; `admin:groups:folders:manage` |
+| Internal PKI certificate authorities | Yes; a folder holds whole CA hierarchies, and a grant covers each root CA in the folder and its intermediates | `pki:ca:folders:manage` |
+| Internal PKI certificates | Yes | `pki:cert:folders:manage` |
+| nginx templates | Yes | `proxy:templates:folders:manage` |
+| Certificate templates | Folders only organize the list; certificate template scopes are not restricted to resources | `pki:templates:folders:manage` |
 | Database backups | Through the database's folder | — |
 | Logging ingest tokens and log search | Through the logging environment's folder | — |
 | Workload Availability | Through the container or Compose folder | — |
 | Backup executors (`nodes:backups:execute`) | Through the Node's folder | — |
-| Internal PKI, access lists, nginx templates, Docker registries, Docker tasks, notifications, status page, SIEM, integrations, hosting accounts and VMs, inference, housekeeping, license, and settings | No | — |
+| Access lists, Docker registries, Docker tasks, notifications, status page, SIEM, integrations, hosting accounts and VMs, inference, Gateway diagnostics, housekeeping, license, and settings | No | — |
 
 Scopes without folder support are global or, where the catalogue shows **Resource**, restricted to one resource. Hosting snapshot folders only organize snapshots; they are not an access boundary.
 
@@ -85,7 +89,7 @@ Git integration scopes can be limited to one connector and, for GitLab and GitHu
 - **Credentials:** Gateway uses the connector's own credential when `integrations:<provider>:use` covers the repository in the same way, and the caller's personal credential otherwise. Without either, AI Workspace users are asked to authorize a personal credential, and other callers receive `403` naming `integrations:<provider>:use` and the repository.
 - **Hidden projects:** a GitLab project outside the caller's grant answers exactly like a project that is not synchronized (`404`, no path). Writes, secrets, sandbox clones, and the credential decision read group ancestry and repository ownership fresh from the provider; reads may use a cached value for up to five minutes, and GitHub ownership is cached by repository ID, never by path. Connector change events over the WebSocket reach only callers who may see that connector.
 - **Lists:** connector lists contain the connectors the caller holds any Git scope on; a connector seen only through narrower grants is returned without its allowlist. Project and repository lists contain only what the grants cover.
-- **Build sources:** configuring a Docker or Pages build source needs `integrations:<provider>:use` on the repository, with any qualifier that covers it, next to the workload's own permissions. `repo:read`, broad `view`, and a personal credential are not needed, because builds use the connector credential. The source picker lists the connectors and repositories that the caller's Git scopes cover, since `use` implies `view`. A manual build checks the caller's `use` on the saved repository again. Sources saved before 2.11.0-rc.11 keep building automatically as before; a source created or saved again since then builds from polling and webhooks only while the account that saved it still holds `use` on the repository, and otherwise records a cancelled build `Build paused: <user> no longer has use on <repo>` until that access returns or someone with `use` saves the source again.
+- **Build sources:** configuring a Docker or Pages build source needs `integrations:<provider>:use` on the repository, with any qualifier that covers it, next to the workload's own permissions. `repo:read`, broad `view`, and a personal credential are not needed, because builds use the connector credential. The source picker lists the connectors and repositories that the caller's Git scopes cover, since `use` implies `view`. A manual build checks the caller's `use` on the saved repository again. Sources saved before 2.11 keep building automatically as before; a source created or saved again after the update builds from polling and webhooks only while the account that saved it still holds `use` on the repository, and otherwise records a cancelled build `Build paused: <user> no longer has use on <repo>` until that access returns or someone with `use` saves the source again.
 - **Tokens and OAuth grants:** a delegated Git scope is bounded by the owner per qualifier. A broader token scope is narrowed to the owner's qualifiers, and a token scope limited to a group, owner, project, or repository is kept when the owner holds the same scope, or one that implies it, anywhere on that connector. Because containment is provider data, every repository operation of a token or OAuth caller needs both the token and the owner's current scopes to cover the repository: a token limited to project P works while its owner holds the group that contains P, and a token limited to group G whose owner holds only project P reaches P alone. Such narrow token scopes never count when the token grants permissions to users or groups.
 
 The group editor, users' additional permissions, the API token form, and OAuth and MCP consent offer these restrictions under each connector, with a search picker for groups and projects or owners and repositories. The picker reads `GET /api/integrations/{provider}/{connectorId}/scope-targets?search=&limit=50`, where `provider` is `gitlab` or `github`, and shows the labels of stored qualifiers through `GET /api/integrations/{provider}/{connectorId}/scope-targets/resolve?ids=group/123,project/456`. Both endpoints need `integrations:<provider>:view` on the connector or on anything inside it, and return only the targets the caller may view and the connector's allowlist includes. They share a limit of 60 requests a minute per account, after which they return `429 SCOPE_TARGET_RATE_LIMITED` with `Retry-After`, and one request makes at most 60 uncached lookups at the provider; further targets keep their raw IDs. A target that no longer exists is marked `missing` and shown as **Unavailable**; a stored qualifier that the caller cannot view keeps its raw ID as its label.
@@ -118,12 +122,16 @@ For two releases, Gateway still accepts the old names on input and rewrites them
 | `proxy:templates:create`, `:edit`, `:delete` | `proxy:templates:manage` |
 | `docker:containers:folders:manage` | `docker:folders:manage` |
 
+Some replacements are broader than the scope they replace, so review groups, user permissions, API tokens, and OAuth grants that held them: `integrations:gitlab:repo:write` also commits repository files and changes CI configuration, variables, webhooks, and registry settings; `integrations:gitlab:repo:read` also reads repository files; a connector's `manage` permission covers its settings, tokens, allowlist, test, and deletion; `nodes:manage` also installs the Secure Runtime, changes service addresses, and controls hosted VMs; `proxy:unrestricted` lifts both the advanced and the raw configuration restrictions; and `notifications:webhooks:manage` also reveals webhook URLs, headers, and delivery payloads. `integrations:gitlab:variables:view` became `integrations:gitlab:repo:read`, which reads variable keys but not their values. See [Updating from 2.10](/en/operations/updates-backups/#updating-from-210).
+
 Other permission changes in 2.11:
 
 - **New scopes:** `pki:ca:edit` (CA URLs, maximum validity, and the OCSP responder) and `pki:ca:export` (CA private-key export), both restrictable to one CA; `docker:volumes:edit` (rename, relabel, resize, and adopt volumes); `integrations:github:repo:read`, `:repo:write`, `integrations:git:repo:read`, and `:repo:write`.
 - **Git providers** share the same verbs: `view` lists connectors, `manage` configures, tests, and synchronizes them, `use` uses the connector's own credential, and `repo:read` and `repo:write` read or change repository content. Each can be limited to a connector and, for GitLab and GitHub, to groups, projects, owners, or repositories; see [Git integration restrictions](#git-integration-restrictions). Listing and reading GitLab's synced projects needs `integrations:gitlab:view`. GitLab `repo:read` covers repository files, CI pipelines and job logs, and CI/CD variable keys, never values; changing variables needs `repo:write`. Reading GitHub Actions variable values needs `integrations:github:repo:write`. The built-in viewer and operator groups get `integrations:gitlab:view` only.
 - **Templates:** writing nginx template content needs `proxy:templates:manage` and no longer `proxy:raw:write`. The built-in operator group keeps only `proxy:templates:view`, because template content is raw nginx configuration.
-- **Folder grants** now resolve for `logs:tokens:*` (through the logging environment's folder) and `docker:availability:manage` (through the container or Compose folder).
+- **Folder grants** now resolve for `logs:tokens:*` (through the logging environment's folder) and `docker:availability:manage` (through the container or Compose folder). Certificate authorities, Internal PKI certificates, and nginx templates can be organised in folders and granted per folder; see [Folder support by resource type](#folder-support-by-resource-type).
+- **Implied view:** every action permission except create implies its family's view permission with the same qualifier, so a delete-only grant now also lists and views those resources; see [Implied view access](#implied-view-access).
+- **New permissions for new features:** `diagnostics:view` and `diagnostics:logs`, `databases:backups:*`, `nodes:backups:execute`, and the `storage:*` scopes. Built-in groups received them; custom permission groups did not, so grant them where needed.
 
 ## Permission catalogue
 
@@ -131,11 +139,12 @@ Other permission changes in 2.11:
 
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
-| `pki:ca:view` | View root and intermediate certificate authorities | Resource | API, MCP |
+| `pki:ca:view` | View root and intermediate certificate authorities | Resource, Folder | API, MCP |
 | `pki:ca:create:root` | Create new root certificate authorities | — | API, MCP |
 | `pki:ca:create:intermediate` | Create intermediate CAs under a root | Resource | API, MCP |
-| `pki:ca:edit` | Edit CA URLs, maximum validity, and the OCSP responder | Resource | API, MCP |
-| `pki:ca:export` | Export a certificate authority with its private key | Resource | API, MCP |
+| `pki:ca:edit` | Edit CA URLs, maximum validity, and the OCSP responder | Resource, Folder | API, MCP |
+| `pki:ca:export` | Export a certificate authority with its private key | Resource, Folder | API, MCP |
+| `pki:ca:folders:manage` | Manage CA folders. Only root CAs move, and their intermediates follow; moving a root CA also needs `pki:ca:edit` on it and on the destination | — | API, MCP |
 | `pki:ca:revoke:root` | Revoke root certificate authorities | — | API, MCP |
 | `pki:ca:revoke:intermediate` | Revoke intermediate certificate authorities | — | API, MCP |
 
@@ -143,10 +152,11 @@ Other permission changes in 2.11:
 
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
-| `pki:cert:view` | View issued certificates | Resource | API, MCP |
+| `pki:cert:view` | View issued certificates | Resource, Folder | API, MCP |
 | `pki:cert:issue` | Issue new certificates | Resource | API, MCP |
-| `pki:cert:revoke` | Revoke issued certificates | Resource | API, MCP |
-| `pki:cert:export` | Export certificates and keys | Resource | API, MCP |
+| `pki:cert:revoke` | Revoke issued certificates | Resource, Folder | API, MCP |
+| `pki:cert:export` | Export certificates and keys | Resource, Folder | API, MCP |
+| `pki:cert:folders:manage` | Manage PKI certificate folders; moving a certificate also needs `pki:cert:issue` on its issuing CA | — | API, MCP |
 
 ### PKI: Templates
 
@@ -156,6 +166,7 @@ Other permission changes in 2.11:
 | `pki:templates:create` | Create certificate templates | — | API, MCP |
 | `pki:templates:edit` | Edit certificate templates | — | API, MCP |
 | `pki:templates:delete` | Delete certificate templates | — | API, MCP |
+| `pki:templates:folders:manage` | Manage certificate template folders; moving a custom template also needs `pki:templates:edit`, and built-in templates never move | — | API, MCP |
 
 ### Domains
 
@@ -202,8 +213,9 @@ Other permission changes in 2.11:
 
 | Scope | Description | Restrictions | Tokens |
 | --- | --- | --- | --- |
-| `proxy:templates:view` | View nginx templates | Resource | API, MCP |
-| `proxy:templates:manage` | Create, edit, and delete nginx templates, including template content | Resource | API, MCP |
+| `proxy:templates:view` | View nginx templates | Resource, Folder | API, MCP |
+| `proxy:templates:manage` | Create, edit, and delete nginx templates, including template content; with a folder qualifier, also create templates in that folder | Resource, Folder | API, MCP |
+| `proxy:templates:folders:manage` | Manage nginx template folders; moving a custom template also needs `proxy:templates:manage` on it and on the destination, and built-in templates never move | — | API, MCP |
 
 ### SSL Certificates
 
@@ -256,6 +268,8 @@ Other permission changes in 2.11:
 | `admin:details:certificates` | View internal system PKI and SSL certificates in read-only mode | — | API, MCP |
 | `admin:update` | Check for and apply updates | — | API, MCP |
 | `admin:alerts` | View and manage alerts | — | API, MCP |
+| `diagnostics:view` | Read Gateway's own state and its 48-hour minute history: host CPU, memory, and disk, the backend process, its PostgreSQL and Redis, the stack containers, background jobs, and API latency. Held by the built-in admin groups | — | API, MCP |
+| `diagnostics:logs` | Read the logs of Gateway's own containers (app, PostgreSQL, Redis, Relay, registry) and of the last update run; implies `diagnostics:view`. Held by the built-in admin groups | — | API, MCP |
 
 ### Gateway Settings
 

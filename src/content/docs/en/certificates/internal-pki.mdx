@@ -5,7 +5,7 @@ section: Certificates and PKI
 order: 2
 audience: [security-admin]
 status: ready
-lastReviewed: 2026-09-28
+lastReviewed: 2026-10-02
 ---
 
 
@@ -58,6 +58,8 @@ Gateway raises expiry alerts for user CAs 180, 60, 30, and 7 days before they ex
 An Internal PKI certificate linked as an [SSL certificate](/en/certificates/ssl-certificates/#internal-pki-certificates) or referenced directly by a Route is reissued automatically when Gateway holds its private key; certificates signed from a CSR are never reissued. Reissuing requires `pki:cert:issue` on the CA, like a manual issue.
 
 Grant `pki:ca:edit` to change a CA's CRL and issuer URLs, maximum validity, and OCSP responder, and `pki:ca:export` to export a CA with its private key; both can be restricted to one CA. `pki:ca:view` covers root and intermediate CAs and can also be restricted to one CA.
+
+Certificate authorities, certificates, and certificate templates can be organised in folders, like Routes and SSL certificates: create, rename, and reorder folders, drag items between them, and pick a folder when creating an item. A CA folder holds whole hierarchies: only root CAs move, and their intermediates follow. Permissions granted on a CA folder cover each root CA in it and its intermediates, and permissions on a certificate folder cover the certificates in it; certificate template folders only organize the list. See [Folder support by resource type](/en/identity/scopes-reference/#folder-support-by-resource-type).
 
 Measure operational success through expiry coverage, revocation publication, audit completeness, and restore testing. Review certificates without owners, overly broad templates, unexpected private-key exports, unused intermediates, and CRLs that relying systems cannot reach. Private-key reveal or export should be rare, separately authorized, and followed by secure custody outside Gateway.
 
