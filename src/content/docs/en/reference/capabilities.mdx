@@ -5,7 +5,7 @@ section: Reference
 order: 1
 audience: [evaluator, operator]
 status: ready
-lastReviewed: 2026-09-29
+lastReviewed: 2026-10-02
 ---
 
 
@@ -29,7 +29,7 @@ lastReviewed: 2026-09-29
 
 ## Availability and target versions
 
-- **Workload Availability (HA) — available**, Business/Enterprise: replication or failover for mount-free Containers, Deployments, and whole Compose Projects, with an optional node priority order and automatic return to the primary. When every participant runs 2.11 rc.20 or later, the Nodes fail over by themselves without Gateway ([data-plane failover](/en/docker/data-plane-failover/)). See the [HA guide](/en/docker/availability/).
+- **Workload Availability (HA) — available**, Business/Enterprise: replication or failover for mount-free Containers, Deployments, and whole Compose Projects, with an optional node priority order and automatic return to the primary. When every participant runs 2.11, the Nodes fail over by themselves without Gateway ([data-plane failover](/en/docker/data-plane-failover/)). See the [HA guide](/en/docker/availability/).
 - **Ingress groups — available**, Business/Enterprise: a Route, Domain, Pages site, or the status page served by several nginx Ingress Nodes at once, with per-member delivery, health, and logs, and a health endpoint for load balancers. See [Ingress groups](/en/ingress/ingress-groups/).
 - **Storage — available in 2.11**, Personal and higher: connections to S3-compatible, FTP, FTPS, and SFTP storage, and managed SeaweedFS object storage with private workload links and Secure Links. See [Storage](/en/storage/overview/).
 - **Database backup and restore — available in 2.11**, Personal and higher: native backups of managed and external PostgreSQL, Redis, and ClickHouse to storage connections. See [Database backups](/en/databases/backups/).

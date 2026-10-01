@@ -5,7 +5,7 @@ section: Ingress
 order: 3
 audience: [operator, platform-engineer, network-engineer]
 status: ready
-lastReviewed: 2026-09-29
+lastReviewed: 2026-10-02
 ---
 
 An ingress group is a set of nginx Ingress Nodes, normally one per site, that serve the same Routes and Domains. Every member renders every Route of the group itself and keeps its own copy of every certificate those Routes use, so a member keeps serving while Gateway or another member is down. Routes to Docker workloads, Pages sites, and the public status page can all be served from a group.
@@ -14,7 +14,7 @@ A group decides which Nodes serve a hostname. It does not choose which member a 
 
 ## Requirements and permissions
 
-- Members are nginx Nodes whose daemon reports the `ingress_group_v1` capability, which the nginx daemon of 2.11 rc.20 and later does. A Node can belong to several groups.
+- Members are nginx Nodes whose daemon reports the `ingress_group_v1` capability, which the nginx daemon of 2.11 does. A Node can belong to several groups.
 - Creating a group, and anything that grows it (adding or reordering members, changing its settings, placing Routes or Domains on it), needs Business or Enterprise, like [Workload Availability](/en/docker/availability/). Existing groups keep serving without it, and removing members or deleting a group is always allowed.
 - Groups use Node permissions. Viewing needs `nodes:details` or `nodes:manage`, broadly or on the group's Node folder; changes need `nodes:manage` on that folder, and adding a Node also needs `nodes:manage` on that Node.
 - Placing a Route or Domain on a group needs `proxy:create` or `domains:create` covering every member: broadly, in the destination folder, or through a grant on each member Node.

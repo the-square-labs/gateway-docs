@@ -5,12 +5,12 @@ section: Docker
 order: 5
 audience: [platform-engineer, operator, sre]
 status: ready
-lastReviewed: 2026-09-29
+lastReviewed: 2026-10-02
 ---
 
 [Workload Availability](/en/docker/availability/) can fail over in two ways. On **backend failover**, Gateway notices that a Node is gone and creates a replacement; this needs a running Gateway. In **data-plane failover** (lease mode), the Docker Nodes, Ingress Nodes, and Relays of the workload decide among themselves who serves it, so a dead or cut-off Node is replaced within about 45 seconds even while Gateway is stopped, being updated, or unreachable.
 
-Lease mode is part of Business and Enterprise. It needs no switch: a policy uses it as soon as every participant supports it and has run steadily for 2 minutes. Participants are the Docker Nodes that can run the workload (candidates), the Ingress Nodes of its Routes, and the Relays that carry its traffic. They must advertise the `availability_lease_v2` capability, which the Docker daemon, nginx daemon, and Relay of Gateway 2.11 rc.20 and later do. Components from rc.18 and rc.19 advertise `availability_lease_v1` and count as outdated.
+Lease mode is part of Business and Enterprise. It needs no switch: a policy uses it as soon as every participant supports it and has run steadily for 2 minutes. Participants are the Docker Nodes that can run the workload (candidates), the Ingress Nodes of its Routes, and the Relays that carry its traffic. They must advertise the `availability_lease_v2` capability, which the Docker daemon, nginx daemon, and Relay of Gateway 2.11 do. Components of early 2.11 release candidates that advertise `availability_lease_v1` count as outdated.
 
 The **Availability** summary of the workload shows **Lease mode**: **Lease** when the Nodes fail over by themselves, **Legacy** on backend failover, and **Bootstrapping** or **Closing** while the policy switches. Hover the badge for the reason.
 
@@ -110,13 +110,13 @@ Gateway plans every move and keeps the records; the Nodes only decide who serves
 
 ## Updates and mixed versions
 
-Update Gateway first, then the Node daemons and the Relay Pool; see [Relay updates](/en/nodes/relay-pool/#drain-update-and-remove) for why the daemons should go first when coming from 2.10 or an earlier 2.11 release candidate. A policy on backend failover stays there while any participant still runs an older release and enters lease mode once, 2 minutes after the last participant was updated. A policy already in lease mode keeps it while only candidate Docker Nodes are outdated; they are excluded and an outdated holder keeps serving until it is updated. An Ingress Node or Relay left on an older release for more than 2 minutes sends the policy to backend failover through **Closing**, with the serving copies kept running; it returns by itself once they are updated.
+Update Gateway first, then the Node daemons and the Relay Pool; see [Relay updates](/en/nodes/relay-pool/#drain-update-and-remove) for why the daemons should go first when coming from 2.10. A policy on backend failover stays there while any participant still runs an older release and enters lease mode once, 2 minutes after the last participant was updated. A policy already in lease mode keeps it while only candidate Docker Nodes are outdated; they are excluded and an outdated holder keeps serving until it is updated. An Ingress Node or Relay left on an older release for more than 2 minutes sends the policy to backend failover through **Closing**, with the serving copies kept running; it returns by itself once they are updated.
 
 Gateway orders daemon updates of lease participants itself. An update of a Docker daemon or Relay that votes in, or can hold, a lease-mode policy waits until the other voters and candidates of that policy are back online, have reported their lease state, and vote again. Meanwhile the Node shows as updating, and the API reports `updatePhase: waiting_for_lease_peers` with the peers in `updateWaitingFor`. Updates requested together run standbys first, then holders; Nodes that share no policy update in parallel. A peer that has not settled 3 minutes after its restart stops blocking, and an update that waited 30 minutes fails with an error naming the peers.
 
-The wait matters mostly once. The first restart of a Node updated from rc.19 or older abstains from voting for about 33 seconds, as does any start after a reboot or with fresh state, so an update may then wait for its lease peers for up to about a minute per peer. Later restarts on the same boot keep voting at once, and a holder whose daemon restarts keeps its slot and keeps serving: its lease is still valid until its watchdog deadline, so its copy takes traffic again as soon as the new daemon process registers, and it keeps renewing until 2 seconds before that deadline. See [Docker daemon restarts](/en/nodes/updates-and-offline-behavior/#docker-daemon-restarts).
+The wait matters mostly once. The first restart of a Node updated from 2.10 abstains from voting for about 33 seconds, as does any start after a reboot or with fresh state, so an update may then wait for its lease peers for up to about a minute per peer. Later restarts on the same boot keep voting at once, and a holder whose daemon restarts keeps its slot and keeps serving: its lease is still valid until its watchdog deadline, so its copy takes traffic again as soon as the new daemon process registers, and it keeps renewing until 2 seconds before that deadline. See [Docker daemon restarts](/en/nodes/updates-and-offline-behavior/#docker-daemon-restarts).
 
-After upgrading to rc.20, a standby with a managed database binding is prepared once more, because standbys now record the database connection settings they were prepared with.
+After the update to 2.11, a standby with a managed database binding is prepared once more, because standbys now record the database connection settings they were prepared with.
 
 A Node rolled back to any release since 2.10.0 still starts: daemons keep their state files in a form older releases can read.
 

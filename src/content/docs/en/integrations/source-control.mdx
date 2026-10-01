@@ -5,7 +5,7 @@ section: Integrations
 order: 3
 audience: [platform-engineer, security-admin]
 status: ready
-lastReviewed: 2026-09-26
+lastReviewed: 2026-10-02
 ---
 
 
@@ -116,7 +116,7 @@ Starting a build from an already saved source is a resource action—`docker:con
 
 Automatic builds from polling and webhooks depend on when the source was last saved:
 
-- **Sources saved before 2.11.0-rc.11** keep building automatically exactly as before.
+- **Sources saved before 2.11** keep building automatically exactly as before.
 - **Sources created or saved again since then** build automatically only while the account that last saved them still holds `integrations:<provider>:use` on the repository and is active. Otherwise no build runs: the build history shows a cancelled build with `SOURCE_OWNER_ACCESS_REVOKED` and the message `Build paused: <user> no longer has use on <repo>`, recorded once per commit, and the source shows the same message as its polling or webhook error. Webhook deliveries are still accepted. Automatic builds resume when the account regains `use`, or when someone who holds it saves the source again.
 
 Grant `use` to the teams that save sources, limited to their projects, before relying on automatic builds.
