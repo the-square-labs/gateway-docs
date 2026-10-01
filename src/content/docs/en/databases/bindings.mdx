@@ -101,7 +101,7 @@ For a failed binding, diagnose in this order: managed database readiness; target
 
 ## Delete and recover
 
-Delete the binding through Gateway when the workload no longer needs access. Gateway removes the listener relationship and retires the binding's engine identity as part of one recorded lifecycle, preventing the normal deletion path from leaving unused identities behind. Delete the binding before deleting the database or the workload whenever possible, then verify that the listener, telemetry, and engine principal cleanup have completed.
+Delete the binding through Gateway when the workload no longer needs access. Gateway removes the listener relationship and retires the binding's engine identity as part of one recorded lifecycle, preventing the normal deletion path from leaving unused identities behind. Delete the binding before deleting the database or the workload whenever possible, then verify that the listener, telemetry, and engine principal cleanup have completed. Deleting a standalone Container through Gateway deletes its links as well, and so does giving its name to another container by creating, duplicating, renaming, or importing one, so a new container with the same name never receives the old link's network or credentials.
 
 If a deletion is interrupted, leave the durable binding record in place and use its operation state for recovery. Manual role deletion is an exceptional recovery procedure because it can make a future reconciliation fail; use it only with an explicit, coordinated recovery plan.
 
