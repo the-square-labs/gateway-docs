@@ -50668,8 +50668,7 @@
                     "maxLength": 200
                   },
                   "removeOrphans": {
-                    "type": "boolean",
-                    "default": false
+                    "type": "boolean"
                   },
                   "volumeNames": {
                     "type": "array",
@@ -230198,6 +230197,7 @@
           "Database Backups"
         ],
         "summary": "Queue restore to a new target",
+        "description": "Restores into a new managed database (newManagedDatabaseName) or another empty connection (restoreTargetConnectionId). storageSizeGb, cpuCores, memoryMb and swapMb size a new managed database with the limits of managed database create; each defaults to the source managed instance, and for a backup of an external database to 1 CPU core, 1024 MB of memory (2048 MB for ClickHouse), no swap and three times the backup on disk (at least 20 GB).",
         "security": [
           {
             "bearerAuth": []
@@ -230278,6 +230278,27 @@
                         "type": "integer"
                       }
                     }
+                  },
+                  "storageSizeGb": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 16384
+                  },
+                  "cpuCores": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 128
+                  },
+                  "memoryMb": {
+                    "type": "integer",
+                    "minimum": 128,
+                    "maximum": 1048576
+                  },
+                  "swapMb": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1048576,
+                    "default": 0
                   }
                 },
                 "required": [
@@ -231221,8 +231242,8 @@
         "tags": [
           "Storage Copy Jobs"
         ],
-        "summary": "Start a server-side copy or sync between two storage connections",
-        "description": "Copies objects from the source to the destination S3 connection (managed or external) on a Storage node, then runs a check and reports object counts, bytes and missing or differing keys. buckets is \"all\" or a list of names (kept on the destination). mode \"sync\" also deletes destination objects the source does not have. dryRun only compares. Reruns copy only what changed; swap source and destination to roll back. Credentials are never returned.",
+        "summary": "Start a server-side copy or sync between two S3 storage connections",
+        "description": "Copies objects from the source to the destination S3 connection (managed or external) on a Storage node, then runs a check and reports object counts, bytes and missing or differing keys. Both connections must be S3: an SFTP or FTP(S) connection is refused with 400 STORAGE_COPY_PROVIDER_UNSUPPORTED. buckets is \"all\" or a list of names (kept on the destination). mode \"sync\" also deletes destination objects the source does not have. dryRun only compares. Reruns copy only what changed; swap source and destination to roll back. Credentials are never returned.",
         "security": [
           {
             "bearerAuth": []
@@ -233304,32 +233325,6 @@
                   },
                   "relayEnabled": {
                     "type": "boolean"
-                  },
-                  "sftpEnabled": {
-                    "type": "boolean"
-                  },
-                  "sftpPort": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 65535
-                  },
-                  "ftpEnabled": {
-                    "type": "boolean"
-                  },
-                  "ftpPort": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 65535
-                  },
-                  "ftpPassivePortStart": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 65535
-                  },
-                  "ftpPassivePortCount": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 64
                   }
                 },
                 "required": [
@@ -234012,7 +234007,8 @@
                   "memoryMb": {
                     "type": "integer",
                     "minimum": 256,
-                    "maximum": 524288
+                    "maximum": 524288,
+                    "description": "Memory in MiB: at least 512 for SeaweedFS clusters (as at create); legacy MinIO clusters accept 256"
                   },
                   "swapMb": {
                     "type": "integer",
@@ -241986,8 +241982,8 @@
                     "maxItems": 32
                   },
                   "storageSizeGb": {
-                    "type": "integer",
-                    "minimum": 1,
+                    "type": "number",
+                    "minimum": 0.1,
                     "maximum": 16384
                   },
                   "cpuCores": {
@@ -270896,6 +270892,7 @@
           "Object Storage"
         ],
         "summary": "Generate a presigned URL",
+        "description": "A URL for an S3 connection. For managed storage reachable only through Gateway (private relay) the request is refused with 409 STORAGE_PRESIGN_UNSUPPORTED; once its S3 endpoint is published, the URL points at the published endpoint (the node address and published port). SFTP and FTP(S) connections have no presigned URLs.",
         "security": [
           {
             "bearerAuth": []
@@ -271256,6 +271253,7 @@
           "Object Storage"
         ],
         "summary": "Upload an object",
+        "description": "The raw request body is the object; it is streamed into storage. The body may be as large as the file upload limit in Settings (not the general API request body limit).",
         "security": [
           {
             "bearerAuth": []
